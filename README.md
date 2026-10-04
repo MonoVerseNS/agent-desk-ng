@@ -6,6 +6,79 @@ An open-source AI Agent customer support system with knowledge-based answers, hu
 
 > Built for teams that need online support, knowledge-base Q&A, human collaboration, and service tracking in one system. It is not just an LLM inside a chat box; it is an AI Helpdesk foundation designed around real support operations.
 
+## What's New
+
+Everything below is additive; the sections that follow this one are unchanged.
+
+### Russian localization
+
+`ru-RU` is now a fully supported third locale, on both sides of the wire.
+
+- Backend: `internal/pkg/i18nx/locales/ru-RU.yml`, complete alongside `zh-CN` and `en-US`, so every user-visible backend error is translated in all three.
+- Frontend: `web/messages/ru-RU.json`, a full catalogue rather than a partial one.
+- Permission and role display names are localized per locale instead of falling back to the backend's Chinese labels.
+- The UI font moved from Geist to Inter, which has real Cyrillic coverage. The previous font rendered Russian with mismatched glyphs.
+- Missing copy was filled in for the support portal, community, audit and help pages, admin settings, and navigation; several places were rendering raw message keys instead of text.
+- `web/i18n/message-integrity.test.mjs` now fails the build when a key used in the UI is missing from any locale, so a gap cannot come back silently.
+- A single radius scale was applied across dashboard and support surfaces.
+
+To change the default locale, set `language` in `config/config.yaml`. `zh-CN`, `en-US` and `ru-RU` are supported.
+
+### Visitor identity from a host platform
+
+A host that embeds the widget can now assert the identity of its own signed-in user, so the visitor is treated as identified rather than anonymous. There are two paths, and both already existed conceptually:
+
+- `userToken`: a JWT issued by the host, verified against a per-channel secret.
+- `externalId`: a new signed identity, verified against a deployment-wide shared secret.
+
+```
+signature = hex(HMAC-SHA256(secret, channelId + "\n" + externalId + "\n" + issuedAt))
+```
+
+`issuedAt` is unix seconds, sent alongside the signature as `externalIdSignedAt` (`X-External-Id-Signed-At`), and is covered by the signed bytes. Two properties are deliberate:
+
+- The channel ID is part of the payload, because visitor identities are stored globally: a signature minted for one channel must not assert the same identity on another.
+- The timestamp is inside the signed payload even though it also travels as its own field, so a captured signature cannot be re-dated.
+
+A signature is accepted only while it is within `identity.maxAgeMinutes` (default 24 hours). This bounds how long a leaked signature stays replayable. It does not protect the secret: HMAC is not invertible, so an external ID and its signature reveal nothing about the key, and no expiry would change that.
+
+Anything that is missing, forged, expired or replayed against a different visitor is downgraded to an anonymous guest rather than rejected, so an unsigned embed keeps working exactly as before.
+
+New configuration:
+
+```yaml
+identity:
+  secret: ""            # IDENTITY_HMAC_SECRET — empty disables signed identities
+  maxAgeMinutes: 1440   # IDENTITY_SIGNATURE_MAX_AGE_MINUTES
+```
+
+The SDK resolves a fresh signature on every `open()` and reloads the frame when the resolved URL changes. Without that, a host page left open longer than the max age would silently degrade to a guest. It also fixes the same staleness for `userToken`, which had been frozen at the first `open()`.
+
+### Several requests per visitor
+
+A visitor could previously only ever hold one conversation: creating one resumed the most recent unfinished request, so a second, unrelated issue silently landed in the first thread.
+
+- `POST /api/conversation/create` starts a new request and never resumes.
+- `POST /api/conversation/create_or_match` is unchanged, because reloading the page must still rejoin the live thread rather than orphan it.
+- `GET /api/conversation/list` returns the visitor's own requests, scoped from the external identity the request already carries.
+- Conversations carry an optional `subject`, so several requests are tellable apart.
+- `conversation.customerMaxOpen` caps how many requests may be open at once (default 3, `-1` removes the cap). The cap protects agents rather than the visitor: each open request is real work, and in human-only mode creating one dispatches an agent immediately. It applies only to the create path, never to the resume path.
+
+The widget gained a request switcher showing the current subject, total unread, and per-request status and time. Activity in a request you are not viewing now surfaces in the switcher instead of being discarded.
+
+### Support portal
+
+- `/` redirects to `/support`, so the visitor-facing entry point is what loads first.
+- `/support/chat` opened directly now renders a real page shell instead of a bare widget; embedded in an iframe it still behaves as a widget.
+- Enterprise SSO (OIDC, WeCom) is no longer offered to portal visitors, and the server rejects it for a portal destination. Those transports create a staff account with a staff role and never link it to a customer, so a visitor signing in through the portal would have received an employee session with none of their history behind it.
+- `/dashboard/users` filters on account type and shows a type column. Portal visitors previously appeared in the agent list with admin actions offered on them.
+
+### Fixes
+
+- The email channel wrote to an outbox `send_detail` column that no migration created, so outbound email failed on an unpatched database.
+- Sidebar section titles wrapped inside a fixed-height row and overlapped their neighbours. A section trigger is the one place where the label is not the button's last child, so the shared truncation never reached it.
+- Regenerated the shared frontend enums, which were missing four `ExternalSource` values and the whole `UserType` enum.
+
 ## Product Preview
 
 Customer chat, agent workspace, knowledge base, model configuration, and AI Agent orchestration are managed in one system.
