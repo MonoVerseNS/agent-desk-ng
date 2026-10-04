@@ -22,7 +22,9 @@
     "cancel": "Cancel",
     "status": "Status",
     "save": "Save",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "actions": "Actions",
+    "name": "Name"
   },
   "language": {
     "enUS": "English",
@@ -775,7 +777,8 @@
     "wechatMenuUrl": "WeChat Menu Link",
     "copiedWechatMenuUrl": "WeChat menu link copied.",
     "wechatGuide2": "2. Set your WeChat custom menu URL to the link above.",
-    "wechatGuide3": "3. Users will open the support chat directly after tapping the menu item."
+    "wechatGuide3": "3. Users will open the support chat directly after tapping the menu item.",
+    "processing": "Working..."
   },
   "upload": {
     "imagePlaceholder": "Upload image",
@@ -3152,8 +3155,7 @@
     "created": "Category created: {name}",
     "updated": "Category updated: {name}",
     "deleted": "Category deleted: {name}"
-  }
-,
+  },
   "supportConfig": {
     "actions": "Actions",
     "description": "Configure navigation, entry points, and display options for the support center portal.",
@@ -3184,12 +3186,20 @@
     "deleteNavigation": "Delete menu item {title}",
     "dragNavigation": "Drag menu item {title} to reorder",
     "toggleNavigation": "Toggle visibility of menu item {title}"
-  }
-,
+  },
   "dashboard": {
     "sidebar": {
       "navSection": "Navigation"
     }
+  },
+  "docs": {
+    "title": "Help Center Scaffold",
+    "description": "The help center will collect product guidance, permission rules, channel integration workflows, and FAQs.",
+    "step1": "Collect project development standards and admin usage guides.",
+    "step2": "Add third-party integration flows and configuration checklists.",
+    "step3": "Connect Markdown or a documentation center later."
+  },
+  "supportCommunityAdmin": {
+    "postStatusUpdated": "Post status updated."
   }
-
 }

@@ -22,7 +22,9 @@
     "cancel": "取消",
     "status": "状态",
     "save": "保存",
-    "confirm": "确认"
+    "confirm": "确认",
+    "actions": "操作",
+    "name": "名称"
   },
   "language": {
     "enUS": "English (英文)",
@@ -775,7 +777,8 @@
     "wechatMenuUrl": "公众号菜单链接",
     "copiedWechatMenuUrl": "已复制公众号菜单链接",
     "wechatGuide2": "2. 将公众号自定义菜单跳转地址设置为上方链接。",
-    "wechatGuide3": "3. 用户点击菜单后会直接进入客服聊天页。"
+    "wechatGuide3": "3. 用户点击菜单后会直接进入客服聊天页。",
+    "processing": "处理中…"
   },
   "upload": {
     "imagePlaceholder": "点击上传图片",
@@ -1965,7 +1968,6 @@
   },
   "skillDefinition": {
     "allStatus": "全部状态",
-    "status": "状态",
     "statusOk": "启用",
     "statusDisabled": "停用",
     "statusDeleted": "已删除",
@@ -1998,6 +2000,7 @@
     "searchStatus": "搜索状态",
     "emptyStatus": "未找到状态",
     "query": "查询",
+    "status": "状态",
     "updatedAt": "最近更新",
     "actions": "操作",
     "loadingRows": "正在加载 Skill...",
@@ -3152,8 +3155,7 @@
     "created": "分类“{name}”已创建",
     "updated": "分类“{name}”已更新",
     "deleted": "分类“{name}”已删除"
-  }
-,
+  },
   "supportConfig": {
     "actions": "操作",
     "description": "配置支持中心门户的导航、入口和展示选项。",
@@ -3184,12 +3186,20 @@
     "deleteNavigation": "删除菜单项 {title}",
     "dragNavigation": "拖动菜单项 {title} 以调整顺序",
     "toggleNavigation": "切换菜单项 {title} 的显示状态"
-  }
-,
+  },
   "dashboard": {
     "sidebar": {
       "navSection": "导航"
     }
+  },
+  "docs": {
+    "title": "帮助中心骨架",
+    "description": "帮助中心用于沉淀产品说明、权限约定、渠道接入流程与常见问题。",
+    "step1": "汇总项目开发规范与后台使用说明。",
+    "step2": "补充第三方接入流程图和配置校验清单。",
+    "step3": "后续可接入 markdown 或文档中心能力。"
+  },
+  "supportCommunityAdmin": {
+    "postStatusUpdated": "主题状态已更新。"
   }
-
 }
