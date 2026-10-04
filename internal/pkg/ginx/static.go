@@ -28,6 +28,10 @@ type SPAOptions struct {
 	DirOptions       DirOptions
 	NotFoundPrefixes []string
 	NotFoundHandler  gin.HandlerFunc
+	// RootRedirect, when set, answers "/" with a redirect instead of serving
+	// the SPA. The static export has no index.html at the root, so without this
+	// the site origin answers 404.
+	RootRedirect string
 }
 
 func StaticFiles(root string) http.FileSystem {
@@ -53,8 +57,15 @@ func (n noDirFS) Open(name string) (http.File, error) {
 
 func HandleSPA(engine *gin.Engine, options SPAOptions) gin.HandlerFunc {
 	handler := NewSPAHandler(options.Root, options.EmbeddedFS, options.EmbeddedRoot, options.DirOptions)
-	engine.GET("/", handler)
-	engine.HEAD("/", handler)
+	rootHandler := handler
+	if options.RootRedirect != "" {
+		target := options.RootRedirect
+		rootHandler = func(ctx *gin.Context) {
+			ctx.Redirect(http.StatusFound, target)
+		}
+	}
+	engine.GET("/", rootHandler)
+	engine.HEAD("/", rootHandler)
 	engine.NoRoute(func(ctx *gin.Context) {
 		for _, prefix := range options.NotFoundPrefixes {
 			if strings.HasPrefix(ctx.Request.URL.Path, prefix) {

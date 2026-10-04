@@ -251,6 +251,9 @@ func handleSpa(app *gin.Engine) {
 		Root:         "./web/out",
 		EmbeddedFS:   webspa.SPA,
 		EmbeddedRoot: "out",
+		// The export only contains dashboard.html, support.html and
+		// workbench.html, so the bare origin has no index to serve.
+		RootRedirect: "/support",
 		DirOptions: ginx.DirOptions{
 			ShowList:  false,
 			SPA:       true,
