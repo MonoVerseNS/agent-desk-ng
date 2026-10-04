@@ -84,8 +84,8 @@ func assetResponseHeaders() gin.HandlerFunc {
 
 func corsMiddleware() gin.HandlerFunc {
 	allowedOrigins := config.Current().Server.CORS.AllowedOrigins
-	allowHeaders := "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-Guest-Id, X-Channel-Id, X-External-Id, X-External-Name, X-Customer-Session-Token, X-Customer-Session-Expires-At"
-	exposeHeaders := "Content-Length, Content-Type, Authorization, X-Guest-Id, X-Channel-Id, X-External-Id, X-External-Name, X-Customer-Session-Token, X-Customer-Session-Expires-At"
+	allowHeaders := "Origin, Content-Type, Accept, Authorization, X-Requested-With, X-Guest-Id, X-Channel-Id, X-External-Id, X-External-Id-Signature, X-External-Name, X-Customer-Session-Token, X-Customer-Session-Expires-At"
+	exposeHeaders := "Content-Length, Content-Type, Authorization, X-Guest-Id, X-Channel-Id, X-External-Id, X-External-Id-Signature, X-External-Name, X-Customer-Session-Token, X-Customer-Session-Expires-At"
 	allowMethods := "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 	allowedOriginSet := make(map[string]struct{}, len(allowedOrigins))
 	for _, origin := range allowedOrigins {

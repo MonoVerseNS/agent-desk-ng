@@ -124,13 +124,18 @@ type FrameMessage =
     return String(config.widgetBaseUrl || config.baseUrl || window.location.origin).replace(/\/$/, "")
   }
 
-  function createFrameUrl(config: NormalizedAgentDeskConfig, userToken: string) {
+  function createFrameUrl(
+    config: NormalizedAgentDeskConfig,
+    userToken: string,
+    externalIdSignature: string
+  ) {
     const widgetBaseUrl = resolveWidgetBaseUrl(config)
     const frameUrl = new URL(`${widgetBaseUrl}/support/chat/`)
     frameUrl.searchParams.set("channelId", config.channelId)
     frameUrl.searchParams.set("baseUrl", config.baseUrl)
     if (config.apiBaseUrl) frameUrl.searchParams.set("apiBaseUrl", config.apiBaseUrl)
     if (config.externalId) frameUrl.searchParams.set("externalId", config.externalId)
+    if (externalIdSignature) frameUrl.searchParams.set("externalIdSignature", externalIdSignature)
     if (config.externalName) frameUrl.searchParams.set("externalName", config.externalName)
     if (userToken) frameUrl.searchParams.set("userToken", userToken)
     return frameUrl
@@ -138,13 +143,20 @@ type FrameMessage =
 
   function createFrameConfig(
     config: NormalizedAgentDeskConfig,
-    userToken: string
+    userToken: string,
+    externalIdSignature: string
   ): SupportChatRuntimeConfig {
-    const { getUserToken: _getUserToken, ...payload } = config
+    const payload = { ...config } as Record<string, unknown>
+    // Functions cannot cross the postMessage boundary; their resolved values travel instead.
+    delete payload.getUserToken
+    delete payload.signExternalId
     if (userToken) {
-      return { ...payload, userToken }
+      return { ...payload, userToken } as SupportChatRuntimeConfig
     }
-    return payload
+    if (externalIdSignature) {
+      return { ...payload, externalIdSignature } as SupportChatRuntimeConfig
+    }
+    return payload as SupportChatRuntimeConfig
   }
 
   function resolveUserToken() {
@@ -161,15 +173,34 @@ type FrameMessage =
     }
   }
 
+  // Resolved per open(), like getUserToken, so a host can rotate the signature
+  // without remounting the widget. A missing signer simply means the visitor
+  // stays an anonymous guest.
+  function resolveExternalIdSignature() {
+    const config = state.config
+    if (!config?.externalId || typeof config.signExternalId !== "function") {
+      return Promise.resolve("")
+    }
+    try {
+      return Promise.resolve(config.signExternalId(config.externalId)).then((signature) =>
+        String(signature || "").trim()
+      )
+    } catch (error) {
+      return Promise.reject(error)
+    }
+  }
+
   function prepareFrameUrl() {
-    return resolveUserToken().then((userToken) => {
-      if (!state.config) {
-        throw new Error("channelId is required")
+    return Promise.all([resolveUserToken(), resolveExternalIdSignature()]).then(
+      ([userToken, externalIdSignature]) => {
+        if (!state.config) {
+          throw new Error("channelId is required")
+        }
+        state.frameUrl = createFrameUrl(state.config, userToken, externalIdSignature)
+        state.frameConfig = createFrameConfig(state.config, userToken, externalIdSignature)
+        return state.frameUrl
       }
-      state.frameUrl = createFrameUrl(state.config, userToken)
-      state.frameConfig = createFrameConfig(state.config, userToken)
-      return state.frameUrl
-    })
+    )
   }
 
   function mergeWidgetConfig(
@@ -311,7 +342,7 @@ type FrameMessage =
       state.initSent = true
       postToFrame({
         type: "agent-desk:init",
-        payload: state.frameConfig || createFrameConfig(state.config, ""),
+        payload: state.frameConfig || createFrameConfig(state.config, "", ""),
       })
     }
 

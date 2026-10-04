@@ -24,6 +24,7 @@ export function readSupportChatRuntimeConfig(): SupportChatRuntimeConfig {
       process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ??
       undefined,
     externalId: query.get("externalId") ?? undefined,
+    externalIdSignature: query.get("externalIdSignature") ?? undefined,
     externalName: query.get("externalName") ?? undefined,
     userToken: query.get("userToken") ?? undefined,
     title: query.get("title") ?? undefined,
@@ -37,11 +38,15 @@ export function readSupportChatRuntimeConfig(): SupportChatRuntimeConfig {
     return window.__CS_AI_AGENT_WIDGET_CONFIG__
   }
   if (window.AgentDeskConfig) {
-    const { getUserToken: _getUserToken, ...hostConfig } = window.AgentDeskConfig
+    // The signer functions cannot cross into the iframe; their resolved values
+    // arrive in the query string and in the init payload instead.
+    const hostConfig = { ...window.AgentDeskConfig } as Record<string, unknown>
+    delete hostConfig.getUserToken
+    delete hostConfig.signExternalId
     return {
       ...fallback,
       ...hostConfig,
-    }
+    } as SupportChatRuntimeConfig
   }
   return fallback
 }

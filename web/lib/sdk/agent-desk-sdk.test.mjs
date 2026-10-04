@@ -128,6 +128,58 @@ test("getChatUrl resolves a fresh userToken for each call", async () => {
   assert.equal(calls, 2)
 })
 
+test("getChatUrl forwards a signed externalId and resolves it per call", async () => {
+  const seen = []
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    externalId: "u_10001",
+    externalName: "Ivan",
+    signExternalId: async (externalId) => {
+      seen.push(externalId)
+      return `sig_${seen.length}`
+    },
+  })
+
+  const first = await sandbox.window.AgentDeskWidget.getChatUrl()
+  const second = await sandbox.window.AgentDeskWidget.getChatUrl()
+
+  assert.equal(new URL(first).searchParams.get("externalId"), "u_10001")
+  assert.equal(new URL(first).searchParams.get("externalIdSignature"), "sig_1")
+  assert.equal(new URL(second).searchParams.get("externalIdSignature"), "sig_2")
+  assert.deepEqual(seen, ["u_10001", "u_10001"])
+})
+
+test("no signer means no externalIdSignature parameter", async () => {
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    externalId: "u_10001",
+  })
+
+  const url = await sandbox.window.AgentDeskWidget.getChatUrl()
+
+  assert.equal(new URL(url).searchParams.get("externalId"), "u_10001")
+  assert.equal(new URL(url).searchParams.has("externalIdSignature"), false)
+})
+
+test("signer without an externalId is not called", async () => {
+  let calls = 0
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    signExternalId: async () => {
+      calls += 1
+      return "sig"
+    },
+  })
+
+  const url = await sandbox.window.AgentDeskWidget.getChatUrl()
+
+  assert.equal(calls, 0)
+  assert.equal(new URL(url).searchParams.has("externalIdSignature"), false)
+})
+
 test("launcher click creates chat iframe with a freshly resolved userToken", async () => {
   const sandbox = await loadSdk({
     channelId: "ch_1",
