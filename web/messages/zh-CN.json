@@ -27,6 +27,7 @@
   "language": {
     "enUS": "English (英文)",
     "zhCN": "简体中文",
+    "ruRU": "Русский (俄语)",
     "viVN": "Tiếng Việt (越南语)",
     "selectLanguage": "选择界面语言"
   },
@@ -224,7 +225,8 @@
   },
   "locale": {
     "zh-CN": "简体中文",
-    "en-US": "English"
+    "en-US": "English",
+    "ru-RU": "Русский"
   },
   "auth": {
     "checkingSession": "正在校验登录态",
@@ -1558,7 +1560,7 @@
     "edit": "编辑",
     "delete": "删除",
     "processing": "处理中…",
-    "moreActions": "更多操作",
+    "moreActions": "更多操作：{name}",
     "loadFailed": "加载工作流失败",
     "saveFailed": "保存工作流失败",
     "deleteFailed": "删除工作流失败",
@@ -2102,6 +2104,7 @@
     "baseNotFound": "未找到该知识库，或它已被删除。",
     "loadBaseFailed": "加载知识库失败",
     "allStatus": "全部状态",
+    "status": "状态",
     "statusOk": "启用",
     "statusDisabled": "禁用",
     "statusDeleted": "已删除",

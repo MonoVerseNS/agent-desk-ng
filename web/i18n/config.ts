@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ["zh-CN", "en-US"] as const
+export const SUPPORTED_LOCALES = ["zh-CN", "en-US", "ru-RU"] as const
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number]
 
 export const DEFAULT_LOCALE: AppLocale = "zh-CN"
@@ -11,6 +11,9 @@ const LOCALE_ALIASES: Record<string, AppLocale> = {
   en: "en-US",
   "en-us": "en-US",
   en_us: "en-US",
+  ru: "ru-RU",
+  "ru-ru": "ru-RU",
+  ru_ru: "ru-RU",
 }
 
 export function normalizeLocale(value: string | null | undefined): AppLocale {

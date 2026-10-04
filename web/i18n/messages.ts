@@ -1,10 +1,12 @@
 import { DEFAULT_LOCALE, type AppLocale, readStoredLocale } from "@/i18n/config"
 import enUSMessages from "@/messages/en-US.json"
+import ruRUMessages from "@/messages/ru-RU.json"
 import zhCNMessages from "@/messages/zh-CN.json"
 
 const messages = {
   "zh-CN": zhCNMessages,
   "en-US": enUSMessages,
+  "ru-RU": ruRUMessages,
 } satisfies Record<AppLocale, typeof zhCNMessages>
 
 export function translateMessage(

@@ -23,7 +23,7 @@ export function localizeNotificationItem<T extends LocalizableNotification>(
   locale: string
 ): T {
   const normalizedLocale = normalizeLocale(locale)
-  if (normalizedLocale !== "en-US") {
+  if (normalizedLocale === "zh-CN") {
     return notification
   }
   if (notification.notificationType === "ticket_assigned") {

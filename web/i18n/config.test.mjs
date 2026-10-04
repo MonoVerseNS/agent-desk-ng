@@ -32,7 +32,16 @@ test("normalizes supported locale aliases", async () => {
   assert.equal(normalizeLocale("en-US"), "en-US")
   assert.equal(normalizeLocale("en_US"), "en-US")
   assert.equal(normalizeLocale("en"), "en-US")
+  assert.equal(normalizeLocale("ru-RU"), "ru-RU")
+  assert.equal(normalizeLocale("ru_ru"), "ru-RU")
+  assert.equal(normalizeLocale("RU"), "ru-RU")
   assert.equal(normalizeLocale("fr-FR"), DEFAULT_LOCALE)
+})
+
+test("lists every supported locale in SUPPORTED_LOCALES", async () => {
+  const { SUPPORTED_LOCALES } = await loadConfig()
+
+  assert.deepEqual([...SUPPORTED_LOCALES], ["zh-CN", "en-US", "ru-RU"])
 })
 
 test("reads the configured locale without browser language detection", async () => {
@@ -42,4 +51,7 @@ test("reads the configured locale without browser language detection", async () 
 
   configureLocale("en-US")
   assert.equal(readStoredLocale(), "en-US")
+
+  configureLocale("ru-RU")
+  assert.equal(readStoredLocale(), "ru-RU")
 })
