@@ -30,10 +30,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --support-shell-max-width: 80rem;
   --support-docs-max-width: 100rem;
   --support-doc-nav-width: 18rem;
