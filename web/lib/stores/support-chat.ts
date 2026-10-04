@@ -4,8 +4,10 @@ import { create } from "zustand"
 
 import {
   closeImConversation,
+  createImConversation,
   createOrMatchImConversation,
   ensureCustomerSession,
+  fetchImConversationList,
   fetchImMessages,
   fetchImWidgetConfig,
   markImMessageRead,
@@ -31,9 +33,15 @@ import {
 import {
   markMessagesReadToMessageId,
   normalizeRealtimeMessage,
-  patchConversation,
-  patchConversationWithMessage,
+  patchConversationList,
+  patchConversationListWithMessage,
 } from "@/lib/im-realtime-state"
+import {
+  CLOSED_IM_CONVERSATION_STATUS,
+  findConversationById,
+  pickConversationToResume,
+  sortConversationsByRecency,
+} from "@/lib/support-conversation-list"
 import { summarizeIMMessage } from "@/lib/im-message"
 import { createRealtimeConnectionManager } from "@/lib/realtime-connection"
 import { generateUUID } from "@/lib/utils"
@@ -46,6 +54,51 @@ import { translateCurrentMessage } from "@/i18n/messages"
 type ChatStatus = "connecting" | "connected" | "disconnected"
 
 const DEFAULT_PAGE_LIMIT = 50
+const CONVERSATION_LIST_PAGE_LIMIT = 50
+
+/**
+ * The single writer for the request list. `conversation` is never assigned
+ * anywhere else: it is always re-derived from `conversations` by id, so the
+ * active request and the list cannot drift apart and leave the composer
+ * pointed at a request the switcher does not show.
+ */
+function withConversations(
+  state: Pick<SupportChatStore, "conversations" | "activeConversationId">,
+  conversations: ImConversation[],
+  activeConversationId?: number
+) {
+  const sorted = sortConversationsByRecency(conversations)
+  const resolvedId =
+    findConversationById(sorted, activeConversationId ?? state.activeConversationId)
+      ?.id ?? 0
+  return {
+    conversations: sorted,
+    activeConversationId: resolvedId,
+    conversation: findConversationById(sorted, resolvedId),
+  }
+}
+
+/**
+ * Applies a field change to the request on screen by routing it through the
+ * list, so the switcher badge and the header never disagree about the same
+ * request.
+ */
+function withActiveConversationPatch(
+  state: Pick<SupportChatStore, "conversations" | "activeConversationId">,
+  patch: Partial<ImConversation>
+) {
+  const active = findConversationById(
+    state.conversations,
+    state.activeConversationId
+  )
+  if (!active) {
+    return {}
+  }
+  return withConversations(
+    state,
+    patchConversationList(state.conversations, { ...patch, id: active.id })
+  )
+}
 
 function getNotificationBody(message: ImMessage): string {
   return summarizeIMMessage(message)
@@ -111,7 +164,13 @@ export type SupportChatStore = {
   title: string
   subtitle: string
   themeColor: string
+  /** Every request this visitor owns, newest activity first. */
+  conversations: ImConversation[]
+  /** The request on screen. Derived from conversations by activeConversationId. */
   conversation: ImConversation | null
+  activeConversationId: number
+  conversationsLoading: boolean
+  creatingConversation: boolean
   messages: ImMessage[]
   messagesCursor: string
   messagesHasMore: boolean
@@ -131,6 +190,9 @@ export type SupportChatStore = {
   setIsVisible: (isVisible: boolean) => void
   bootstrap: () => void
   disconnectSocket: () => void
+  refreshConversations: () => Promise<void>
+  selectConversation: (conversationId: number) => Promise<void>
+  startNewConversation: (subject?: string) => Promise<void>
   refreshMessages: () => Promise<void>
   syncLatestMessages: () => Promise<void>
   loadOlderMessages: () => Promise<void>
@@ -175,8 +237,8 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         return
       }
 
-      const conversationId = get().conversation?.id
-      if (!conversationId) {
+      const activeConversationId = get().conversation?.id
+      if (!activeConversationId) {
         return
       }
 
@@ -184,21 +246,39 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         void get().refreshMessages()
         return
       }
-      if (payload?.conversationId !== conversationId) {
+
+      const eventConversationId = Number(payload?.conversationId) || 0
+      if (!eventConversationId) {
         return
       }
 
       if (event.type === "message.created") {
+        const isActive = eventConversationId === activeConversationId
         const message = normalizeRealtimeMessage<ImMessage>(payload)
         if (!message) {
-          void get().syncLatestMessages()
+          if (isActive) {
+            void get().syncLatestMessages()
+          }
           return
         }
-        set((state) => ({
-          messages: mergeImMessagesByIdAsc(state.messages, [message]),
-          conversation: patchConversationWithMessage(state.conversation, message),
-        }))
+        set((state) => {
+          const conversations = patchConversationListWithMessage(
+            state.conversations,
+            message
+          )
+          if (!isActive) {
+            // Activity in a background request still has to show up in the
+            // switcher, otherwise the visitor only finds out by opening each
+            // request in turn.
+            return withConversations(state, conversations)
+          }
+          return {
+            ...withConversations(state, conversations),
+            messages: mergeImMessagesByIdAsc(state.messages, [message]),
+          }
+        })
         if (
+          isActive &&
           message.senderType !== "customer" &&
           typeof document !== "undefined" &&
           document.visibilityState !== "visible"
@@ -213,8 +293,16 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
       }
 
       if (event.type?.startsWith("conversation.")) {
+        set((state) =>
+          withConversations(
+            state,
+            patchConversationList(state.conversations, payload)
+          )
+        )
+        if (eventConversationId !== activeConversationId) {
+          return
+        }
         set((state) => ({
-          conversation: patchConversation(state.conversation, payload),
           messages: markConversationReadMessages(state.messages, payload),
         }))
       }
@@ -239,7 +327,11 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     title: t("supportChat.title"),
     subtitle: "",
     themeColor: "#2563eb",
+    conversations: [],
     conversation: null,
+    activeConversationId: 0,
+    conversationsLoading: false,
+    creatingConversation: false,
     messages: [],
     messagesCursor: "",
     messagesHasMore: false,
@@ -303,13 +395,49 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             return
           }
 
-          let currentConversation = get().conversation
-          if (!get().initialized || !currentConversation) {
-            currentConversation = await createOrMatchImConversation()
+          // Rejoin the newest still-open request rather than blindly creating
+          // one: with several requests in play, create_or_match would silently
+          // drop the visitor back into their first thread.
+          let conversations: ImConversation[] = []
+          try {
+            const page = await fetchImConversationList({
+              limit: CONVERSATION_LIST_PAGE_LIMIT,
+            })
+            conversations = Array.isArray(page?.results) ? page.results : []
+          } catch {
+            // A visitor who has never written to us has no request rows yet,
+            // and the list endpoint may legitimately refuse on a cold channel.
+            // Falling through to create_or_match keeps a first-time visitor
+            // working, which matters more here than surfacing the failure.
+          }
+          if (bootstrapToken !== token || !get().isOpen) {
+            return
+          }
+
+          const resumable = pickConversationToResume(conversations)
+          if (resumable) {
+            set((state) => ({
+              initialized: true,
+              ...withConversations(state, conversations, resumable.id),
+            }))
+          } else {
+            // Either a brand new visitor, or every request is closed. Both need
+            // a fresh thread; create_or_match is the only path that can tell.
+            const created = await createOrMatchImConversation()
             if (bootstrapToken !== token || !get().isOpen) {
               return
             }
-            set({ initialized: true, conversation: currentConversation })
+            set((state) => ({
+              initialized: true,
+              ...withConversations(
+                state,
+                [
+                  created,
+                  ...conversations.filter((item) => item.id !== created.id),
+                ],
+                created.id
+              ),
+            }))
           }
 
           await get().refreshMessages()
@@ -334,6 +462,82 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
 
     disconnectSocket: () => {
       closeSocket({ reconnect: false })
+    },
+
+    refreshConversations: async () => {
+      try {
+        const page = await fetchImConversationList({
+          limit: CONVERSATION_LIST_PAGE_LIMIT,
+        })
+        const results = Array.isArray(page?.results) ? page.results : []
+        set((state) => withConversations(state, results))
+      } catch (error) {
+        set({
+          error:
+            error instanceof Error
+              ? error.message
+              : t("supportChat.loadConversationsFailed"),
+        })
+      }
+    },
+
+    selectConversation: async (conversationId: number) => {
+      const target = findConversationById(get().conversations, conversationId)
+      if (!target) {
+        return
+      }
+      if (target.id === get().activeConversationId) {
+        return
+      }
+
+      set({
+        activeConversationId: target.id,
+        // Messages belong to the request they were loaded for, so they have to
+        // be cleared before the switch; leaving the previous thread on screen
+        // would show one request's history under another's header.
+        messages: [],
+        messagesCursor: "",
+        messagesHasMore: false,
+        error: "",
+      })
+
+      try {
+        await get().refreshMessages()
+      } catch (error) {
+        console.error("Failed to load support chat messages", error)
+      }
+    },
+
+    startNewConversation: async (subject?: string) => {
+      if (get().creatingConversation) {
+        return
+      }
+
+      set({ creatingConversation: true, error: "" })
+      try {
+        const created = await createImConversation(subject)
+        set((state) => ({
+          creatingConversation: false,
+          messages: [],
+          messagesCursor: "",
+          messagesHasMore: false,
+          ...withConversations(
+            state,
+            [created, ...state.conversations.filter((item) => item.id !== created.id)],
+            created.id
+          ),
+        }))
+        await get().refreshMessages()
+      } catch (error) {
+        set({
+          creatingConversation: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : t("supportChat.createConversationFailed"),
+        })
+        throw error
+      }
     },
 
     refreshMessages: async () => {
@@ -469,13 +673,10 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             }
             return item.customerRead ? item : { ...item, customerRead: true }
           }),
-          conversation: current.conversation
-            ? {
-                ...current.conversation,
-                customerUnreadCount: 0,
-                customerLastReadMessageId: lastMessage.id,
-              }
-            : null,
+          ...withActiveConversationPatch(current, {
+            customerUnreadCount: 0,
+            customerLastReadMessageId: lastMessage.id,
+          }),
         }))
       } catch (error) {
         set({ readingMessageId: 0 })
@@ -504,15 +705,12 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
                 message.id === nextMessage.id ? nextMessage : message
               )
             : [...state.messages, nextMessage],
-          conversation: state.conversation
-            ? {
-                ...state.conversation,
-                customerLastReadMessageId: nextMessage.id,
-                customerUnreadCount: 0,
-                lastMessageAt: nextMessage.sentAt,
-                lastMessageSummary: summarizeIMMessage(nextMessage),
-              }
-            : null,
+          ...withActiveConversationPatch(state, {
+            customerLastReadMessageId: nextMessage.id,
+            customerUnreadCount: 0,
+            lastMessageAt: nextMessage.sentAt,
+            lastMessageSummary: summarizeIMMessage(nextMessage),
+          }),
         }))
       } catch (error) {
         set({
@@ -569,15 +767,12 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
                 message.id === nextMessage.id ? nextMessage : message
               )
             : [...state.messages, nextMessage],
-          conversation: state.conversation
-            ? {
-                ...state.conversation,
-                customerLastReadMessageId: nextMessage.id,
-                customerUnreadCount: 0,
-                lastMessageAt: nextMessage.sentAt,
-                lastMessageSummary: summarizeIMMessage(nextMessage),
-              }
-            : null,
+          ...withActiveConversationPatch(state, {
+            customerLastReadMessageId: nextMessage.id,
+            customerUnreadCount: 0,
+            lastMessageAt: nextMessage.sentAt,
+            lastMessageSummary: summarizeIMMessage(nextMessage),
+          }),
         }))
       } catch (error) {
         set({
@@ -601,12 +796,10 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         set((state) => ({
           closingConversation: false,
           status: "disconnected",
-          conversation: state.conversation
-            ? {
-                ...state.conversation,
-                status: 2,
-              }
-            : null,
+          ...withActiveConversationPatch(state, {
+            status: CLOSED_IM_CONVERSATION_STATUS,
+            customerUnreadCount: 0,
+          }),
         }))
       } catch (error) {
         set({

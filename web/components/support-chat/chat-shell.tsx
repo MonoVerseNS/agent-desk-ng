@@ -21,6 +21,8 @@ import {
 import { useShallow } from "zustand/react/shallow"
 
 import { SupportChatConnectionStatus } from "@/components/support-chat/connection-status"
+import { SupportChatConversationSwitcher } from "@/components/support-chat/conversation-switcher"
+import { SupportChatNewRequestDialog } from "@/components/support-chat/new-request-dialog"
 import { getStandaloneClosedUrl } from "@/components/support-chat/close-navigation"
 import { CustomerMessageEditor } from "@/components/support-chat/customer-message-editor"
 import {
@@ -133,6 +135,7 @@ export function SupportChatPanel() {
   const [isMaximized, setIsMaximized] = useState(false)
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
   const [isClosingConversation, setIsClosingConversation] = useState(false)
+  const [isNewRequestDialogOpen, setIsNewRequestDialogOpen] = useState(false)
 
   const {
     title,
@@ -325,6 +328,9 @@ export function SupportChatPanel() {
                 </div>
               </div>
             </div>
+            <SupportChatConversationSwitcher
+              onNewRequest={() => setIsNewRequestDialogOpen(true)}
+            />
             <div className="flex shrink-0 items-center gap-0.5 sm:hidden">
               {!isEmbedded && status !== "connected" ? (
                 <WindowActionButton
@@ -485,6 +491,14 @@ export function SupportChatPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SupportChatNewRequestDialog
+        open={isNewRequestDialogOpen}
+        onOpenChange={setIsNewRequestDialogOpen}
+        onCreated={() => {
+          messageListRef.current?.scrollToBottom()
+        }}
+      />
     </>
   )
 }
