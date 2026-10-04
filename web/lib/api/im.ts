@@ -166,6 +166,7 @@ function getRuntimeImConfig() {
     channelId: widgetConfig.channelId || OPEN_IM_CHANNEL_ID,
     externalId: (widgetConfig.externalId || "").trim(),
     externalIdSignature: (widgetConfig.externalIdSignature || "").trim(),
+    externalIdSignedAt: Number(widgetConfig.externalIdSignedAt) || 0,
     externalName: (widgetConfig.externalName || "").trim(),
     userToken: (widgetConfig.userToken || "").trim(),
   }
@@ -271,8 +272,9 @@ function createExchangeHeaders() {
     // Only meaningful together with a host-supplied externalId: the browser-local
     // guest id cannot be signed by the host. Without a valid signature the
     // server treats the visitor as anonymous.
-    if (config.externalId && config.externalIdSignature) {
+    if (config.externalId && config.externalIdSignature && config.externalIdSignedAt) {
       headers["X-External-Id-Signature"] = config.externalIdSignature
+      headers["X-External-Id-Signed-At"] = String(config.externalIdSignedAt)
     }
     if (config.externalName) {
       headers["X-External-Name"] = encodeURIComponent(config.externalName)

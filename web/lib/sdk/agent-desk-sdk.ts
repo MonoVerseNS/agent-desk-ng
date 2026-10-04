@@ -13,6 +13,12 @@ type NormalizedAgentDeskConfig = AgentDeskConfig & {
   width: string
 }
 
+/** A host-signed visitor identity, resolved fresh on every open. */
+type ResolvedExternalIdentity = {
+  signature: string
+  issuedAt: number
+}
+
 type WidgetState = {
   button: HTMLButtonElement | null
   frame: HTMLIFrameElement | null
@@ -127,7 +133,7 @@ type FrameMessage =
   function createFrameUrl(
     config: NormalizedAgentDeskConfig,
     userToken: string,
-    externalIdSignature: string
+    identity: ResolvedExternalIdentity
   ) {
     const widgetBaseUrl = resolveWidgetBaseUrl(config)
     const frameUrl = new URL(`${widgetBaseUrl}/support/chat/`)
@@ -135,7 +141,8 @@ type FrameMessage =
     frameUrl.searchParams.set("baseUrl", config.baseUrl)
     if (config.apiBaseUrl) frameUrl.searchParams.set("apiBaseUrl", config.apiBaseUrl)
     if (config.externalId) frameUrl.searchParams.set("externalId", config.externalId)
-    if (externalIdSignature) frameUrl.searchParams.set("externalIdSignature", externalIdSignature)
+    if (identity.signature) frameUrl.searchParams.set("externalIdSignature", identity.signature)
+    if (identity.issuedAt) frameUrl.searchParams.set("externalIdSignedAt", String(identity.issuedAt))
     if (config.externalName) frameUrl.searchParams.set("externalName", config.externalName)
     if (userToken) frameUrl.searchParams.set("userToken", userToken)
     return frameUrl
@@ -144,7 +151,7 @@ type FrameMessage =
   function createFrameConfig(
     config: NormalizedAgentDeskConfig,
     userToken: string,
-    externalIdSignature: string
+    identity: ResolvedExternalIdentity
   ): SupportChatRuntimeConfig {
     const payload = { ...config } as Record<string, unknown>
     // Functions cannot cross the postMessage boundary; their resolved values travel instead.
@@ -153,8 +160,12 @@ type FrameMessage =
     if (userToken) {
       return { ...payload, userToken } as SupportChatRuntimeConfig
     }
-    if (externalIdSignature) {
-      return { ...payload, externalIdSignature } as SupportChatRuntimeConfig
+    if (identity.signature) {
+      return {
+        ...payload,
+        externalIdSignature: identity.signature,
+        externalIdSignedAt: identity.issuedAt,
+      } as SupportChatRuntimeConfig
     }
     return payload as SupportChatRuntimeConfig
   }
@@ -173,31 +184,32 @@ type FrameMessage =
     }
   }
 
-  // Resolved per open(), like getUserToken, so a host can rotate the signature
-  // without remounting the widget. A missing signer simply means the visitor
-  // stays an anonymous guest.
-  function resolveExternalIdSignature() {
+  // Resolved per open(), like getUserToken, so the pair is always fresh and a
+  // long-lived host page does not keep replaying an expired signature. A missing
+  // signer simply means the visitor stays an anonymous guest.
+  function resolveExternalIdentity(): Promise<ResolvedExternalIdentity> {
     const config = state.config
     if (!config?.externalId || typeof config.signExternalId !== "function") {
-      return Promise.resolve("")
+      return Promise.resolve({ signature: "", issuedAt: 0 })
     }
     try {
-      return Promise.resolve(config.signExternalId(config.externalId)).then((signature) =>
-        String(signature || "").trim()
-      )
+      return Promise.resolve(config.signExternalId(config.externalId)).then((signed) => ({
+        signature: String(signed?.signature || "").trim(),
+        issuedAt: Number(signed?.issuedAt) || 0,
+      }))
     } catch (error) {
       return Promise.reject(error)
     }
   }
 
   function prepareFrameUrl() {
-    return Promise.all([resolveUserToken(), resolveExternalIdSignature()]).then(
-      ([userToken, externalIdSignature]) => {
+    return Promise.all([resolveUserToken(), resolveExternalIdentity()]).then(
+      ([userToken, identity]) => {
         if (!state.config) {
           throw new Error("channelId is required")
         }
-        state.frameUrl = createFrameUrl(state.config, userToken, externalIdSignature)
-        state.frameConfig = createFrameConfig(state.config, userToken, externalIdSignature)
+        state.frameUrl = createFrameUrl(state.config, userToken, identity)
+        state.frameConfig = createFrameConfig(state.config, userToken, identity)
         return state.frameUrl
       }
     )
@@ -342,7 +354,7 @@ type FrameMessage =
       state.initSent = true
       postToFrame({
         type: "agent-desk:init",
-        payload: state.frameConfig || createFrameConfig(state.config, "", ""),
+        payload: state.frameConfig || createFrameConfig(state.config, "", { signature: "", issuedAt: 0 }),
       })
     }
 
@@ -599,6 +611,12 @@ type FrameMessage =
       .then(() => {
         if (!state.frame) {
           createFrame()
+        } else if (state.frameUrl && state.frame.src !== state.frameUrl.toString()) {
+          // The resolved URL carries a freshly signed identity and a freshly
+          // issued userToken. A frame created by an earlier open() would keep
+          // the stale pair, so reload it instead of silently letting an expired
+          // signature downgrade the visitor to a guest.
+          reloadFrame()
         }
         if (!state.frame) {
           return
@@ -609,6 +627,18 @@ type FrameMessage =
       .catch((error) => {
         console.error("[agent-desk-widget] open failed", error)
       })
+  }
+
+  function reloadFrame() {
+    if (!state.frame || !state.frameUrl) {
+      return
+    }
+    state.frameLoaded = false
+    state.frameReady = false
+    state.initSent = false
+    state.frame.style.visibility = "hidden"
+    state.frame.style.pointerEvents = "none"
+    state.frame.src = state.frameUrl.toString()
   }
 
   window.AgentDeskWidget = {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 	"github.com/subosito/gotenv"
@@ -219,6 +220,16 @@ type IdentityConfig struct {
 	// visitor whose ID carries no valid signature is then always treated as an
 	// anonymous guest, which is the safe default.
 	Secret string `yaml:"secret"`
+	// MaxAgeMinutes bounds how old a signed identity may be. It limits how long a
+	// captured signature stays replayable. Values <= 0 fall back to 24 hours.
+	MaxAgeMinutes int `yaml:"maxAgeMinutes"`
+}
+
+func (c IdentityConfig) MaxAge() time.Duration {
+	if c.MaxAgeMinutes <= 0 {
+		return 24 * time.Hour
+	}
+	return time.Duration(c.MaxAgeMinutes) * time.Minute
 }
 
 func (c CustomerSessionConfig) TTL() int {
@@ -486,6 +497,7 @@ func bindConfigDefaults(v *viper.Viper) {
 	// Intentionally no default: an empty identity secret disables signed visitor
 	// identities rather than silently trusting unsigned ones.
 	v.SetDefault("identity.secret", "")
+	v.SetDefault("identity.maxAgeMinutes", 1440)
 	v.SetDefault("storage.default", "local")
 	v.SetDefault("storage.maxUploadSizeMB", 20)
 	v.SetDefault("storage.local.root", "data/storage")
@@ -531,6 +543,7 @@ func bindEnvironmentAliases(v *viper.Viper) {
 	_ = v.BindEnv("auth.tokenTTLHours", "AGENT_DESK_AUTH_TOKENTTLHOURS", "AUTH_TOKEN_TTL_HOURS")
 	_ = v.BindEnv("customerSession.secret", "AGENT_DESK_CUSTOMERSESSION_SECRET", "CUSTOMER_SESSION_SECRET", "SESSION_SECRET", "JWT_SECRET")
 	_ = v.BindEnv("identity.secret", "AGENT_DESK_IDENTITY_SECRET", "AGENT_DESK_IDENTITY_HMAC_SECRET", "IDENTITY_HMAC_SECRET", "WIDGET_IDENTITY_SECRET")
+	_ = v.BindEnv("identity.maxAgeMinutes", "AGENT_DESK_IDENTITY_MAXAGEMINUTES", "IDENTITY_SIGNATURE_MAX_AGE_MINUTES")
 	_ = v.BindEnv("storage.default", "AGENT_DESK_STORAGE_DEFAULT", "STORAGE_DEFAULT", "STORAGE_TYPE")
 	_ = v.BindEnv("storage.local.root", "AGENT_DESK_STORAGE_LOCAL_ROOT", "STORAGE_LOCAL_ROOT")
 	_ = v.BindEnv("storage.local.baseUrl", "AGENT_DESK_STORAGE_LOCAL_BASEURL", "STORAGE_LOCAL_BASE_URL")

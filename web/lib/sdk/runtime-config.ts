@@ -25,6 +25,7 @@ export function readSupportChatRuntimeConfig(): SupportChatRuntimeConfig {
       undefined,
     externalId: query.get("externalId") ?? undefined,
     externalIdSignature: query.get("externalIdSignature") ?? undefined,
+    externalIdSignedAt: Number(query.get("externalIdSignedAt")) || undefined,
     externalName: query.get("externalName") ?? undefined,
     userToken: query.get("userToken") ?? undefined,
     title: query.get("title") ?? undefined,

@@ -128,7 +128,7 @@ test("getChatUrl resolves a fresh userToken for each call", async () => {
   assert.equal(calls, 2)
 })
 
-test("getChatUrl forwards a signed externalId and resolves it per call", async () => {
+test("getChatUrl forwards a signed externalId with its timestamp", async () => {
   const seen = []
   const sandbox = await loadSdk({
     channelId: "ch_1",
@@ -137,7 +137,7 @@ test("getChatUrl forwards a signed externalId and resolves it per call", async (
     externalName: "Ivan",
     signExternalId: async (externalId) => {
       seen.push(externalId)
-      return `sig_${seen.length}`
+      return { signature: `sig_${seen.length}`, issuedAt: 1700000000 + seen.length }
     },
   })
 
@@ -146,11 +146,13 @@ test("getChatUrl forwards a signed externalId and resolves it per call", async (
 
   assert.equal(new URL(first).searchParams.get("externalId"), "u_10001")
   assert.equal(new URL(first).searchParams.get("externalIdSignature"), "sig_1")
+  assert.equal(new URL(first).searchParams.get("externalIdSignedAt"), "1700000001")
   assert.equal(new URL(second).searchParams.get("externalIdSignature"), "sig_2")
+  assert.equal(new URL(second).searchParams.get("externalIdSignedAt"), "1700000002")
   assert.deepEqual(seen, ["u_10001", "u_10001"])
 })
 
-test("no signer means no externalIdSignature parameter", async () => {
+test("no signer means no identity parameters", async () => {
   const sandbox = await loadSdk({
     channelId: "ch_1",
     baseUrl: "https://api.example",
@@ -161,6 +163,7 @@ test("no signer means no externalIdSignature parameter", async () => {
 
   assert.equal(new URL(url).searchParams.get("externalId"), "u_10001")
   assert.equal(new URL(url).searchParams.has("externalIdSignature"), false)
+  assert.equal(new URL(url).searchParams.has("externalIdSignedAt"), false)
 })
 
 test("signer without an externalId is not called", async () => {
@@ -170,7 +173,7 @@ test("signer without an externalId is not called", async () => {
     baseUrl: "https://api.example",
     signExternalId: async () => {
       calls += 1
-      return "sig"
+      return { signature: "sig", issuedAt: 1700000000 }
     },
   })
 
@@ -178,6 +181,40 @@ test("signer without an externalId is not called", async () => {
 
   assert.equal(calls, 0)
   assert.equal(new URL(url).searchParams.has("externalIdSignature"), false)
+})
+
+// A signature expires, so reopening on a long-lived host page must hand the frame
+// a fresh one instead of leaving the stale pair in its URL.
+test("reopening reloads the frame when a fresh signature was issued", async () => {
+  let issued = 0
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    externalId: "u_10001",
+    signExternalId: async () => {
+      issued += 1
+      return { signature: `sig_${issued}`, issuedAt: 1700000000 + issued }
+    },
+  })
+  await flushPromises()
+
+  const widget = sandbox.window.AgentDeskWidget
+  await widget.open()
+  const frame = sandbox.document.body.children.find(
+    (child) => child.dataset.agentDeskWidget === "frame"
+  )
+  assert.ok(frame, "expected the launcher click to create the frame")
+  const firstSrc = frame.src
+  assert.ok(firstSrc.includes("externalIdSignature=sig_1"), `frame src = ${firstSrc}`)
+
+  widget.close()
+  await widget.open()
+
+  const reloaded = sandbox.document.body.children.find(
+    (child) => child.dataset.agentDeskWidget === "frame"
+  )
+  assert.ok(reloaded.src.includes("externalIdSignature=sig_2"), `frame src after reopen = ${reloaded.src}`)
+  assert.notEqual(reloaded.src, firstSrc)
 })
 
 test("launcher click creates chat iframe with a freshly resolved userToken", async () => {

@@ -91,17 +91,27 @@ identity:
   # Deployment-wide shared secret a host platform uses to sign the external
   # visitor ID it passes to the widget. The host computes, with this same secret:
   #
-  #   signature = hex(HMAC-SHA256(secret, channelId + "\n" + externalId))
+  #   signature = hex(HMAC-SHA256(secret, channelId + "\n" + externalId + "\n" + issuedAt))
   #
-  # and sends it as externalIdSignature (or the X-External-Id-Signature header).
-  # The channel id is part of the payload on purpose: visitor identities are
-  # stored globally, so a signature minted for one channel must not grant the
-  # same asserted identity on another.
+  # where issuedAt is unix seconds, and sends both values as
+  # externalIdSignature / externalIdSignedAt (or the X-External-Id-Signature and
+  # X-External-Id-Signed-At headers).
+  #
+  # Two details are deliberate. The channel id is part of the payload because
+  # visitor identities are stored globally, so a signature minted for one
+  # channel must not assert the same identity on another. The timestamp is part
+  # of the signed bytes even though it also travels as its own field, so a
+  # captured signature cannot be re-dated.
   #
   # Leave empty to disable the feature. A visitor whose signature is missing or
   # wrong is then always treated as an anonymous guest, never as an identified
   # user, so an unsigned embed keeps working unchanged.
   secret: ""
+  # How long a signed identity stays acceptable, in minutes. This bounds how
+  # long a leaked signature can be replayed; it is not needed to protect the
+  # secret, which HMAC does not allow to be derived. A small forward clock skew
+  # is always tolerated. Values <= 0 fall back to 1440 (24 hours).
+  maxAgeMinutes: 1440
 
 storage:
   # Default file storage provider used for uploads. Supported values: local, oss.
