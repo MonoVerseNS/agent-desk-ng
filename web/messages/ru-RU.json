@@ -529,6 +529,8 @@
     "uploadImageFailed": "Не удалось загрузить изображение.",
     "sendAttachmentFailed": "Не удалось отправить вложение.",
     "closeConversationFailed": "Не удалось закрыть диалог.",
+    "pageTitle": "Онлайн-поддержка",
+    "pageDescription": "Задайте вопрос здесь. История обращений сохраняется в этом браузере.",
     "refreshFailed": "Не удалось обновить чат."
   },
   "dashboardHome": {

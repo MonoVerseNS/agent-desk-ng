@@ -529,6 +529,8 @@
     "uploadImageFailed": "上传图片失败",
     "sendAttachmentFailed": "发送附件失败",
     "closeConversationFailed": "关闭会话失败",
+    "pageTitle": "在线客服",
+    "pageDescription": "直接在这里提问，历史记录会保存在您的浏览器中。",
     "refreshFailed": "刷新失败"
   },
   "dashboardHome": {

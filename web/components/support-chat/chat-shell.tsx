@@ -107,7 +107,7 @@ function useSupportChatSystemTheme() {
   }, [])
 }
 
-function isEmbeddedInHost() {
+export function isEmbeddedInHost() {
   if (typeof window === "undefined") {
     return false
   }
@@ -119,7 +119,12 @@ function isEmbeddedInHost() {
   }
 }
 
-export function SupportChatShell() {
+/**
+ * The chat panel without any outer sizing. Both the embedded iframe frame and
+ * the standalone support page render this, so the surrounding chrome decides
+ * how much room it gets.
+ */
+export function SupportChatPanel() {
   const t = useI18n()
   useSupportChatSystemTheme()
 
@@ -293,11 +298,11 @@ export function SupportChatShell() {
   }, [isCloseDialogOpen, isClosingConversation])
 
   return (
-    <main
-      className="relative flex h-[100dvh] min-h-[100dvh] overflow-hidden bg-muted text-foreground supports-not-[height:100dvh]:h-screen supports-not-[height:100dvh]:min-h-screen"
-      style={{ "--primary": themeColor } as CSSProperties}
-    >
-      <section className="flex h-full w-full flex-col overflow-hidden bg-card text-card-foreground">
+    <>
+      <section
+        className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-card text-card-foreground"
+        style={{ "--primary": themeColor } as CSSProperties}
+      >
         <header className="shrink-0 border-b border-border/70 bg-card/95 px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur dark:border-border/60 dark:bg-card/90 sm:px-4">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -480,6 +485,18 @@ export function SupportChatShell() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  )
+}
+
+/**
+ * The embedded widget frame. The host sizes the iframe, so the panel always
+ * fills the whole document box.
+ */
+export function SupportChatShell() {
+  return (
+    <main className="relative flex h-[100dvh] min-h-[100dvh] overflow-hidden bg-muted text-foreground supports-not-[height:100dvh]:h-screen supports-not-[height:100dvh]:min-h-screen">
+      <SupportChatPanel />
     </main>
   )
 }

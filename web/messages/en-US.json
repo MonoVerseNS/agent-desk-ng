@@ -529,6 +529,8 @@
     "uploadImageFailed": "Could not upload the image.",
     "sendAttachmentFailed": "Could not send the attachment.",
     "closeConversationFailed": "Could not close the conversation.",
+    "pageTitle": "Live Support",
+    "pageDescription": "Ask your question here. Your request history is kept in this browser.",
     "refreshFailed": "Could not refresh the chat."
   },
   "dashboardHome": {
