@@ -42,7 +42,7 @@
 
 .content-editor-markdown .cm-content,
 .content-editor-markdown .cm-line {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-app-mono), monospace;
   font-size: 0.875rem;
   line-height: 1.75;
 }
