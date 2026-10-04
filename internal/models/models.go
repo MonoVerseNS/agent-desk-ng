@@ -523,6 +523,7 @@ type ChannelMessageOutbox struct {
 	RetryCount     int        `gorm:"type:int;not null;default:0"`                                               // RetryCount 为已重试次数。
 	NextRetryAt    *time.Time `gorm:"index"`                                                                     // NextRetryAt 为下一次允许重试时间。
 	LastError      string     `gorm:"type:text"`                                                                 // LastError 为最近一次发送失败信息。
+	SendDetail     string     `gorm:"type:text"`                                                                 // SendDetail 为最近一次发送的结果详情，成功与失败均会写入。
 	SentAt         *time.Time `gorm:"index"`                                                                     // SentAt 为最终发送成功时间。
 	AuditFields
 }
