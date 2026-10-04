@@ -1,8 +1,16 @@
-const SEEDED_ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super admin",
-  admin: "Admin",
-  cs_team_leader: "Support team lead",
-  cs_user: "Support agent",
+const SEEDED_ROLE_LABELS: Record<string, Record<string, string>> = {
+  "en-US": {
+    super_admin: "Super admin",
+    admin: "Admin",
+    cs_team_leader: "Support team lead",
+    cs_user: "Support agent",
+  },
+  "ru-RU": {
+    super_admin: "Суперадминистратор",
+    admin: "Администратор",
+    cs_team_leader: "Руководитель команды поддержки",
+    cs_user: "Оператор поддержки",
+  },
 }
 
 export function getRoleDisplayName(
@@ -10,9 +18,10 @@ export function getRoleDisplayName(
   fallbackName: string,
   locale: string
 ) {
-  if (locale !== "en-US") {
+  const labels = SEEDED_ROLE_LABELS[locale]
+  if (!labels) {
     return fallbackName
   }
-  const label = SEEDED_ROLE_LABELS[code?.trim() ?? ""]
+  const label = labels[code?.trim() ?? ""]
   return label || fallbackName
 }
