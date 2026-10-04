@@ -380,6 +380,7 @@ error.wxwork.emailTaken: "Этот адрес электронной почты 
 error.wxwork.configIncomplete: "WeCom не включён или его конфигурация неполная."
 error.customerSession.secretMissing: "Не задан секрет сессии клиента."
 error.conversation.createFailed: "Не удалось создать диалог."
+error.conversation.tooManyOpen: "У вас уже {0} открытых обращений. Закройте одно из них, прежде чем создать новое."
 error.conversation.tagNotFound: "Тег не найден."
 error.aiConfig.noneEnabled: "Не настроена ни одна доступная конфигурация ИИ."
 error.embeddingModel.noneEnabled: "Не настроена ни одна доступная модель эмбеддингов."

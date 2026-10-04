@@ -402,6 +402,7 @@ type Conversation struct {
 	LastMessageAt       time.Time                       `gorm:"index"`                                       // LastMessageAt 为最后消息时间。
 	LastActiveAt        time.Time                       `gorm:"index"`                                       // LastActiveAt 为会话最近活跃时间。
 	LastMessageSummary  string                          `gorm:"type:varchar(255);not null;default:''"`       // LastMessageSummary 为最后一条消息摘要。
+	Subject             string                          `gorm:"type:varchar(255);not null;default:''"`       // Subject 为访客发起会话时填写的主题，用于在其请求列表中区分多条会话；未填写时展示由 CustomerName 兜底。
 	CustomerUnreadCount int                             `gorm:"type:int;not null;default:0"`                 // CustomerUnreadCount 为用户侧未读数。
 	AgentUnreadCount    int                             `gorm:"type:int;not null;default:0"`                 // AgentUnreadCount 为客服侧未读数。
 	HandoffAt           *time.Time                      `gorm:"index"`                                       // HandoffAt 为最近一次转人工时间。

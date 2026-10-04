@@ -39,6 +39,12 @@ type CloseConversationRequest struct {
 	CloseReason    string `json:"closeReason"`
 }
 
+// CreateCustomerConversationRequest 访客主动新建请求的入参。
+type CreateCustomerConversationRequest struct {
+	// Subject 是访客填写的请求主题，用于在其请求列表中区分多条会话；留空时由前端用兜底文案。
+	Subject string `json:"subject"`
+}
+
 type ReadConversationRequest struct {
 	ConversationID int64 `json:"conversationId"`
 	MessageID      int64 `json:"messageId"`

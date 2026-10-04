@@ -26,6 +26,7 @@ type Config struct {
 	OIDC            OIDCConfig            `yaml:"oidc"`
 	CustomerSession CustomerSessionConfig `yaml:"customerSession"`
 	Identity        IdentityConfig        `yaml:"identity"`
+	Conversation    ConversationConfig    `yaml:"conversation"`
 	Webhook         WebhookConfig         `yaml:"webhook"`
 	Discord         DiscordConfig         `yaml:"discord"`
 	Email           EmailConfig           `yaml:"email"`
@@ -230,6 +231,30 @@ func (c IdentityConfig) MaxAge() time.Duration {
 		return 24 * time.Hour
 	}
 	return time.Duration(c.MaxAgeMinutes) * time.Minute
+}
+
+// ConversationConfig holds visitor-facing conversation limits.
+type ConversationConfig struct {
+	// CustomerMaxOpen caps how many not-yet-closed conversations one visitor may
+	// have at a time. It exists to protect agents, not the visitor: every open
+	// conversation is real work, and in human-only mode opening one dispatches
+	// an agent immediately. Without a cap a single caller could flood the queue,
+	// and the visitor cannot undo that by closing a conversation.
+	//
+	// 0 or unset falls back to the default of 3. Use -1 to remove the cap
+	// entirely, which is an explicit opt-out rather than something reached by
+	// omission.
+	CustomerMaxOpen int `yaml:"customerMaxOpen"`
+}
+
+func (c ConversationConfig) MaxOpen() int {
+	if c.CustomerMaxOpen < 0 {
+		return 0
+	}
+	if c.CustomerMaxOpen == 0 {
+		return 3
+	}
+	return c.CustomerMaxOpen
 }
 
 func (c CustomerSessionConfig) TTL() int {
@@ -544,6 +569,7 @@ func bindEnvironmentAliases(v *viper.Viper) {
 	_ = v.BindEnv("customerSession.secret", "AGENT_DESK_CUSTOMERSESSION_SECRET", "CUSTOMER_SESSION_SECRET", "SESSION_SECRET", "JWT_SECRET")
 	_ = v.BindEnv("identity.secret", "AGENT_DESK_IDENTITY_SECRET", "AGENT_DESK_IDENTITY_HMAC_SECRET", "IDENTITY_HMAC_SECRET", "WIDGET_IDENTITY_SECRET")
 	_ = v.BindEnv("identity.maxAgeMinutes", "AGENT_DESK_IDENTITY_MAXAGEMINUTES", "IDENTITY_SIGNATURE_MAX_AGE_MINUTES")
+	_ = v.BindEnv("conversation.customerMaxOpen", "AGENT_DESK_CONVERSATION_CUSTOMERMAXOPEN", "CONVERSATION_CUSTOMER_MAX_OPEN")
 	_ = v.BindEnv("storage.default", "AGENT_DESK_STORAGE_DEFAULT", "STORAGE_DEFAULT", "STORAGE_TYPE")
 	_ = v.BindEnv("storage.local.root", "AGENT_DESK_STORAGE_LOCAL_ROOT", "STORAGE_LOCAL_ROOT")
 	_ = v.BindEnv("storage.local.baseUrl", "AGENT_DESK_STORAGE_LOCAL_BASEURL", "STORAGE_LOCAL_BASE_URL")

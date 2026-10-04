@@ -7,6 +7,7 @@ import (
 
 	"agent-desk/internal/events"
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/config"
 	"agent-desk/internal/pkg/constants"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
@@ -26,6 +27,11 @@ import (
 )
 
 var ConversationService = newConversationService()
+
+// conversationSubjectMaxLength matches the Subject column width, so a
+// visitor-typed title is truncated before the write rather than being rejected
+// by the database.
+const conversationSubjectMaxLength = 255
 
 func newConversationService() *conversationService {
 	return &conversationService{}
@@ -85,25 +91,148 @@ func (s *conversationService) Updates(id int64, columns map[string]interface{}) 
 	return repositories.ConversationRepository.Updates(sqls.DB(), id, columns)
 }
 
-func (s *conversationService) getLatestNotFinishedByCustomerID(db *gorm.DB, customerID int64) *models.Conversation {
-	if customerID <= 0 {
-		return nil
+func (s *conversationService) resolveAIAgent(aiAgentID int64) (*models.AIAgent, error) {
+	aiAgent := AIAgentService.Get(aiAgentID)
+	if aiAgent == nil || aiAgent.Status != enums.StatusOk {
+		return nil, errorsx.InvalidParamI18n("error.e0002")
 	}
-	cnd := sqls.NewCnd()
-	cnd.Eq("customer_id", customerID)
+	return aiAgent, nil
+}
+
+// insertConversation writes the conversation row, its participant and the
+// creation event, and hands back the AI welcome message so the caller can
+// publish it only after the transaction has committed.
+func (s *conversationService) insertConversation(
+	ctx *sqls.TxContext,
+	externalUser openidentity.ExternalUser,
+	aiAgent *models.AIAgent,
+	channelID, customerID int64,
+	customerName, subject string,
+) (*models.Conversation, *models.Message, error) {
+	now := time.Now()
+	conversation := &models.Conversation{
+		AIAgentID:         aiAgent.ID,
+		ChannelID:         channelID,
+		CustomerID:        customerID,
+		CustomerName:      customerName,
+		Subject:           subject,
+		Status:            s.resolveInitialStatus(aiAgent.ServiceMode),
+		ServiceMode:       aiAgent.ServiceMode,
+		Priority:          0,
+		CurrentAssigneeID: 0,
+		CurrentTeamID:     0,
+		LastMessageAt:     now,
+		LastActiveAt:      now,
+		AuditFields:       utils.BuildAuditFields(nil),
+	}
+	if err := ctx.Tx.Create(conversation).Error; err != nil {
+		return nil, nil, err
+	}
+	if err := ConversationParticipantService.CreateCustomerParticipant(ctx, conversation.ID, externalUser); err != nil {
+		return nil, nil, err
+	}
+	if err := ConversationEventLogService.CreateEvent(ctx, conversation.ID, enums.IMEventTypeCreate, enums.IMSenderTypeCustomer, 0, "用户创建会话", ""); err != nil {
+		return nil, nil, err
+	}
+	welcomeMessage, err := MessageService.createAIWelcomeMessage(ctx, conversation, aiAgent, now)
+	if err != nil {
+		return nil, nil, err
+	}
+	return conversation, welcomeMessage, nil
+}
+
+// afterConversationCreated runs only once the creating transaction has
+// committed: realtime fan-out and human dispatch must not observe - or act on -
+// rows that a rollback would discard.
+func (s *conversationService) afterConversationCreated(
+	conversation *models.Conversation,
+	welcomeMessage *models.Message,
+	aiAgent *models.AIAgent,
+) (*models.Conversation, error) {
+	WsService.PublishConversationChanged(conversation, enums.IMRealtimeEventConversationCreated)
+	if welcomeMessage != nil {
+		if updatedConversation := s.Get(conversation.ID); updatedConversation != nil {
+			WsService.PublishMessageCreated(updatedConversation, welcomeMessage)
+			WsService.PublishConversationChanged(updatedConversation, enums.IMRealtimeEventConversationUpdated)
+		}
+	}
+
+	if aiAgent.ServiceMode == enums.IMConversationServiceModeHumanOnly {
+		if _, err := ConversationHumanDispatchService.ApplyHumanOnlyCreate(conversation.ID, *aiAgent); err != nil {
+			return nil, err
+		}
+	}
+	return s.Get(conversation.ID), nil
+}
+
+func (s *conversationService) countNotFinishedByCustomerID(db *gorm.DB, customerID int64) int64 {
+	if customerID <= 0 {
+		return 0
+	}
+	return repositories.ConversationRepository.Count(db, s.notFinishedCnd(customerID))
+}
+
+// notFinishedCnd is the single definition of "still open" so the resume path,
+// the cap and any future query cannot drift apart.
+func (s *conversationService) notFinishedCnd(customerID int64) *sqls.Cnd {
+	cnd := sqls.NewCnd().Eq("customer_id", customerID)
 	cnd.In("status", []enums.IMConversationStatus{
 		enums.IMConversationStatusAIServing,
 		enums.IMConversationStatusPending,
 		enums.IMConversationStatusActive,
 	})
+	return cnd
+}
+
+func (s *conversationService) getLatestNotFinishedByCustomerID(db *gorm.DB, customerID int64) *models.Conversation {
+	if customerID <= 0 {
+		return nil
+	}
+	cnd := s.notFinishedCnd(customerID)
 	cnd.Desc("id")
 	return repositories.ConversationRepository.FindOne(db, cnd)
 }
 
+// checkCustomerOpenLimit guards the queue rather than the visitor. Each open
+// conversation is real agent work, and in human-only mode creating one dispatches
+// an agent immediately, so without a cap one caller could flood the queue. A
+// visitor cannot undo that by closing a conversation, since they may legitimately
+// need one to stay open.
+func (s *conversationService) checkCustomerOpenLimit(db *gorm.DB, customerID int64) error {
+	maxOpen := config.Current().Conversation.MaxOpen()
+	if maxOpen <= 0 || customerID <= 0 {
+		return nil
+	}
+	open := s.countNotFinishedByCustomerID(db, customerID)
+	if open < int64(maxOpen) {
+		return nil
+	}
+	return errorsx.BusinessErrorI18n(0, "error.conversation.tooManyOpen", maxOpen)
+}
+
+// normalizeConversationSubject keeps a visitor-typed line usable as a list title.
+// It is capped to the column width on rune boundaries so a long or multi-byte
+// value cannot overflow the varchar on write.
+func normalizeConversationSubject(subject string) string {
+	subject = strings.Join(strings.Fields(subject), " ")
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
+		return ""
+	}
+	runes := []rune(subject)
+	if len(runes) > conversationSubjectMaxLength {
+		return strings.TrimSpace(string(runes[:conversationSubjectMaxLength]))
+	}
+	return subject
+}
+
+// Create resumes the visitor's most recent unfinished conversation, starting one
+// only when there is none. The widget depends on this so that reloading the page
+// rejoins the live thread instead of orphaning it.
 func (s *conversationService) Create(externalUser openidentity.ExternalUser, channelID, aiAgentID int64) (*models.Conversation, error) {
-	aiAgent := AIAgentService.Get(aiAgentID)
-	if aiAgent == nil || aiAgent.Status != enums.StatusOk {
-		return nil, errorsx.InvalidParamI18n("error.e0002")
+	aiAgent, err := s.resolveAIAgent(aiAgentID)
+	if err != nil {
+		return nil, err
 	}
 
 	var conversation *models.Conversation
@@ -129,31 +258,7 @@ func (s *conversationService) Create(externalUser openidentity.ExternalUser, cha
 			return nil
 		}
 		created = true
-		now := time.Now()
-		conversation = &models.Conversation{
-			AIAgentID:         aiAgentID,
-			ChannelID:         channelID,
-			CustomerID:        customerID,
-			CustomerName:      customerName,
-			Status:            s.resolveInitialStatus(aiAgent.ServiceMode),
-			ServiceMode:       aiAgent.ServiceMode,
-			Priority:          0,
-			CurrentAssigneeID: 0,
-			CurrentTeamID:     0,
-			LastMessageAt:     now,
-			LastActiveAt:      now,
-			AuditFields:       utils.BuildAuditFields(nil),
-		}
-		if err := ctx.Tx.Create(conversation).Error; err != nil {
-			return err
-		}
-		if err := ConversationParticipantService.CreateCustomerParticipant(ctx, conversation.ID, externalUser); err != nil {
-			return err
-		}
-		if err := ConversationEventLogService.CreateEvent(ctx, conversation.ID, enums.IMEventTypeCreate, enums.IMSenderTypeCustomer, 0, "用户创建会话", ""); err != nil {
-			return err
-		}
-		welcomeMessage, err = MessageService.createAIWelcomeMessage(ctx, conversation, aiAgent, now)
+		conversation, welcomeMessage, err = s.insertConversation(ctx, externalUser, aiAgent, channelID, customerID, customerName, "")
 		return err
 	}); err != nil {
 		return nil, err
@@ -164,22 +269,67 @@ func (s *conversationService) Create(externalUser openidentity.ExternalUser, cha
 	if !created {
 		return conversation, nil
 	}
+	return s.afterConversationCreated(conversation, welcomeMessage, aiAgent)
+}
 
-	// 推送会话创建事件
-	WsService.PublishConversationChanged(conversation, enums.IMRealtimeEventConversationCreated)
-	if welcomeMessage != nil {
-		if updatedConversation := s.Get(conversation.ID); updatedConversation != nil {
-			WsService.PublishMessageCreated(updatedConversation, welcomeMessage)
-			WsService.PublishConversationChanged(updatedConversation, enums.IMRealtimeEventConversationUpdated)
-		}
+// CreateNew always starts a fresh conversation. It backs the visitor's "new
+// request" action, so unlike Create it must never resume an unfinished one.
+func (s *conversationService) CreateNew(externalUser openidentity.ExternalUser, channelID, aiAgentID int64, subject string) (*models.Conversation, error) {
+	aiAgent, err := s.resolveAIAgent(aiAgentID)
+	if err != nil {
+		return nil, err
 	}
 
-	if aiAgent.ServiceMode == enums.IMConversationServiceModeHumanOnly {
-		if _, err := ConversationHumanDispatchService.ApplyHumanOnlyCreate(conversation.ID, *aiAgent); err != nil {
-			return nil, err
+	var conversation *models.Conversation
+	var welcomeMessage *models.Message
+	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+		customerID, err := CustomerService.EnsureExternalCustomer(ctx, externalUser)
+		if err != nil {
+			return err
 		}
+		if err := s.checkCustomerOpenLimit(ctx.Tx, customerID); err != nil {
+			return err
+		}
+		customerName := s.getCustomerName(ctx.Tx, customerID)
+		conversation, welcomeMessage, err = s.insertConversation(ctx, externalUser, aiAgent, channelID, customerID, customerName, normalizeConversationSubject(subject))
+		return err
+	}); err != nil {
+		return nil, err
 	}
-	return s.Get(conversation.ID), nil
+	if conversation == nil {
+		return nil, errorsx.BusinessErrorI18n(1, "error.conversation.createFailed")
+	}
+	return s.afterConversationCreated(conversation, welcomeMessage, aiAgent)
+}
+
+// ListCustomerConversations returns the visitor's own conversations, newest
+// activity first, so the widget can offer a request list. A visitor who has not
+// talked to us yet has no identity row and therefore an empty list, not an error.
+//
+// Scoping is by customer, not by channel: a CustomerIdentity is keyed by
+// (external_source, external_id) globally, so one signed visitor reaching us
+// through two channels is one person with one request history. For a guest the
+// external id is issued per channel, so their identities cannot collide across
+// channels anyway. Narrowing this to the current channel would silently hide the
+// visitor's earlier requests.
+func (s *conversationService) ListCustomerConversations(externalUser openidentity.ExternalUser, cnd *sqls.Cnd) ([]models.Conversation, *sqls.Paging, error) {
+	if cnd == nil {
+		cnd = sqls.NewCnd()
+	}
+	identity := repositories.CustomerIdentityRepository.GetBy(sqls.DB(), externalUser.ExternalSource, strings.TrimSpace(externalUser.ExternalID))
+	if identity == nil {
+		paging := &sqls.Paging{}
+		if cnd.Paging != nil {
+			*paging = *cnd.Paging
+		}
+		return []models.Conversation{}, paging, nil
+	}
+	cnd.Eq("customer_id", identity.CustomerID).Desc("last_active_at").Desc("id")
+	list, paging := repositories.ConversationRepository.FindPageByCnd(sqls.DB(), cnd)
+	if list == nil {
+		list = []models.Conversation{}
+	}
+	return list, paging, nil
 }
 
 func (s *conversationService) AssignConversation(req request.AssignConversationRequest, operator *dto.AuthPrincipal) error {

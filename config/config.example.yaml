@@ -113,6 +113,15 @@ identity:
   # is always tolerated. Values <= 0 fall back to 1440 (24 hours).
   maxAgeMinutes: 1440
 
+conversation:
+  # How many not-yet-closed conversations one visitor may have at a time.
+  # This protects agents rather than the visitor: every open conversation is
+  # real work, and in human-only mode opening one dispatches an agent at once.
+  # Without a cap a single caller could flood the queue, and the visitor cannot
+  # undo that by closing a conversation - they may need it kept open.
+  # Unset or 0 means 3; use -1 to remove the cap entirely.
+  customerMaxOpen: 3
+
 storage:
   # Default file storage provider used for uploads. Supported values: local, oss.
   # Empty value is treated as local by the backend.

@@ -36,6 +36,7 @@ export type ImConversation = {
   id: number
   channelId: number
   customerName: string
+  subject?: string
   status: number
   serviceMode: number
   priority: number
@@ -394,6 +395,27 @@ export function createOrMatchImConversation() {
   return request<ImConversation>("/api/conversation/create_or_match", {
     ...createRequestOptions({ method: "POST" }),
   })
+}
+
+// Starts a new request instead of rejoining the unfinished one. The server caps
+// how many open requests one visitor may have and answers with a localized
+// message when the cap is reached.
+export function createImConversation(subject?: string) {
+  return request<ImConversation>("/api/conversation/create", {
+    ...createRequestOptions({ method: "POST" }),
+    body: JSON.stringify({ subject: subject?.trim() ?? "" }),
+  })
+}
+
+// The visitor's own requests, newest activity first. Scoping comes from the
+// external identity the request already carries.
+export function fetchImConversationList(
+  query?: Record<string, string | number | undefined>
+) {
+  return request<PageResult<ImConversation>>(
+    `/api/conversation/list${toQueryString(query)}`,
+    createRequestOptions()
+  )
 }
 
 export function fetchImWidgetConfig() {

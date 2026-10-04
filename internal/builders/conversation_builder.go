@@ -25,6 +25,7 @@ func BuildConversationWithLocale(item *models.Conversation, locale string) respo
 		ChannelID:                 item.ChannelID,
 		CustomerID:                item.CustomerID,
 		CustomerName:              item.CustomerName,
+		Subject:                   item.Subject,
 		Status:                    item.Status,
 		ServiceMode:               item.ServiceMode,
 		Priority:                  item.Priority,

@@ -90,7 +90,9 @@ func registerApiCustomerRoutes(group *gin.RouterGroup, limits publicRateLimits) 
 
 func registerApiConversationRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", api.ConversationGetBy)
+	group.Any("/list", api.ConversationAnyList)
 	group.POST("/close", api.ConversationPostClose)
+	group.POST("/create", api.ConversationPostCreate)
 	group.POST("/create_or_match", api.ConversationPostCreate_or_match)
 }
 
