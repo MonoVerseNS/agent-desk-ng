@@ -1,5 +1,5 @@
 {
-"app": {
+  "app": {
     "brand": "Agent Desk",
     "metadataTitle": "Панель администратора ИИ-поддержки",
     "metadataDescription": "Панель администратора ИИ-поддержки"
@@ -193,7 +193,7 @@
     "deleted": "Страница удалена",
     "cancel": "Отмена"
   },
-"editor": {
+  "editor": {
     "placeholder": "Введите содержимое...",
     "undo": "Отменить",
     "redo": "Повторить",
@@ -339,7 +339,7 @@
       ]
     }
   },
-"account": {
+  "account": {
     "passwordRequired": "Введите новый пароль.",
     "confirmPasswordRequired": "Подтвердите новый пароль.",
     "passwordMismatch": "Пароли не совпадают.",
@@ -482,7 +482,6 @@
     "claimConfirmSuffix": "»? Он перейдёт в ваши диалоги.",
     "claimCurrent": "Взять текущий диалог в работу?",
     "customerFallbackPrefix": "Клиент #",
-    "cancel": "Отмена",
     "claiming": "Взятие в работу...",
     "confirmClaim": "Взять в работу"
   },
@@ -530,7 +529,7 @@
     "closeConversationFailed": "Не удалось закрыть диалог.",
     "refreshFailed": "Не удалось обновить чат."
   },
-"dashboardHome": {
+  "dashboardHome": {
     "rangeToday": "Сегодня",
     "range7d": "Последние 7 дней",
     "range30d": "Последние 30 дней",
@@ -778,7 +777,7 @@
     "wechatGuide2": "2. Укажите в пользовательском меню WeChat ссылку выше.",
     "wechatGuide3": "3. Пользователи откроют чат поддержки сразу после нажатия на пункт меню."
   },
-"upload": {
+  "upload": {
     "imagePlaceholder": "Загрузить изображение",
     "chooseImage": "Выберите файл изображения.",
     "imageTooLarge": "Размер изображения должен быть меньше {maxSize} МБ.",
@@ -1082,7 +1081,7 @@
     "senderCustomer": "Клиент",
     "senderSystem": "Система"
   },
-"user": {
+  "user": {
     "loadFailed": "Не удалось загрузить пользователей.",
     "loadRoleAssignFailed": "Не удалось загрузить данные назначения ролей.",
     "created": "Пользователь создан: {username}",
@@ -1367,7 +1366,7 @@
     "noMCPToolsHint": "Без инструментов MCP агент не будет вызывать внешние инструменты MCP.",
     "removeMCPTool": "Удалить инструмент MCP {name}"
   },
-"aiConfig": {
+  "aiConfig": {
     "allStatuses": "Все статусы",
     "allProviders": "Все провайдеры",
     "allTypes": "Все типы",
@@ -1636,7 +1635,7 @@
     "callSuccess": "Вызов выполнен успешно",
     "close": "Закрыть"
   },
-"agentProfile": {
+  "agentProfile": {
     "allStatuses": "Все статусы",
     "all": "Все",
     "statusIdle": "Свободен",
@@ -1964,7 +1963,7 @@
     "conversationMissing": "Диалог не найден.",
     "createSuccess": "Обращение создано."
   },
-"skillDefinition": {
+  "skillDefinition": {
     "allStatus": "Все статусы",
     "statusOk": "Включён",
     "statusDisabled": "Отключён",
@@ -2445,7 +2444,7 @@
     "delete": "Удалить",
     "more": "Ещё"
   },
-"widgetDemo": {
+  "widgetDemo": {
     "defaultName": "Демо-пользователь",
     "missingUserId": "Введите userId.",
     "missingName": "Введите имя пользователя.",
@@ -2781,13 +2780,15 @@
     "empty": "Ошибочных исходящих сообщений нет",
     "loadFailed": "Не удалось загрузить исходящие сообщения"
   },
-"supportPublic": {
+  "supportPublic": {
     "brand": "AgentDesk Support",
     "nav": {
       "home": "Главная",
       "help": "Справка",
       "questions": "FAQ",
-      "login": "Войти"
+      "login": "Войти",
+      "community": "Сообщество",
+      "siteNavigation": "Навигация сайта"
     },
     "home": {
       "badge": "Центр поддержки",
@@ -2806,7 +2807,9 @@
       "browseDocs": "Перейти к документации",
       "askQuestion": "Задать вопрос",
       "recommendedPages": "Рекомендуемые страницы",
-      "hotQuestions": "Популярные вопросы"
+      "hotQuestions": "Популярные вопросы",
+      "postsTitle": "Вопросы и ответы сообщества",
+      "postsDescription": "Посмотрите, что спрашивали и отвечали другие пользователи."
     },
     "help": {
       "title": "Центр справки",
@@ -2879,13 +2882,20 @@
       "loginAction": "Войти",
       "registerAction": "Зарегистрироваться и войти",
       "switchToRegister": "Нет учётной записи? Зарегистрируйтесь",
-      "switchToLogin": "Уже есть учётная запись? Войдите"
+      "switchToLogin": "Уже есть учётная запись? Войдите",
+      "account": "Учётная запись",
+      "accountPlaceholder": "Введите учётную запись",
+      "noMethodsDescription": "Администратор ещё не настроил ни одного способа входа. Попробуйте позже.",
+      "noMethodsTitle": "Нет доступного способа входа",
+      "welcomeBack": "С возвращением"
     },
     "account": {
       "loading": "Загрузка состояния входа",
       "openMenu": "Открыть меню учётной записи",
       "signOut": "Выйти",
-      "signingOut": "Выход..."
+      "signingOut": "Выход...",
+      "profile": "Профиль",
+      "editProfile": "Изменить профиль"
     },
     "actions": {
       "search": "Поиск",
@@ -2902,7 +2912,20 @@
       "retry": "Повторить",
       "loadMore": "Показать ещё",
       "viewDiscussion": "Посмотреть обсуждение",
-      "answerQuestion": "Ответить"
+      "answerQuestion": "Ответить",
+      "cancel": "Отмена",
+      "copyLink": "Копировать ссылку",
+      "createPost": "Создать тему",
+      "delete": "Удалить",
+      "edit": "Изменить",
+      "noMore": "Больше нет",
+      "publishComment": "Опубликовать комментарий",
+      "publishPost": "Опубликовать тему",
+      "publishReply": "Опубликовать ответ",
+      "reply": "Ответить",
+      "report": "Пожаловаться",
+      "save": "Сохранить",
+      "viewReplies": "Показать ответы"
     },
     "status": {
       "all": "Все",
@@ -2924,7 +2947,10 @@
       "noQuestionsMatched": "Вопросы не найдены",
       "questionsFailed": "Не удалось загрузить вопросы. Попробуйте позже.",
       "noAnswers": "Ответов пока нет",
-      "selectPage": "Выберите страницу слева"
+      "selectPage": "Выберите страницу слева",
+      "noComments": "Комментариев пока нет",
+      "noPostsMatched": "Темы не найдены",
+      "postsFailed": "Не удалось загрузить темы. Попробуйте позже."
     },
     "loading": {
       "categories": "Загрузка категорий…",
@@ -2932,20 +2958,89 @@
       "page": "Загрузка страницы...",
       "question": "Загрузка вопроса...",
       "questions": "Загрузка вопросов...",
-      "session": "Проверка состояния входа..."
+      "session": "Проверка состояния входа...",
+      "comments": "Загрузка комментариев...",
+      "post": "Загрузка темы...",
+      "posts": "Загрузка тем..."
     },
     "toast": {
       "feedbackSaved": "Спасибо за отзыв",
       "codeCopied": "Код скопирован",
       "answerCreated": "Ответ опубликован",
       "questionCreated": "Вопрос опубликован",
-      "loggedIn": "Вы вошли в систему"
+      "loggedIn": "Вы вошли в систему",
+      "commentCreated": "Комментарий опубликован",
+      "commentDeleted": "Комментарий удалён",
+      "commentReported": "Жалоба отправлена",
+      "commentUpdated": "Комментарий обновлён",
+      "linkCopied": "Ссылка скопирована",
+      "postCreated": "Тема опубликована",
+      "profileUpdated": "Профиль обновлён",
+      "replyCreated": "Ответ опубликован"
     },
     "a11y": {
       "openNavigation": "Открыть навигацию документации",
       "closeNavigation": "Закрыть навигацию документации",
       "collapse": "Свернуть вложенные страницы",
-      "expand": "Развернуть вложенные страницы"
+      "expand": "Развернуть вложенные страницы",
+      "openMenu": "Открыть меню",
+      "closeMenu": "Закрыть меню"
+    },
+    "comment": {
+      "accepted": "Принят",
+      "authorBadge": "Автор",
+      "count": "Комментариев: {count}",
+      "deleteConfirm": "Удалить этот комментарий?",
+      "deleted": "Комментарий удалён",
+      "placeholder": "Напишите комментарий...",
+      "replyPlaceholder": "Напишите ответ...",
+      "sort": {
+        "default": "По умолчанию",
+        "hot": "Популярные",
+        "latest": "Новые"
+      },
+      "title": "Комментарии"
+    },
+    "createPost": {
+      "categoriesFailed": "Не удалось загрузить категории. Нажмите, чтобы повторить.",
+      "category": "Категория",
+      "categoryRequired": "Выберите категорию",
+      "content": "Подробности",
+      "contentPlaceholder": "Опишите свой вопрос или поделитесь опытом",
+      "contentRequired": "Добавьте подробности темы",
+      "formTitle": "Опубликовать тему",
+      "postTitle": "Заголовок",
+      "postTitlePlaceholder": "Сформулируйте тему в одном предложении",
+      "tags": "Теги",
+      "tagsPlaceholder": "Разделяйте теги запятыми",
+      "titleRequired": "Введите заголовок"
+    },
+    "posts": {
+      "categoriesFailed": "Не удалось загрузить категории. Нажмите, чтобы повторить.",
+      "categoryNavigation": "Категории тем",
+      "comments": "Комментарии",
+      "createdBy": "Опубликовал {name}",
+      "likes": "Нравится",
+      "title": "Темы",
+      "updatedAt": "Обновлено {date}",
+      "views": "Просмотры"
+    },
+    "profile": {
+      "avatar": "Аватар",
+      "avatarPlaceholder": "Загрузите аватар",
+      "communityDescription": "Посмотрите темы, которые вы опубликовали в сообществе.",
+      "communityTitle": "Активность в сообществе",
+      "edit": "Изменить профиль",
+      "editDescription": "Обновите аватар, отображаемое имя и email.",
+      "editTitle": "Изменение профиля",
+      "email": "Email",
+      "emailPlaceholder": "Введите email",
+      "emailUnset": "Не задан",
+      "nickname": "Отображаемое имя",
+      "nicknamePlaceholder": "Введите отображаемое имя",
+      "nicknameRequired": "Введите отображаемое имя",
+      "noPosts": "Вы ещё не опубликовали ни одной темы",
+      "username": "Имя пользователя"
     }
   },
   "nav": {

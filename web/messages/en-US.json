@@ -482,7 +482,6 @@
     "claimConfirmSuffix": "\"? It will move to your conversations.",
     "claimCurrent": "Claim the current conversation?",
     "customerFallbackPrefix": "Customer #",
-    "cancel": "Cancel",
     "claiming": "Claiming...",
     "confirmClaim": "Claim"
   },
@@ -653,26 +652,26 @@
     "discordSetupTitle": "Discord Bot Connection",
     "discordSetupDescription": "Create a bot in the Discord Developer Portal, enable the Message Content privileged intent, invite it to your server, and point an interaction or bridge endpoint at the webhook URL below. Leave the bot token empty to use the deployment-wide DISCORD_BOT_TOKEN.",
     "inboundWebhookUrl": "Inbound Webhook Endpoint",
-"typeEmail": "Email Support",
-"emailAddress": "Support Email Address",
-"senderName": "Sender Display Name",
-"emailProvider": "Email Delivery Service",
-"emailProviderDefault": "System Default (.env / config.yaml)",
-"emailProviderSmtp": "Custom SMTP Server",
-"emailProviderBrevo": "Brevo API",
-"emailProviderSendGrid": "SendGrid API",
-"emailProviderResend": "Resend API",
-"emailProviderPostmark": "Postmark API",
-"emailProviderMailgun": "Mailgun API",
-"emailApiKey": "API Key",
-"emailAutoConnectTitle": "Automatic Inbound Email Ingestion",
-"emailAutoConnectDescription": "Forward emails sent to your support address to the Inbound Webhook endpoint to automatically convert incoming emails into tickets and trigger AI agent responses.",
-"configEmailDescription": "Configure inbound email webhook ingestion and outbound delivery across SMTP, Brevo, SendGrid, Resend, Postmark, or Mailgun.",
-"emailAddressRequired": "Support email address is required",
-"smtpHost": "SMTP Host",
-"smtpPort": "SMTP Port",
-"smtpUser": "SMTP Username",
-"smtpPassword": "SMTP Password",
+    "typeEmail": "Email Support",
+    "emailAddress": "Support Email Address",
+    "senderName": "Sender Display Name",
+    "emailProvider": "Email Delivery Service",
+    "emailProviderDefault": "System Default (.env / config.yaml)",
+    "emailProviderSmtp": "Custom SMTP Server",
+    "emailProviderBrevo": "Brevo API",
+    "emailProviderSendGrid": "SendGrid API",
+    "emailProviderResend": "Resend API",
+    "emailProviderPostmark": "Postmark API",
+    "emailProviderMailgun": "Mailgun API",
+    "emailApiKey": "API Key",
+    "emailAutoConnectTitle": "Automatic Inbound Email Ingestion",
+    "emailAutoConnectDescription": "Forward emails sent to your support address to the Inbound Webhook endpoint to automatically convert incoming emails into tickets and trigger AI agent responses.",
+    "configEmailDescription": "Configure inbound email webhook ingestion and outbound delivery across SMTP, Brevo, SendGrid, Resend, Postmark, or Mailgun.",
+    "emailAddressRequired": "Support email address is required",
+    "smtpHost": "SMTP Host",
+    "smtpPort": "SMTP Port",
+    "smtpUser": "SMTP Username",
+    "smtpPassword": "SMTP Password",
     "loadFailed": "Could not load channels.",
     "created": "Channel created: {name}",
     "updated": "Channel updated: {name}",
@@ -2787,7 +2786,9 @@
       "home": "Home",
       "help": "Help",
       "questions": "FAQ",
-      "login": "Log In"
+      "login": "Log In",
+      "community": "Community",
+      "siteNavigation": "Site navigation"
     },
     "home": {
       "badge": "Support Center",
@@ -2806,7 +2807,9 @@
       "browseDocs": "Browse help docs",
       "askQuestion": "Ask a question",
       "recommendedPages": "Recommended Pages",
-      "hotQuestions": "Popular Questions"
+      "hotQuestions": "Popular Questions",
+      "postsTitle": "Community Q&A",
+      "postsDescription": "See what other users asked and answered."
     },
     "help": {
       "title": "Help Center",
@@ -2879,13 +2882,20 @@
       "loginAction": "Log In",
       "registerAction": "Register and Log In",
       "switchToRegister": "No account? Register",
-      "switchToLogin": "Already have an account? Log in"
+      "switchToLogin": "Already have an account? Log in",
+      "account": "Account",
+      "accountPlaceholder": "Enter your account",
+      "noMethodsDescription": "No sign-in method has been configured yet. Please try again later.",
+      "noMethodsTitle": "No sign-in method available",
+      "welcomeBack": "Welcome back"
     },
     "account": {
       "loading": "Loading sign-in status",
       "openMenu": "Open account menu",
       "signOut": "Sign out",
-      "signingOut": "Signing out..."
+      "signingOut": "Signing out...",
+      "profile": "Profile",
+      "editProfile": "Edit profile"
     },
     "actions": {
       "search": "Search",
@@ -2902,7 +2912,20 @@
       "retry": "Retry",
       "loadMore": "Load more",
       "viewDiscussion": "View discussion",
-      "answerQuestion": "Answer"
+      "answerQuestion": "Answer",
+      "cancel": "Cancel",
+      "copyLink": "Copy link",
+      "createPost": "New post",
+      "delete": "Delete",
+      "edit": "Edit",
+      "noMore": "No more",
+      "publishComment": "Post comment",
+      "publishPost": "Publish post",
+      "publishReply": "Post reply",
+      "reply": "Reply",
+      "report": "Report",
+      "save": "Save",
+      "viewReplies": "View replies"
     },
     "status": {
       "all": "All",
@@ -2924,7 +2947,10 @@
       "noQuestionsMatched": "No questions found",
       "questionsFailed": "Could not load questions. Try again later.",
       "noAnswers": "No answers yet",
-      "selectPage": "Select a page on the left"
+      "selectPage": "Select a page on the left",
+      "noComments": "No comments yet",
+      "noPostsMatched": "No posts found",
+      "postsFailed": "Could not load posts. Try again later."
     },
     "loading": {
       "categories": "Loading categories…",
@@ -2932,20 +2958,89 @@
       "page": "Loading page...",
       "question": "Loading question...",
       "questions": "Loading questions...",
-      "session": "Checking sign-in status..."
+      "session": "Checking sign-in status...",
+      "comments": "Loading comments...",
+      "post": "Loading post...",
+      "posts": "Loading posts..."
     },
     "toast": {
       "feedbackSaved": "Thanks for the feedback",
       "codeCopied": "Code copied",
       "answerCreated": "Answer published",
       "questionCreated": "Question published",
-      "loggedIn": "Logged in"
+      "loggedIn": "Logged in",
+      "commentCreated": "Comment published",
+      "commentDeleted": "Comment deleted",
+      "commentReported": "Comment reported",
+      "commentUpdated": "Comment updated",
+      "linkCopied": "Link copied",
+      "postCreated": "Post published",
+      "profileUpdated": "Profile updated",
+      "replyCreated": "Reply published"
     },
     "a11y": {
       "openNavigation": "Open documentation navigation",
       "closeNavigation": "Close documentation navigation",
       "collapse": "Collapse child pages",
-      "expand": "Expand child pages"
+      "expand": "Expand child pages",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
+    },
+    "comment": {
+      "accepted": "Accepted",
+      "authorBadge": "Author",
+      "count": "{count} comments",
+      "deleteConfirm": "Delete this comment?",
+      "deleted": "Comment deleted",
+      "placeholder": "Write your comment...",
+      "replyPlaceholder": "Write your reply...",
+      "sort": {
+        "default": "Default",
+        "hot": "Hot",
+        "latest": "Latest"
+      },
+      "title": "Comments"
+    },
+    "createPost": {
+      "categoriesFailed": "Could not load categories. Click to retry.",
+      "category": "Category",
+      "categoryRequired": "Select a category",
+      "content": "Details",
+      "contentPlaceholder": "Describe your question or share what you know",
+      "contentRequired": "Add the post details",
+      "formTitle": "Publish a post",
+      "postTitle": "Title",
+      "postTitlePlaceholder": "Summarize your topic in one sentence",
+      "tags": "Tags",
+      "tagsPlaceholder": "Separate tags with commas",
+      "titleRequired": "Enter a title"
+    },
+    "posts": {
+      "categoriesFailed": "Could not load categories. Click to retry.",
+      "categoryNavigation": "Post categories",
+      "comments": "Comments",
+      "createdBy": "Posted by {name}",
+      "likes": "Likes",
+      "title": "Posts",
+      "updatedAt": "Updated {date}",
+      "views": "Views"
+    },
+    "profile": {
+      "avatar": "Avatar",
+      "avatarPlaceholder": "Upload avatar",
+      "communityDescription": "Review the posts you published in the community.",
+      "communityTitle": "Community activity",
+      "edit": "Edit profile",
+      "editDescription": "Update your avatar, nickname, and email.",
+      "editTitle": "Edit profile",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email",
+      "emailUnset": "Not set",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "Enter your nickname",
+      "nicknameRequired": "Enter a nickname",
+      "noPosts": "You have not published any posts yet",
+      "username": "Username"
     }
   },
   "nav": {

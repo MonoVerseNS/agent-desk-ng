@@ -482,7 +482,6 @@
     "claimConfirmSuffix": "”吗？认领后会话会进入我的列表。",
     "claimCurrent": "确认认领当前会话吗？",
     "customerFallbackPrefix": "客户 #",
-    "cancel": "取消",
     "claiming": "认领中...",
     "confirmClaim": "确认认领"
   },
@@ -653,26 +652,26 @@
     "discordSetupTitle": "Discord 机器人接入",
     "discordSetupDescription": "在 Discord Developer Portal 创建机器人，开启 Message Content 特权意图，邀请机器人进入服务器，并将交互或转发端点指向下方的 Webhook 地址。Bot Token 留空则使用部署级 DISCORD_BOT_TOKEN。",
     "inboundWebhookUrl": "入站 Webhook 地址",
-"typeEmail": "邮件客服",
-"emailAddress": "支持邮箱地址",
-"senderName": "发件人显示名称",
-"emailProvider": "邮件发送服务",
-"emailProviderDefault": "系统默认配置 (.env / config.yaml)",
-"emailProviderSmtp": "自定义 SMTP 服务器",
-"emailProviderBrevo": "Brevo API",
-"emailProviderSendGrid": "SendGrid API",
-"emailProviderResend": "Resend API",
-"emailProviderPostmark": "Postmark API",
-"emailProviderMailgun": "Mailgun API",
-"emailApiKey": "API Key",
-"emailAutoConnectTitle": "邮件客服自动接入",
-"emailAutoConnectDescription": "将发送至支持邮箱的邮件通过 Webhook 转发至 Inbound Webhook 接口，自动创建工单并触发 AI Agent 回复。",
-"configEmailDescription": "配置邮件 Inbound Webhook 接入与 SMTP / Brevo / SendGrid / Resend / Postmark / Mailgun 邮件发送。",
-"emailAddressRequired": "请填写支持邮箱地址",
-"smtpHost": "SMTP 服务器",
-"smtpPort": "SMTP 端口",
-"smtpUser": "SMTP 用户名",
-"smtpPassword": "SMTP 密码",
+    "typeEmail": "邮件客服",
+    "emailAddress": "支持邮箱地址",
+    "senderName": "发件人显示名称",
+    "emailProvider": "邮件发送服务",
+    "emailProviderDefault": "系统默认配置 (.env / config.yaml)",
+    "emailProviderSmtp": "自定义 SMTP 服务器",
+    "emailProviderBrevo": "Brevo API",
+    "emailProviderSendGrid": "SendGrid API",
+    "emailProviderResend": "Resend API",
+    "emailProviderPostmark": "Postmark API",
+    "emailProviderMailgun": "Mailgun API",
+    "emailApiKey": "API Key",
+    "emailAutoConnectTitle": "邮件客服自动接入",
+    "emailAutoConnectDescription": "将发送至支持邮箱的邮件通过 Webhook 转发至 Inbound Webhook 接口，自动创建工单并触发 AI Agent 回复。",
+    "configEmailDescription": "配置邮件 Inbound Webhook 接入与 SMTP / Brevo / SendGrid / Resend / Postmark / Mailgun 邮件发送。",
+    "emailAddressRequired": "请填写支持邮箱地址",
+    "smtpHost": "SMTP 服务器",
+    "smtpPort": "SMTP 端口",
+    "smtpUser": "SMTP 用户名",
+    "smtpPassword": "SMTP 密码",
     "loadFailed": "加载接入渠道失败",
     "created": "已创建接入渠道：{name}",
     "updated": "已更新接入渠道：{name}",
@@ -1999,7 +1998,6 @@
     "searchStatus": "搜索状态",
     "emptyStatus": "未找到状态",
     "query": "查询",
-    "status": "状态",
     "updatedAt": "最近更新",
     "actions": "操作",
     "loadingRows": "正在加载 Skill...",
@@ -2788,7 +2786,9 @@
       "home": "首页",
       "help": "帮助",
       "questions": "FAQ",
-      "login": "登录"
+      "login": "登录",
+      "community": "社区",
+      "siteNavigation": "站点导航"
     },
     "home": {
       "badge": "支持中心",
@@ -2807,7 +2807,9 @@
       "browseDocs": "浏览帮助文档",
       "askQuestion": "提出一个问题",
       "recommendedPages": "推荐页面",
-      "hotQuestions": "热门问题"
+      "hotQuestions": "热门问题",
+      "postsTitle": "社区问答",
+      "postsDescription": "看看其他用户的问题和解答。"
     },
     "help": {
       "title": "帮助中心",
@@ -2880,13 +2882,20 @@
       "loginAction": "登录",
       "registerAction": "注册并登录",
       "switchToRegister": "没有账号，去注册",
-      "switchToLogin": "已有账号，去登录"
+      "switchToLogin": "已有账号，去登录",
+      "account": "账号",
+      "accountPlaceholder": "请输入账号",
+      "noMethodsDescription": "管理员尚未配置任何登录方式，请稍后再试。",
+      "noMethodsTitle": "暂无可用登录方式",
+      "welcomeBack": "欢迎回来"
     },
     "account": {
       "loading": "正在加载登录状态",
       "openMenu": "打开账号菜单",
       "signOut": "退出登录",
-      "signingOut": "正在退出..."
+      "signingOut": "正在退出...",
+      "profile": "个人中心",
+      "editProfile": "编辑资料"
     },
     "actions": {
       "search": "搜索",
@@ -2903,7 +2912,20 @@
       "retry": "重试",
       "loadMore": "加载更多",
       "viewDiscussion": "查看讨论",
-      "answerQuestion": "参与回答"
+      "answerQuestion": "参与回答",
+      "cancel": "取消",
+      "copyLink": "复制链接",
+      "createPost": "发布主题",
+      "delete": "删除",
+      "edit": "编辑",
+      "noMore": "没有更多了",
+      "publishComment": "发布评论",
+      "publishPost": "发布主题",
+      "publishReply": "发布回复",
+      "reply": "回复",
+      "report": "举报",
+      "save": "保存",
+      "viewReplies": "查看回复"
     },
     "status": {
       "all": "全部",
@@ -2925,7 +2947,10 @@
       "noQuestionsMatched": "没有找到问题",
       "questionsFailed": "问题加载失败，请稍后重试",
       "noAnswers": "暂无回答",
-      "selectPage": "选择左侧页面查看内容"
+      "selectPage": "选择左侧页面查看内容",
+      "noComments": "还没有评论",
+      "noPostsMatched": "没有匹配的主题",
+      "postsFailed": "加载主题失败，请稍后重试。"
     },
     "loading": {
       "categories": "正在加载分类…",
@@ -2933,20 +2958,89 @@
       "page": "正在加载页面...",
       "question": "正在加载问题...",
       "questions": "正在加载问题...",
-      "session": "正在检查登录状态..."
+      "session": "正在检查登录状态...",
+      "comments": "正在加载评论...",
+      "post": "正在加载主题...",
+      "posts": "正在加载主题..."
     },
     "toast": {
       "feedbackSaved": "感谢反馈",
       "codeCopied": "代码已复制",
       "answerCreated": "回答已发布",
       "questionCreated": "问题已发布",
-      "loggedIn": "已登录"
+      "loggedIn": "已登录",
+      "commentCreated": "评论已发布",
+      "commentDeleted": "评论已删除",
+      "commentReported": "举报已提交",
+      "commentUpdated": "评论已更新",
+      "linkCopied": "链接已复制",
+      "postCreated": "主题已发布",
+      "profileUpdated": "资料已更新",
+      "replyCreated": "回复已发布"
     },
     "a11y": {
       "openNavigation": "打开文档导航",
       "closeNavigation": "关闭文档导航",
       "collapse": "折叠子页面",
-      "expand": "展开子页面"
+      "expand": "展开子页面",
+      "openMenu": "打开菜单",
+      "closeMenu": "关闭菜单"
+    },
+    "comment": {
+      "accepted": "已采纳",
+      "authorBadge": "作者",
+      "count": "{count} 条评论",
+      "deleteConfirm": "确定删除这条评论吗？",
+      "deleted": "评论已删除",
+      "placeholder": "写下你的评论...",
+      "replyPlaceholder": "写下你的回复...",
+      "sort": {
+        "default": "默认",
+        "hot": "最热",
+        "latest": "最新"
+      },
+      "title": "评论"
+    },
+    "createPost": {
+      "categoriesFailed": "加载分类失败，点击重试。",
+      "category": "分类",
+      "categoryRequired": "请选择分类",
+      "content": "正文",
+      "contentPlaceholder": "描述你的问题或分享经验",
+      "contentRequired": "请填写正文",
+      "formTitle": "发布主题",
+      "postTitle": "标题",
+      "postTitlePlaceholder": "用一句话概括你的主题",
+      "tags": "标签",
+      "tagsPlaceholder": "多个标签用逗号分隔",
+      "titleRequired": "请输入标题"
+    },
+    "posts": {
+      "categoriesFailed": "加载分类失败，点击重试。",
+      "categoryNavigation": "主题分类",
+      "comments": "评论",
+      "createdBy": "{name} 发布",
+      "likes": "点赞",
+      "title": "主题",
+      "updatedAt": "更新于 {date}",
+      "views": "浏览"
+    },
+    "profile": {
+      "avatar": "头像",
+      "avatarPlaceholder": "上传头像",
+      "communityDescription": "查看你在社区发布的主题。",
+      "communityTitle": "社区内容",
+      "edit": "编辑资料",
+      "editDescription": "更新你的头像、昵称和邮箱。",
+      "editTitle": "编辑资料",
+      "email": "邮箱",
+      "emailPlaceholder": "请输入邮箱",
+      "emailUnset": "未设置",
+      "nickname": "昵称",
+      "nicknamePlaceholder": "请输入昵称",
+      "nicknameRequired": "请输入昵称",
+      "noPosts": "你还没有发布任何主题",
+      "username": "用户名"
     }
   },
   "nav": {
