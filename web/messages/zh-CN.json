@@ -1203,7 +1203,14 @@
     "removedRoles": "移除角色",
     "noneAdded": "无新增",
     "noneRemoved": "无移除",
-    "confirmAssign": "确认分配"
+    "confirmAssign": "确认分配",
+    "columnUserType": "类型",
+    "userTypeStaff": "员工",
+    "userTypeVisitor": "访客",
+    "filterUserType": "账号类型",
+    "filterUserTypeAll": "全部",
+    "filterUserTypeStaff": "员工",
+    "filterUserTypeVisitor": "访客"
   },
   "aiAgent": {
     "allStatuses": "全部状态",

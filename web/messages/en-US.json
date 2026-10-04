@@ -1203,7 +1203,14 @@
     "removedRoles": "Removed Roles",
     "noneAdded": "None added",
     "noneRemoved": "None removed",
-    "confirmAssign": "Assign Roles"
+    "confirmAssign": "Assign Roles",
+    "columnUserType": "Type",
+    "userTypeStaff": "Staff",
+    "userTypeVisitor": "Visitor",
+    "filterUserType": "Account type",
+    "filterUserTypeAll": "All",
+    "filterUserTypeStaff": "Staff",
+    "filterUserTypeVisitor": "Visitors"
   },
   "aiAgent": {
     "allStatuses": "All statuses",

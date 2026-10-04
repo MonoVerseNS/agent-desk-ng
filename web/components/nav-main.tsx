@@ -66,7 +66,7 @@ export function NavMain({
 
   if (state === "collapsed" && !isMobile) {
     return (
-      <SidebarGroup className="px-2 py-0 first:pt-2 last:pb-2">
+      <SidebarGroup className="px-2 py-1 first:pt-2 last:pb-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -75,7 +75,9 @@ export function NavMain({
                 render={<SidebarMenuButton />}
               >
                 {icon}
-                <span title={title}>{title}</span>
+                <span className="min-w-0 flex-1 truncate" title={title}>
+                  {title}
+                </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="right"
@@ -108,21 +110,34 @@ export function NavMain({
   }
 
   return (
-    <SidebarGroup className="px-2 py-0 first:pt-2 last:pb-2">
-      <SidebarMenu>
+    <SidebarGroup className="px-2 py-1 first:pt-2 last:pb-2">
+      <SidebarMenu className="gap-0.5">
         <Collapsible
           open={open}
           onOpenChange={handleOpenChange}
           className="group/collapsible"
           render={<SidebarMenuItem />}
         >
-          <CollapsibleTrigger render={<SidebarMenuButton tooltip={title} />}>
-            {icon}
-            <span title={title}>{title}</span>
-            <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
+          {/* A section title is the one place the label is not the button's last
+              child, so the shared truncate never reaches it. Left unconstrained
+              it wrapped inside the fixed h-8 and spilled over its neighbours,
+              so let it wrap deliberately and give the row the height it needs. */}
+          <CollapsibleTrigger
+            render={
+              <SidebarMenuButton
+                tooltip={title}
+                className="h-auto min-h-8 items-start py-1.5"
+              />
+            }
+          >
+            <span className="mt-0.5 shrink-0">{icon}</span>
+            <span className="min-w-0 flex-1 leading-5" title={title}>
+              {title}
+            </span>
+            <ChevronRightIcon className="mt-0.5 ml-auto shrink-0 transition-transform duration-200 group-data-open/collapsible:rotate-90" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <SidebarMenuSub>
+            <SidebarMenuSub className="gap-0.5 py-1">
               {items.map((item) => (
                 <SidebarMenuSubItem key={item.title}>
                   <SidebarMenuSubButton
@@ -130,7 +145,9 @@ export function NavMain({
                     isActive={isDashboardNavItemActive(pathname, item.url)}
                     tooltip={item.title}
                   >
-                    <span title={item.title}>{item.title}</span>
+                    <span className="min-w-0 flex-1 truncate" title={item.title}>
+                      {item.title}
+                    </span>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               ))}

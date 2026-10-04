@@ -8,6 +8,8 @@ import (
 	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/httpx"
 	"agent-desk/internal/pkg/httpx/params"
+	"agent-desk/internal/pkg/i18nx"
+	"agent-desk/internal/pkg/loginaudience"
 	"agent-desk/internal/services"
 	"log/slog"
 	"net/http"
@@ -49,7 +51,33 @@ func PublicConfig(ctx *gin.Context) {
 	})
 }
 
+// redirectPortalSSORejected sends a portal-initiated enterprise SSO attempt back
+// to the portal login with a reason, instead of starting a flow that would hand
+// a visitor a staff session.
+func redirectPortalSSORejected(ctx *gin.Context, errorParam string) {
+	ctx.Redirect(
+		http.StatusFound,
+		"/support/login?"+errorParam+"="+url.QueryEscape(i18nx.T(ctx, "error.auth.staffSsoOnPortal")),
+	)
+}
+
+func rejectPortalSSO(ctx *gin.Context, errorParam string) bool {
+	if !loginaudience.Resolve(ctx.Query("next")).IsPortal() {
+		return false
+	}
+	slog.Warn("rejected enterprise SSO started from the visitor portal",
+		"provider", errorParam,
+		"next", ctx.Query("next"),
+		"clientIp", ctx.ClientIP(),
+	)
+	redirectPortalSSORejected(ctx, errorParam)
+	return true
+}
+
 func WxWorkLogin(ctx *gin.Context) {
+	if rejectPortalSSO(ctx, "wxworkError") {
+		return
+	}
 	loginURL, err := services.WxWorkLoginService.BuildWxWorkLoginURL(ctx.Query("next"))
 	if err != nil {
 		ctx.Redirect(http.StatusFound, "/login?wxworkError="+url.QueryEscape(wxWorkErrorMessage(err.Error())))
@@ -59,6 +87,9 @@ func WxWorkLogin(ctx *gin.Context) {
 }
 
 func WxWorkQRLogin(ctx *gin.Context) {
+	if rejectPortalSSO(ctx, "wxworkError") {
+		return
+	}
 	loginURL, err := services.WxWorkLoginService.BuildWxWorkQRCodeLoginURL(ctx.Query("next"))
 	if err != nil {
 		ctx.Redirect(http.StatusFound, "/login?wxworkError="+url.QueryEscape(wxWorkErrorMessage(err.Error())))
@@ -98,6 +129,9 @@ func WxWorkExchange(ctx *gin.Context) {
 }
 
 func OIDCLogin(ctx *gin.Context) {
+	if rejectPortalSSO(ctx, "oidcError") {
+		return
+	}
 	loginURL, err := services.OIDCLoginService.BuildOIDCLoginURL(ctx.Query("next"))
 	if err != nil {
 		ctx.Redirect(http.StatusFound, "/dashboard/login?oidcError="+url.QueryEscape(loginErrorMessage(err.Error())))

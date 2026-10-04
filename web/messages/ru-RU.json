@@ -1203,7 +1203,14 @@
     "removedRoles": "Удалённые роли",
     "noneAdded": "Ничего не добавлено",
     "noneRemoved": "Ничего не удалено",
-    "confirmAssign": "Назначить роли"
+    "confirmAssign": "Назначить роли",
+    "columnUserType": "Тип",
+    "userTypeStaff": "Сотрудник",
+    "userTypeVisitor": "Посетитель",
+    "filterUserType": "Тип аккаунта",
+    "filterUserTypeAll": "Все",
+    "filterUserTypeStaff": "Сотрудники",
+    "filterUserTypeVisitor": "Посетители"
   },
   "aiAgent": {
     "allStatuses": "Все статусы",

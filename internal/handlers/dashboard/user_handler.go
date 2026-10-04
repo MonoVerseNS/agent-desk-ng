@@ -15,6 +15,11 @@ import (
 	"github.com/mlogclub/simple/web"
 )
 
+// Portal visitors live in the same table as staff - UserType is what separates
+// them - and without a filter on it they sat in the middle of the agent list
+// with admin actions offered on them. Neither group is deleted or hidden; they
+// are just no longer indistinguishable. user_type is a varchar, so the filter is
+// a plain equality and an unknown value simply matches nothing.
 func UserAnyList(ctx *gin.Context) {
 	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionUserView); err != nil {
 		httpx.WriteJSON(ctx, err)
@@ -25,6 +30,7 @@ func UserAnyList(ctx *gin.Context) {
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "username", Op: params.Like},
 		params.QueryFilter{ParamName: "nickname", Op: params.Like},
+		params.QueryFilter{ParamName: "userType"},
 	).Desc("id")
 	cnd.Where("status <> ?", enums.StatusDeleted)
 	list, paging := services.UserService.FindPageByCnd(cnd)
@@ -45,6 +51,7 @@ func UserAnyList_all(ctx *gin.Context) {
 		params.QueryFilter{ParamName: "status"},
 		params.QueryFilter{ParamName: "username", Op: params.Like},
 		params.QueryFilter{ParamName: "nickname", Op: params.Like},
+		params.QueryFilter{ParamName: "userType"},
 	).Desc("id")
 	cnd.Where("status <> ?", enums.StatusDeleted)
 

@@ -37,7 +37,7 @@ import {
   type ResetPasswordResult,
   type UpdateAdminUserPayload,
 } from "@/lib/api/admin"
-import { Status } from "@/lib/generated/enums"
+import { Status, UserType } from "@/lib/generated/enums"
 import { useAppLocale, useI18n } from "@/i18n/provider"
 import { getRoleDisplayName } from "@/lib/role-i18n"
 import { formatDateTime } from "@/lib/utils"
@@ -86,6 +86,9 @@ export default function DashboardUsersPage() {
   const [resetPasswordResult, setResetPasswordResult] =
     useState<ResetPasswordResult | null>(null)
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
+  // Staff and portal visitors share one table, separated only by userType. The
+  // segment keeps them from being read as one list, where an agent account looks
+  // exactly like a visitor's self-registered account.
   const filters = useMemo<DashboardListFilter[]>(
     () => [
       {
@@ -94,6 +97,18 @@ export default function DashboardUsersPage() {
         defaultValue: "",
         trim: true,
       },
+      {
+        name: "userType",
+        label: t("user.filterUserType"),
+        type: "segment",
+        defaultValue: "all",
+        allValue: "all",
+        options: [
+          { value: "all", label: t("user.filterUserTypeAll") },
+          { value: UserType.Employee, label: t("user.filterUserTypeStaff") },
+          { value: UserType.User, label: t("user.filterUserTypeVisitor") },
+        ],
+      },
     ],
     [t],
   )
@@ -101,6 +116,7 @@ export default function DashboardUsersPage() {
     (query: Record<string, string | number | boolean | string[] | number[] | undefined>) =>
       fetchUsers({
         username: typeof query.username === "string" ? query.username : undefined,
+        userType: typeof query.userType === "string" ? query.userType : undefined,
         page: Number(query.page),
         limit: Number(query.limit),
       }),
@@ -341,6 +357,7 @@ export default function DashboardUsersPage() {
                 <TableRow>
                   <TableHead className="w-20">ID</TableHead>
                   <TableHead>{t("user.columnUser")}</TableHead>
+                  <TableHead>{t("user.columnUserType")}</TableHead>
                   <TableHead>{t("user.columnRoles")}</TableHead>
                   <TableHead>{t("user.columnStatus")}</TableHead>
                   <TableHead>{t("user.columnContact")}</TableHead>
@@ -364,6 +381,13 @@ export default function DashboardUsersPage() {
                           <div className="text-xs text-muted-foreground">{item.username}</div>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={item.userType === UserType.Employee ? "secondary" : "outline"}>
+                        {item.userType === UserType.Employee
+                          ? t("user.userTypeStaff")
+                          : t("user.userTypeVisitor")}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">

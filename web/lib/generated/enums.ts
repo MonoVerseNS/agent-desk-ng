@@ -79,6 +79,10 @@ export enum ExternalSource {
   User = "user",
   Telegram = "telegram",
   ZaloOA = "zalo_oa",
+  Slack = "slack",
+  Discord = "discord",
+  Lark = "lark",
+  Email = "email",
 }
 export const ExternalSourceLabels: Record<ExternalSource, string> = {
   [ExternalSource.Guest]: "访客",
@@ -86,6 +90,10 @@ export const ExternalSourceLabels: Record<ExternalSource, string> = {
   [ExternalSource.User]: "用户",
   [ExternalSource.Telegram]: "Telegram",
   [ExternalSource.ZaloOA]: "Zalo OA",
+  [ExternalSource.Slack]: "Slack",
+  [ExternalSource.Discord]: "Discord",
+  [ExternalSource.Lark]: "Lark",
+  [ExternalSource.Email]: "Email",
 }
 
 export enum Gender {
@@ -370,6 +378,15 @@ export const TicketStatusLabels: Record<TicketStatus, string> = {
   [TicketStatus.Pending]: "待处理",
   [TicketStatus.InProgress]: "处理中",
   [TicketStatus.Done]: "已处理",
+}
+
+export enum UserType {
+  User = "user",
+  Employee = "employee",
+}
+export const UserTypeLabels: Record<UserType, string> = {
+  [UserType.User]: "访客",
+  [UserType.Employee]: "员工",
 }
 
 export enum VectorDBType {

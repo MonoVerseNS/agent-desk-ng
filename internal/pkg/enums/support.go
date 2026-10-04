@@ -54,3 +54,14 @@ const (
 	UserTypeUser     UserType = "user"
 	UserTypeEmployee UserType = "employee"
 )
+
+var UserTypeValues = []UserType{UserTypeUser, UserTypeEmployee}
+
+var userTypeLabelMap = map[UserType]string{
+	UserTypeUser:     "访客",
+	UserTypeEmployee: "员工",
+}
+
+func GetUserTypeLabel(userType UserType) string {
+	return userTypeLabelMap[userType]
+}

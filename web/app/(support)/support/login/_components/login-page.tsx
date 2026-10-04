@@ -3,7 +3,7 @@
 import Image from "next/image"
 import { useEffect, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { KeyRoundIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react"
+import { Loader2Icon, TriangleAlertIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -17,11 +17,6 @@ import { fetchPublicConfig, type PublicConfig } from "@/lib/api/config"
 import { loginSupportCustomer, registerSupportCustomer } from "@/lib/api/support"
 import { cn } from "@/lib/utils"
 
-function detectWxWorkEnvironment() {
-  if (typeof navigator === "undefined") return false
-  return navigator.userAgent.toLowerCase().includes("wxwork")
-}
-
 export function SupportLoginPage() {
   const t = useI18n()
   const router = useRouter()
@@ -30,18 +25,24 @@ export function SupportLoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login")
   const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null)
   const [publicConfigError, setPublicConfigError] = useState("")
-  const [isWxWorkEnv, setIsWxWorkEnv] = useState(false)
   const [name, setName] = useState("")
   const [account, setAccount] = useState("")
   const [registerEmail, setRegisterEmail] = useState("")
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const nextDestination = getSupportLoginDestination(searchParams.get("next"))
-  const wxworkError = searchParams.get("wxworkError")
   const oidcError = searchParams.get("oidcError")
+  // The server sends this back when enterprise SSO is started from the portal,
+  // so a bookmarked or hand-crafted SSO link explains itself instead of
+  // bouncing the visitor silently.
+  const ssoRejectedError = oidcError || searchParams.get("wxworkError")
   const passwordLoginEnabled = publicConfig?.passwordLoginEnabled !== false
-  const providerCount = Number(publicConfig?.wxworkEnabled) + Number(publicConfig?.oidcEnabled)
-  const hasAnyLoginMethod = passwordLoginEnabled || providerCount > 0
+  // Enterprise SSO is deliberately not offered here. The server rejects it for a
+  // portal destination, because it provisions a staff account that carries no
+  // Customer behind it - a visitor would get an employee session with none of
+  // their history. Showing a button that cannot work would be worse than not
+  // showing it. Staff sign in at the dashboard login instead.
+  const hasAnyLoginMethod = passwordLoginEnabled
 
   useEffect(() => {
     if (ready && session) router.replace(nextDestination)
@@ -52,16 +53,8 @@ export function SupportLoginPage() {
   }, [mode, passwordLoginEnabled])
 
   useEffect(() => {
-    if (wxworkError) toast.error(wxworkError)
-  }, [wxworkError])
-
-  useEffect(() => {
-    if (oidcError) toast.error(oidcError)
-  }, [oidcError])
-
-  useEffect(() => {
-    setIsWxWorkEnv(detectWxWorkEnvironment())
-  }, [])
+    if (ssoRejectedError) toast.error(ssoRejectedError)
+  }, [ssoRejectedError])
 
   useEffect(() => {
     let cancelled = false
@@ -97,15 +90,6 @@ export function SupportLoginPage() {
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const startWxWorkLogin = () => {
-    const path = isWxWorkEnv ? "/api/auth/wxwork_login" : "/api/auth/wxwork_qr_login"
-    window.location.href = `${path}?next=${encodeURIComponent(nextDestination)}`
-  }
-
-  const startOIDCLogin = () => {
-    window.location.href = `/api/auth/oidc_login?next=${encodeURIComponent(nextDestination)}`
   }
 
   return (
@@ -159,25 +143,6 @@ export function SupportLoginPage() {
                     {mode === "login" ? t("supportPublic.login.switchToRegister") : t("supportPublic.login.switchToLogin")}
                   </Button>
                 </form>
-              ) : null}
-              {providerCount > 0 ? (
-                <div className="grid gap-3">
-                  {passwordLoginEnabled ? <div className="flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">{t("auth.continueWith")}</div> : null}
-                  <div className="grid gap-3">
-                    {publicConfig.wxworkEnabled ? (
-                      <Button type="button" variant="outline" onClick={startWxWorkLogin} aria-label={t("auth.wxworkSignIn")}>
-                        <Image src="/images/wxwork.svg" alt="" width={16} height={16} className="size-4 shrink-0" />
-                        {t("auth.wxworkSignIn")}
-                      </Button>
-                    ) : null}
-                    {publicConfig.oidcEnabled ? (
-                      <Button type="button" variant="outline" onClick={startOIDCLogin} aria-label={t("auth.oidcSignIn")}>
-                        <KeyRoundIcon className="size-4 shrink-0" />
-                        {t("auth.oidcSignIn")}
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
               ) : null}
             </div>
           ) : null}

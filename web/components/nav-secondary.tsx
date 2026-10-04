@@ -31,7 +31,7 @@ export function NavSecondary({
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SidebarMenu className="gap-0.5">
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
@@ -40,7 +40,9 @@ export function NavSecondary({
                 tooltip={item.title}
               >
                 {item.icon}
-                <span title={item.title}>{item.title}</span>
+                <span className="min-w-0 flex-1 truncate" title={item.title}>
+                  {item.title}
+                </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
