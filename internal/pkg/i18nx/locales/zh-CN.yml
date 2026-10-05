@@ -487,6 +487,9 @@ graph.handoffConfirmPrompt: |-
   原因：%s
   请回复“确认”或“取消”。
 conversation.interrupt.defaultPrompt: "请补充更多信息后再试。"
+conversation.summary.image: "[图片]"
+conversation.summary.attachment: "[附件]"
+conversation.summary.recalled: "该消息已撤回。"
 ticket.defaultConversationTitle: "会话工单"
 error.docPage.sortScopeMismatch: "排序页面必须完整属于同一父页面"
 error.docPage.sortDuplicate: "排序页面中存在重复项"

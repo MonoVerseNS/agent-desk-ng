@@ -189,10 +189,16 @@ const MessageItem = memo(
     const t = useI18n()
     const { open } = useImageLightbox()
     const isCustomer = message.senderType === "customer"
+    // The server substitutes recalled messages with its own placeholder text, so
+    // rendering content as-is would show a visitor that placeholder in the
+    // server's language. The dashboard already replaces it; the portal did not.
+    const isRecalled = Boolean(message.recalledAt) || message.sendStatus === 6
     const senderName = isCustomer ? t("supportChat.customerSelf") : message.senderName?.trim() || t("supportChat.agentLabel")
     const avatarSrc =
       !isCustomer && message.senderAvatar?.trim() ? message.senderAvatar.trim() : undefined
-    const htmlContent = renderIMMessageHTML(message)
+    const htmlContent = isRecalled
+      ? `<p>${t("conversation.messageRecalledHtml")}</p>`
+      : renderIMMessageHTML(message)
     const fallbackName = senderName.slice(0, 1).toUpperCase()
 
     return (
@@ -233,23 +239,27 @@ const MessageItem = memo(
           }
         >
           <ConversationMessageBubble
-            variant={isCustomer ? "customer" : "system"}
+            variant={isRecalled ? "recalled" : isCustomer ? "customer" : "system"}
             className={cn(
               "rounded-lg border-0 px-3 py-2 text-sm leading-normal shadow-[0_10px_22px_rgba(15,23,42,0.06)]",
-              isCustomer
-                ? "!bg-[#a9ea7a] !text-[#161616] dark:!bg-emerald-500 dark:!text-emerald-950"
-                : "!border-border !bg-card !text-card-foreground dark:!bg-background"
+              isRecalled
+                ? "!border-border !bg-muted !text-muted-foreground"
+                : isCustomer
+                  ? "!bg-[#a9ea7a] !text-[#161616] dark:!bg-emerald-500 dark:!text-emerald-950"
+                  : "!border-border !bg-card !text-card-foreground dark:!bg-background"
             )}
           >
             <ImMessageHTML
               html={htmlContent}
               className={cn(
-                isCustomer
-                  ? "[&_p]:text-[#161616] dark:[&_p]:text-emerald-950 [&_a]:text-[#161616] dark:[&_a]:text-emerald-950 [&_a]:underline [&_img]:cursor-zoom-in"
-                  : "[&_a]:text-card-foreground [&_a]:underline [&_img]:cursor-zoom-in"
+                isRecalled
+                  ? "[&_p]:text-muted-foreground"
+                  : isCustomer
+                    ? "[&_p]:text-[#161616] dark:[&_p]:text-emerald-950 [&_a]:text-[#161616] dark:[&_a]:text-emerald-950 [&_a]:underline [&_img]:cursor-zoom-in"
+                    : "[&_a]:text-card-foreground [&_a]:underline [&_img]:cursor-zoom-in"
               )}
               onImageSettled={onImageSettled}
-              onImageClick={open}
+              onImageClick={isRecalled ? undefined : open}
             />
           </ConversationMessageBubble>
         </ConversationMessageRow>

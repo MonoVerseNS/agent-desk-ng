@@ -487,6 +487,9 @@ graph.handoffConfirmPrompt: |-
   Reason: %s
   Please reply with "Confirm" or "Cancel".
 conversation.interrupt.defaultPrompt: "Please provide more information and try again."
+conversation.summary.image: "[Image]"
+conversation.summary.attachment: "[Attachment]"
+conversation.summary.recalled: "This message was recalled."
 ticket.defaultConversationTitle: "Conversation ticket"
 error.docPage.sortScopeMismatch: "Pages being sorted must be the complete set under the same parent"
 error.docPage.sortDuplicate: "The page sort order contains duplicate entries"

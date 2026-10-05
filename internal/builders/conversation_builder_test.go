@@ -49,6 +49,44 @@ func TestLocalizeConversationSummary(t *testing.T) {
 			summary: "[图片]",
 			want:    "[图片]",
 		},
+		// Russian used to fall through to the raw stored marker, so a visitor
+		// saw [图片] in their request list.
+		{
+			name:    "image summary in russian",
+			locale:  i18nx.LocaleRuRU,
+			summary: "[图片]",
+			want:    "[Изображение]",
+		},
+		{
+			name:    "attachment summary keeps the filename in russian",
+			locale:  i18nx.LocaleRuRU,
+			summary: "[附件] spec.pdf",
+			want:    "[Вложение] spec.pdf",
+		},
+		{
+			name:    "recalled message in russian",
+			locale:  i18nx.LocaleRuRU,
+			summary: "该消息已撤回",
+			want:    "Это сообщение было отозвано.",
+		},
+		{
+			name:    "unknown locale follows the system default",
+			locale:  "xx-YY",
+			summary: "[图片]",
+			want:    i18nx.Getf(i18nx.DefaultLocale, "conversation.summary.image"),
+		},
+		{
+			name:    "business text is not translated in russian",
+			locale:  i18nx.LocaleRuRU,
+			summary: "客户反馈无法登录",
+			want:    "客户反馈无法登录",
+		},
+		{
+			name:    "blank summary stays blank",
+			locale:  i18nx.LocaleRuRU,
+			summary: "   ",
+			want:    "",
+		},
 	}
 
 	for _, tt := range tests {

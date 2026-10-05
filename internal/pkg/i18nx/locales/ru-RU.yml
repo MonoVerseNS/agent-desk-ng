@@ -487,6 +487,9 @@ graph.handoffConfirmPrompt: |-
   Причина: %s
   Ответьте «Подтвердить» или «Отмена».
 conversation.interrupt.defaultPrompt: "Пожалуйста, предоставьте больше информации и попробуйте снова."
+conversation.summary.image: "[Изображение]"
+conversation.summary.attachment: "[Вложение]"
+conversation.summary.recalled: "Это сообщение было отозвано."
 ticket.defaultConversationTitle: "Обращение из диалога"
 error.docPage.sortScopeMismatch: "Сортируемые страницы должны быть полным набором с одним и тем же родителем"
 error.docPage.sortDuplicate: "Порядок сортировки страниц содержит повторяющиеся записи"

@@ -72,24 +72,42 @@ func BuildConversationWithLocale(item *models.Conversation, locale string) respo
 	return ret
 }
 
+// conversationSummaryTokens are the markers BuildRuntimeMessageText and
+// BuildHTMLSummary write into conversation.last_message_summary.
+//
+// They are persisted, not rendered on the fly, so the stored value is Chinese
+// regardless of who is reading it. Rather than migrate every existing row, the
+// stored token is recognised here and swapped for the reader's locale. Storing
+// localized text in the database would make the column meaningless as soon as
+// a second locale existed.
+var conversationSummaryTokens = []struct {
+	stored     string
+	messageKey string
+}{
+	{stored: "[图片]", messageKey: "conversation.summary.image"},
+	{stored: "[附件]", messageKey: "conversation.summary.attachment"},
+	{stored: "该消息已撤回", messageKey: "conversation.summary.recalled"},
+}
+
+// localizeConversationSummary translates the persisted Chinese markers for the
+// reader's locale. A summary is a user-typed message more often than not, so
+// anything unrecognised is returned untouched rather than guessed at.
 func localizeConversationSummary(locale string, summary string) string {
-	if i18nx.NormalizeLocale(locale) != i18nx.LocaleEnUS {
-		return summary
+	summary = strings.TrimSpace(summary)
+	if summary == "" {
+		return ""
 	}
-	switch {
-	case summary == "[图片]":
-		return "[Image]"
-	case strings.HasPrefix(summary, "[图片] "):
-		return "[Image] " + strings.TrimPrefix(summary, "[图片] ")
-	case summary == "[附件]":
-		return "[Attachment]"
-	case strings.HasPrefix(summary, "[附件] "):
-		return "[Attachment] " + strings.TrimPrefix(summary, "[附件] ")
-	case summary == "该消息已撤回":
-		return "This message was recalled."
-	default:
-		return summary
+	normalized := i18nx.NormalizeLocale(locale)
+	for _, token := range conversationSummaryTokens {
+		translated := i18nx.Getf(normalized, token.messageKey)
+		switch {
+		case summary == token.stored:
+			return translated
+		case strings.HasPrefix(summary, token.stored+" "):
+			return translated + " " + strings.TrimPrefix(summary, token.stored+" ")
+		}
 	}
+	return summary
 }
 
 func BuildParticipantResponses(conversationID int64) []response.ConversationParticipantResponse {
