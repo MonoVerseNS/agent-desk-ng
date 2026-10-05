@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { MenuIcon, XIcon } from "lucide-react"
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useI18n } from "@/i18n/provider"
+import { fetchPublicConfig } from "@/lib/api/config"
 import type { SupportNavigationMenuItem } from "@/lib/api/support-config"
 import { cn } from "@/lib/utils"
 
@@ -23,8 +24,28 @@ type SupportMobileMenuProps = {
 export function SupportMobileMenu({ navigationItems, pathname, secondary }: SupportMobileMenuProps) {
   const t = useI18n()
   const [open, setOpen] = useState(false)
+  const [companyName, setCompanyName] = useState("")
   const triggerClassName = secondary ? "xl:hidden" : "sm:hidden"
   const isActive = (href: string) => href === "/support" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
+
+  // The mobile sheet used to hardcode the product name while the desktop header
+  // read it from /api/config, so a renamed deployment showed two different names
+  // depending on the viewport.
+  useEffect(() => {
+    let cancelled = false
+    void fetchPublicConfig()
+      .then((config) => {
+        if (!cancelled) {
+          setCompanyName(config.companyName?.trim() || "")
+        }
+      })
+      .catch(() => {
+        // Leave it empty; the localized fallback below covers the failure.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -47,7 +68,7 @@ export function SupportMobileMenu({ navigationItems, pathname, secondary }: Supp
       >
         <SheetHeader className="flex h-14 flex-row items-center justify-between border-b px-4 py-0">
           <SheetTitle className="text-sm font-semibold tracking-tight">
-            AGENT DESK
+            {companyName || t("app.brand")}
           </SheetTitle>
           <Button
             variant="ghost"

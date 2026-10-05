@@ -176,6 +176,121 @@ Model configuration supports OpenAI-compatible providers. You can configure LLMs
 - **AI extensibility**: Skills, MCP debugging, and external tool integration.
 - **Multiple entry points**: Admin dashboard, agent workspace, customer-facing web pages, and embeddable SDK.
 
+## Embedding the widget
+
+The widget is a single script tag plus one global config object. No build step and no framework required.
+
+```html
+<script>
+  window.AgentDeskConfig = {
+    baseUrl: "https://your-desk.example.com",
+    channelId: "web_main",
+  };
+</script>
+<script async src="https://your-desk.example.com/sdk/agent-desk-sdk.min.js"></script>
+```
+
+`baseUrl` is where AgentDesk is served. `channelId` is the channel the visitor's conversation belongs to; the dashboard's channel page shows a ready-made snippet with both filled in.
+
+### Options
+
+| Option | Type | Purpose |
+| --- | --- | --- |
+| `channelId` | `string` | **Required.** Channel the conversation belongs to. |
+| `baseUrl` | `string` | Where AgentDesk is served. Inferred from the script URL when omitted. |
+| `apiBaseUrl` | `string` | Only when the API lives on a different origin. |
+| `widgetBaseUrl` | `string` | Only when the frontend is served separately from the API. |
+| `externalId` | `string` | Stable visitor ID from your platform. A browser-local ID is used when omitted. |
+| `signExternalId` | `fn` | Proves that `externalId`, described below. |
+| `externalName` | `string` | Display name, used on first contact only. |
+| `getUserToken` | `fn` | A user JWT issued by your system. |
+| `title` / `subtitle` | `string` | Widget header text, overriding the channel's. |
+| `language` | `string` | `zh-CN`, `en-US` or `ru-RU`. |
+| `themeColor` | `string` | Accent colour. |
+| `position` | `"left" \| "right"` | Which corner the launcher sits in. |
+| `width` | `string` | Launcher width. |
+
+### Identifying your signed-in user
+
+Anonymous visitors work with no configuration. If your platform has its own users, you have two ways to prove who they are, and both are optional.
+
+**A signed visitor ID.** Sign the ID with the deployment-wide shared secret and return the pair. `issuedAt` is unix seconds and travels separately, but is covered by the signature, so a captured pair cannot be re-dated:
+
+```
+signature = hex(HMAC-SHA256(secret, channelId + "\n" + externalId + "\n" + issuedAt))
+```
+
+```html
+<script>
+  window.AgentDeskConfig = {
+    baseUrl: "https://your-desk.example.com",
+    channelId: "web_main",
+    externalId: currentUser.id,
+    signExternalId: async (externalId) => ({
+      signature: await signForMe(externalId),
+      issuedAt: Math.floor(Date.now() / 1000),
+    }),
+  };
+</script>
+```
+
+The secret is the deployment's `identity.secret`, never the host's own session secret. A signature is accepted for `identity.maxAgeMinutes`, 24 hours by default. Anything missing, forged, expired, or replayed against a different visitor is downgraded to an anonymous guest rather than rejected, so an unsigned embed keeps working.
+
+The SDK resolves the signature on every `open()` and reloads the frame when the value changes. That matters: without it a host page left open longer than the max age would silently degrade to a guest, and a `userToken` would stay frozen at whatever it was when the page loaded.
+
+**A user JWT.** If your platform already issues HS256 JWTs, hand one over instead:
+
+```html
+<script>
+  window.AgentDeskConfig = {
+    baseUrl: "https://your-desk.example.com",
+    channelId: "web_main",
+    getUserToken: async () => await fetchMyToken(),
+  };
+</script>
+```
+
+The token is verified against the channel's `userTokenSecret` and must carry a non-empty user id and name. Prefer this when your platform already issues JWTs; it needs no shared secret in the browser.
+
+### Controlling the widget
+
+```js
+const widget = window.AgentDeskWidget
+widget.open()      // resolves a fresh identity and shows the panel
+widget.close()
+widget.getChatUrl() // the chat URL, if you want to link to it instead
+widget.destroy()
+```
+
+`open()` is where identity is resolved, so prefer it over mounting with an open panel. It also returns a promise that settles after the frame has been told to open.
+
+The widget and the page talk over `postMessage`, so the panel can be closed, minimized or maximized from the host with the messages `agent-desk:request-close`, `agent-desk:request-minimize` and `agent-desk:request-toggle-maximize`.
+
+### Allowing the origin
+
+The widget runs in an iframe and calls the API cross-origin, so add your site's origin to `server.cors.allowedOrigins`:
+
+```yaml
+server:
+  cors:
+    allowedOrigins:
+      - https://your-site.example.com
+```
+
+### Self-hosting the deployment name
+
+The platform name and logo apply to the portal, the dashboard and the widget chrome at once. Rename a deployment from **Settings** in the dashboard, or set it in configuration:
+
+```yaml
+server:
+  companyName: "Acme Support"
+  companyLogoUrl: /brand/logo.svg
+```
+
+What the dashboard saves wins over configuration, and clearing a field hands control back to the configuration value, so a deployment that already sets `COMPANY_NAME` in its environment keeps its branding.
+
+Note that the widget's JavaScript globals (`AgentDeskConfig`, `AgentDeskWidget`) and its script path are part of the published embed contract and are deliberately not renamed. Renaming them would break every existing integration silently.
+
 ## Use Cases
 
 - Website live support

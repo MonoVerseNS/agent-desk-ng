@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactElement } from "react"
 import { toast } from "sonner"
 
 import { useI18n } from "@/i18n/provider"
+import { fetchPublicConfig } from "@/lib/api/config"
 import { listMyOrganizations, switchOrganization, type OrganizationItem } from "@/lib/api/organization"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,23 @@ export function WorkspaceSwitcher({
   const [orgs, setOrgs] = useState<OrganizationItem[]>([])
   const [activeOrgId, setActiveOrgId] = useState<number | null>(null)
   const [switching, setSwitching] = useState(false)
+  const [logoUrl, setLogoUrl] = useState("")
+
+  useEffect(() => {
+    let mounted = true
+    void fetchPublicConfig()
+      .then((config) => {
+        if (mounted) {
+          setLogoUrl(config.companyLogoUrl?.trim() || "")
+        }
+      })
+      .catch(() => {
+        // Fall back to the bundled logo.
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -113,7 +131,7 @@ export function WorkspaceSwitcher({
     variant === "rail" ? (
       <>
         <img
-          src="/images/logo.svg"
+          src={logoUrl || "/images/logo.svg"}
           alt={t("app.brand")}
           width="32"
           height="32"
@@ -127,7 +145,7 @@ export function WorkspaceSwitcher({
     ) : (
       <>
         <img
-          src="/images/logo.svg"
+          src={logoUrl || "/images/logo.svg"}
           alt={t("app.brand")}
           width="32"
           height="32"

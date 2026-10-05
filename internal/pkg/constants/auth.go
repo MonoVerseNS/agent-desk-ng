@@ -176,6 +176,8 @@ var (
 	PermissionCommunityUpdate     = Permission{Name: "管理支持中心社区", Code: "supportCommunity.update", Type: "api", GroupName: "supportCommunity", Method: "POST", APIPath: "/api/dashboard/support-community/posts/moderate", SortNo: 1595}
 	PermissionSupportConfigView   = Permission{Name: "查看支持中心配置", Code: "supportConfig.view", Type: "api", GroupName: "supportConfig", Method: "GET", APIPath: "/api/dashboard/support/config", SortNo: 1596}
 	PermissionSupportConfigUpdate = Permission{Name: "更新支持中心配置", Code: "supportConfig.update", Type: "api", GroupName: "supportConfig", Method: "POST", APIPath: "/api/dashboard/support/config/save", SortNo: 1597}
+	PermissionBrandingView        = Permission{Name: "查看平台品牌配置", Code: "branding.view", Type: "api", GroupName: "branding", Method: "GET", APIPath: "/api/dashboard/branding", SortNo: 1598}
+	PermissionBrandingUpdate      = Permission{Name: "更新平台品牌配置", Code: "branding.update", Type: "api", GroupName: "branding", Method: "POST", APIPath: "/api/dashboard/branding/save", SortNo: 1599}
 
 	// Skill 定义相关权限
 	PermissionSkillDefinitionView   = Permission{Name: "查看技能定义", Code: "skillDefinition.view", Type: "api", GroupName: "skillDefinition", Method: "ANY", APIPath: "/api/dashboard/skill-definition/list", SortNo: 1610}
@@ -289,6 +291,8 @@ var Permissions = []Permission{
 	PermissionCommunityUpdate,
 	PermissionSupportConfigView,
 	PermissionSupportConfigUpdate,
+	PermissionBrandingView,
+	PermissionBrandingUpdate,
 	PermissionSkillDefinitionView,
 	PermissionSkillDefinitionCreate,
 	PermissionSkillDefinitionUpdate,

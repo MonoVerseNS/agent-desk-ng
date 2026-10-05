@@ -97,7 +97,14 @@ export function SupportLoginPage() {
       <SupportPageContent className="flex min-h-[calc(100svh-3.5rem)] items-start justify-center py-8 sm:items-center sm:py-12">
         <section className="w-full max-w-[440px] rounded-md bg-card px-5 py-6 sm:px-7 sm:py-8">
           <div className="mb-6 flex flex-col items-center gap-3 text-center">
-            <Image src="/images/logo.svg" alt="" width={56} height={56} className="size-14 opacity-80" priority />
+            <Image
+              src={publicConfig?.companyLogoUrl?.trim() || "/images/logo.svg"}
+              alt=""
+              width={56}
+              height={56}
+              className="size-14 opacity-80"
+              priority
+            />
             <h1 className="text-2xl font-semibold tracking-tight">{t("supportPublic.login.welcomeBack")}</h1>
           </div>
           {!publicConfig && !publicConfigError ? (

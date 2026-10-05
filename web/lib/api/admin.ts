@@ -1168,6 +1168,31 @@ export function testChannelEmail(channelId: number) {
   })
 }
 
+export type DashboardBranding = {
+  companyName: string
+  companyLogoUrl: string
+  savedCompanyName: string
+  savedCompanyLogoUrl: string
+  configuredCompanyName: string
+  configuredCompanyLogoUrl: string
+  effectiveCompanyName: string
+  usesConfiguredFallback: boolean
+}
+
+export function fetchDashboardBranding() {
+  return request<DashboardBranding>("/api/dashboard/branding")
+}
+
+export function saveDashboardBranding(payload: {
+  companyName: string
+  companyLogoUrl: string
+}) {
+  return request<DashboardBranding>("/api/dashboard/branding/save", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
 export function createUser(payload: CreateAdminUserPayload) {
   return request<CreateUserResult>("/api/dashboard/user/create", {
     method: "POST",

@@ -31,6 +31,14 @@ type systemConfigService struct {
 const (
 	systemConfigGroupSupportCenter = "support"
 	systemConfigKeySupportNavMenu  = "navigationMenu"
+
+	// The branding group is what lets an operator rename a deployment without
+	// editing configuration and restarting. It is deliberately separate from the
+	// support group: the name is read on every page load by both the visitor
+	// portal and the dashboard, while the navigation menu is a portal concern.
+	systemConfigGroupBranding          = "branding"
+	systemConfigKeyBrandingCompanyName = "companyName"
+	systemConfigKeyBrandingCompanyLogo = "companyLogoUrl"
 )
 
 type configValidator interface {
@@ -88,6 +96,24 @@ var systemConfigDefinitions = map[string]map[string]systemConfigDefinition{
 			DescriptionKey: "systemConfig.support.navigationMenu.description",
 			DefaultValue:   defaultSupportNavigationMenu(),
 			Validator:      supportNavigationMenuValidator{},
+		},
+	},
+	systemConfigGroupBranding: {
+		systemConfigKeyBrandingCompanyName: {
+			GroupCode:      systemConfigGroupBranding,
+			Key:            systemConfigKeyBrandingCompanyName,
+			TitleKey:       "systemConfig.branding.companyName.title",
+			DescriptionKey: "systemConfig.branding.companyName.description",
+			DefaultValue:   "",
+			Validator:      brandingCompanyNameValidator{},
+		},
+		systemConfigKeyBrandingCompanyLogo: {
+			GroupCode:      systemConfigGroupBranding,
+			Key:            systemConfigKeyBrandingCompanyLogo,
+			TitleKey:       "systemConfig.branding.companyLogoUrl.title",
+			DescriptionKey: "systemConfig.branding.companyLogoUrl.description",
+			DefaultValue:   "",
+			Validator:      brandingCompanyLogoURLValidator{},
 		},
 	},
 }

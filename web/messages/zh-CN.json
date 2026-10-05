@@ -24,7 +24,9 @@
     "save": "保存",
     "confirm": "确认",
     "actions": "操作",
-    "name": "名称"
+    "name": "名称",
+    "saving": "保存中...",
+    "reset": "重置"
   },
   "language": {
     "enUS": "English (英文)",
@@ -627,7 +629,13 @@
     "description": "系统设置页将管理认证参数、上传配置、基础信息与运行策略。",
     "step1": "补充系统配置读取与保存接口。",
     "step2": "按安全、存储、登录策略拆分设置区块。",
-    "step3": "增加敏感配置的脱敏显示和二次确认。"
+    "step3": "增加敏感配置的脱敏显示和二次确认。",
+    "brandingTitle": "平台品牌",
+    "brandingDescription": "修改平台名称和 Logo，应用到访客门户、控制台和页面标题。",
+    "brandingSaved": "平台品牌已更新",
+    "brandingSaveFailed": "保存平台品牌失败",
+    "brandingLoadFailed": "加载平台品牌失败",
+    "brandingConfiguredFallback": "当前名称来自配置（{name}）。清空此处可恢复使用配置值。"
   },
   "status": {
     "all": "全部状态",
@@ -3242,5 +3250,17 @@
   },
   "supportCommunityAdmin": {
     "postStatusUpdated": "主题状态已更新。"
+  },
+  "systemConfig": {
+    "branding": {
+      "companyName": {
+        "title": "平台名称",
+        "description": "显示在门户页头、控制台和页面标题中。"
+      },
+      "companyLogoUrl": {
+        "title": "平台 Logo",
+        "description": "留空则使用内置 Logo。"
+      }
+    }
   }
 }

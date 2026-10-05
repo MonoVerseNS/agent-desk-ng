@@ -41,10 +41,13 @@ func Login(ctx *gin.Context) {
 
 func PublicConfig(ctx *gin.Context) {
 	cfg := config.Current()
+	// Saved branding wins over configuration, so an operator can rename a
+	// deployment from the dashboard without touching the file it is running from.
+	branding := services.ResolveBranding()
 	httpx.WriteJSON(ctx, &response.PublicConfigResponse{
 		Language:             cfg.LanguageOrDefault(),
-		CompanyName:          cfg.Server.CompanyName,
-		CompanyLogoURL:       cfg.Server.CompanyLogoURL,
+		CompanyName:          branding.CompanyName,
+		CompanyLogoURL:       branding.CompanyLogoURL,
 		PasswordLoginEnabled: cfg.Auth.IsPasswordLoginEnabled(),
 		WxWorkEnabled:        cfg.WxWork.Enabled,
 		OIDCEnabled:          cfg.OIDC.Enabled,

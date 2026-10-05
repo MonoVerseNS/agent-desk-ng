@@ -24,7 +24,9 @@
     "save": "Save",
     "confirm": "Confirm",
     "actions": "Actions",
-    "name": "Name"
+    "name": "Name",
+    "saving": "Saving...",
+    "reset": "Reset"
   },
   "language": {
     "enUS": "English",
@@ -627,7 +629,13 @@
     "description": "System settings will manage authentication, uploads, basic site information, and runtime policies.",
     "step1": "Add APIs for reading and saving system settings.",
     "step2": "Split settings into security, storage, and sign-in policy sections.",
-    "step3": "Add masked display and confirmation for sensitive settings."
+    "step3": "Add masked display and confirmation for sensitive settings.",
+    "brandingTitle": "Platform branding",
+    "brandingDescription": "Change the platform name and logo. They apply to the visitor portal, the dashboard and page titles.",
+    "brandingSaved": "Platform branding updated",
+    "brandingSaveFailed": "Could not save the platform branding",
+    "brandingLoadFailed": "Could not load the platform branding",
+    "brandingConfiguredFallback": "The current name comes from configuration ({name}). Clear this field to fall back to it."
   },
   "status": {
     "all": "All statuses",
@@ -3242,5 +3250,17 @@
   },
   "supportCommunityAdmin": {
     "postStatusUpdated": "Post status updated."
+  },
+  "systemConfig": {
+    "branding": {
+      "companyName": {
+        "title": "Platform name",
+        "description": "Shown in the portal header, the dashboard and page titles."
+      },
+      "companyLogoUrl": {
+        "title": "Platform logo",
+        "description": "Leave empty to keep the bundled logo."
+      }
+    }
   }
 }

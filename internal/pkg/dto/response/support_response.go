@@ -34,6 +34,22 @@ type DashboardSupportConfigResponse struct {
 	NavigationMenu []SupportNavigationMenuItemResponse `json:"navigationMenu"`
 }
 
+// DashboardBrandingResponse shows both what is saved and what is actually in
+// effect. They differ whenever configuration supplies a fallback, and an operator
+// editing this form needs to see which one they are changing.
+type DashboardBrandingResponse struct {
+	CompanyName    string `json:"companyName"`
+	CompanyLogoURL string `json:"companyLogoUrl"`
+	// Saved* is what this form would persist; Configured* comes from the file or
+	// environment; Effective* is what every page will render.
+	SavedCompanyName       string `json:"savedCompanyName"`
+	SavedCompanyLogoURL    string `json:"savedCompanyLogoUrl"`
+	ConfiguredCompanyName  string `json:"configuredCompanyName"`
+	ConfiguredCompanyLogo  string `json:"configuredCompanyLogoUrl"`
+	EffectiveCompanyName   string `json:"effectiveCompanyName"`
+	UsesConfiguredFallback bool   `json:"usesConfiguredFallback"`
+}
+
 type DocPageResponse struct {
 	ID                        int64               `json:"id"`
 	ParentID                  int64               `json:"parentId"`

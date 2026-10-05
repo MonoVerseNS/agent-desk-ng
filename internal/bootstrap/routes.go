@@ -140,6 +140,11 @@ func registerDashboardSupportConfigRoutes(group *gin.RouterGroup) {
 	group.POST("/save", dashboard.SupportConfigPostSave)
 }
 
+func registerDashboardBrandingRoutes(group *gin.RouterGroup) {
+	group.GET("", dashboard.BrandingGetConfig)
+	group.POST("/save", dashboard.BrandingPostSave)
+}
+
 func registerDashboardDashboardRoutes(group *gin.RouterGroup) {
 	group.GET("/overview", dashboard.DashboardGetOverview)
 }
