@@ -24,3 +24,6 @@ agent-desk
 
 test-reports
 web/public/flowgram-editor/
+# Python bytecode from scripts/
+__pycache__/
+*.py[cod]
