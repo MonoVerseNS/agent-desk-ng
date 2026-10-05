@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -78,7 +79,11 @@ func (s *emailInboundService) HandleWebhook(ctx context.Context, channelID strin
 			expectedSecret = systemSecret
 		}
 
-		if expectedSecret != "" && strings.TrimSpace(secretHeader) != expectedSecret {
+		// Constant-time so the comparison cannot be measured to recover the secret
+		// one byte at a time. Discord and Slack already do this; email did not.
+		if expectedSecret != "" && subtle.ConstantTimeCompare(
+			[]byte(strings.TrimSpace(secretHeader)), []byte(expectedSecret),
+		) != 1 {
 			return errorsx.UnauthorizedI18n("error.auth.invalidSignature")
 		}
 

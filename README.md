@@ -73,6 +73,45 @@ The widget gained a request switcher showing the current subject, total unread, 
 - Enterprise SSO (OIDC, WeCom) is no longer offered to portal visitors, and the server rejects it for a portal destination. Those transports create a staff account with a staff role and never link it to a customer, so a visitor signing in through the portal would have received an employee session with none of their history behind it.
 - `/dashboard/users` filters on account type and shows a type column. Portal visitors previously appeared in the agent list with admin actions offered on them.
 
+### Email channel
+
+The email channel works as a full request medium: a visitor's mail becomes a conversation, and the conversation continues as mail.
+
+- **Inbound from real mail.** `POST /api/third/email/webhook` accepts Cloudflare Email Routing, Mailgun, SendGrid, Brevo, Postmark and generic JSON. A Cloudflare worker that parses MIME and forwards is included in `scripts/cloudflare-email-worker`.
+- **Inbound from a program.** `POST /api/third/email/request` files a request from an external system. This is the API bridge for headless integrations - it is the only way to open a request without a browser or a mail forwarder:
+
+  ```bash
+  curl -X POST https://your-desk.example.com/api/third/email/request/support_mail \
+    -H 'Content-Type: application/json' \
+    -H 'X-Webhook-Secret: <channel webhook secret>' \
+    -d '{"email":"alice@example.com","name":"Alice","subject":"Cannot complete payment","message":"The checkout page spins forever."}'
+  ```
+
+  It answers with the conversation id, the subject, and where the request actually landed:
+
+  ```json
+  { "conversationId": 42, "outcome": "email", "verified": true, "subject": "Cannot complete payment" }
+  ```
+
+  **Verified and self-reported modes.** Presenting the channel's `X-Webhook-Secret` marks the submitted address as verified. Omitting it still files the request, but the address is recorded as self-reported and agents can see that in the dashboard, so an unproven address is never mistaken for a proven one. A secret that is present but wrong is rejected rather than quietly downgraded - a broken integration must not look like a working one.
+- **Automatic acknowledgement.** The visitor gets a receipt by email as soon as the request is filed, then the AI Agent's answer arrives separately. The receipt text comes from the channel's welcome message, so it can be branded per channel.
+- **Where a request lands.** If the visitor still has a live chat open, the email is appended to that chat instead of starting an email thread - they are present in the chat and absent from their inbox - and they are emailed a note asking them to continue there. Once the chat has gone quiet it counts as abandoned and the email becomes its own conversation. The window is `conversation.emailChatLiveMinutes`, 30 minutes by default.
+- **Replies.** `Reply-To` points at the channel's own inbound address, so a reply comes back to AgentDesk rather than to the agent's mailbox. Threads hold through the `[#id]` token in the subject and through `In-Reply-To`.
+- **Outbound delivery** goes through an outbox with retries, over SMTP, Brevo, SendGrid, Resend, Postmark or Mailgun.
+
+```yaml
+email:
+  provider: smtp        # smtp | brevo | sendgrid | resend | postmark | mailgun
+  fromAddress: support@example.com
+  fromName: Support
+  smtpHost: smtp.example.com
+  smtpPort: 587
+  smtpUser: support@example.com
+  smtpPassword: ...
+  smtpUseTls: true
+  inboundSecret: ...    # fallback when a channel has no secret of its own
+```
+
 ### Fixes
 
 - The email channel wrote to an outbox `send_detail` column that no migration created, so outbound email failed on an unpatched database.

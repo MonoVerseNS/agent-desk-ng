@@ -313,10 +313,24 @@ func (s *channelMessageOutboxService) EnqueueSlackMessage(conversation *models.C
 }
 
 func (s *channelMessageOutboxService) EnqueueEmailMessage(conversation *models.Conversation, message *models.Message) error {
+	if conversation == nil {
+		return nil
+	}
+	return s.EnqueueEmailMessageVia(ChannelService.Get(conversation.ChannelID), conversation, message)
+}
+
+// EnqueueEmailMessageVia queues a message for email delivery through an explicit
+// channel.
+//
+// The channel is a parameter because the delivery medium and the conversation's
+// channel are not always the same thing. Telling a visitor that a request they
+// sent by email landed in a chat they left has to go out over email even though
+// that conversation belongs to the web channel; deriving the channel from the
+// conversation, as the original code did, silently dropped exactly those notices.
+func (s *channelMessageOutboxService) EnqueueEmailMessageVia(channel *models.Channel, conversation *models.Conversation, message *models.Message) error {
 	if conversation == nil || message == nil {
 		return nil
 	}
-	channel := ChannelService.Get(conversation.ChannelID)
 	if channel == nil || channel.ChannelType != enums.ChannelTypeEmail {
 		return nil
 	}
@@ -510,13 +524,16 @@ func (s *channelMessageOutboxService) ListPending(channelType string, limit int)
 			string(enums.ChannelMessageOutboxStatusPending),
 			string(enums.ChannelMessageOutboxStatusFailed),
 		}).
-		// Only rows whose backoff has elapsed are eligible; ordering by
-		// next_retry_at keeps a backlog of not-yet-due retries from starving
-		// newer pending sends.
-		Lte("next_retry_at", now).
 		Asc("next_retry_at").
 		Asc("id").
 		Limit(limit)
+	// A row with no next_retry_at has never been scheduled, so it is due
+	// immediately. Comparing it directly would not work: NULL <= ? is unknown in
+	// SQL, never true, so a plain Lte silently drops every freshly queued message
+	// for every channel. Only rows whose backoff has elapsed are held back, and
+	// ordering by next_retry_at keeps a backlog of not-yet-due retries from
+	// starving newer pending sends.
+	cnd.Where("next_retry_at IS NULL OR next_retry_at <= ?", now)
 	return s.Find(cnd)
 }
 

@@ -29,6 +29,7 @@ type publicRateLimits struct {
 	sessionExchange *ratelimit.Limiter
 	upload          *ratelimit.Limiter
 	docFeedback     *ratelimit.Limiter
+	emailRequest    *ratelimit.Limiter
 }
 
 // Limits are sized for a human driving a browser, not for a machine. They are
@@ -41,6 +42,9 @@ const (
 	limitSessionExchange = 120
 	limitUpload          = 30
 	limitDocFeedback     = 20
+	// An integration filing requests on a visitor's behalf is machine traffic, but it
+	// should not be able to queue a support office's worth of work in one window.
+	limitEmailRequest = 30
 )
 
 func newPublicRateLimits(cfg config.RateLimitConfig) publicRateLimits {
@@ -56,6 +60,7 @@ func newPublicRateLimits(cfg config.RateLimitConfig) publicRateLimits {
 		sessionExchange: ratelimit.New(limitSessionExchange, window),
 		upload:          ratelimit.New(limitUpload, window),
 		docFeedback:     ratelimit.New(limitDocFeedback, window),
+		emailRequest:    ratelimit.New(limitEmailRequest, window),
 	}
 }
 
@@ -508,7 +513,12 @@ func registerThirdLarkRoutes(group *gin.RouterGroup) {
 	group.POST("/webhook/:channel_id", third.LarkPostWebhook)
 }
 
-func registerThirdEmailRoutes(group *gin.RouterGroup) {
+func registerThirdEmailRoutes(group *gin.RouterGroup, limits publicRateLimits) {
 	group.POST("/webhook", third.EmailPostWebhook)
 	group.POST("/webhook/:channel_id", third.EmailPostWebhook)
+	// Programmatic intake, rate limited per caller rather than left open: unlike a
+	// mail provider webhook this endpoint is reachable by anyone who learns the URL,
+	// and each call can create a conversation.
+	group.POST("/request", middleware.RateLimit(limits.emailRequest), third.EmailPostRequest)
+	group.POST("/request/:channel_id", middleware.RateLimit(limits.emailRequest), third.EmailPostRequest)
 }

@@ -138,6 +138,15 @@ func (s *emailOutboundService) processOutbox(outboxID int64) error {
 		fromName = "Customer Support"
 	}
 
+	// Point replies at the channel's own inbound address rather than the mailbox
+	// the sending agent happens to authenticate with. Without this a reply lands
+	// in that person's inbox instead of back in AgentDesk, and the email thread
+	// stops being a support channel after the first answer.
+	replyTo := strings.TrimSpace(cfg.EmailAddress)
+	if replyTo == "" {
+		replyTo = strings.TrimSpace(cfg.ForwardingAddress)
+	}
+
 	provider := email.DeliveryProvider(strings.ToLower(strings.TrimSpace(cfg.Provider)))
 	if provider == "" || provider == "default" {
 		provider = email.DeliveryProvider(strings.ToLower(strings.TrimSpace(sysEmail.Provider)))
@@ -230,6 +239,7 @@ func (s *emailOutboundService) processOutbox(outboxID int64) error {
 	sendErr := client.SendEmail(ctx, email.SendEmailParams{
 		FromEmail:  fromEmail,
 		FromName:   fromName,
+		ReplyTo:    replyTo,
 		ToEmail:    targetEmail,
 		ToName:     targetName,
 		Subject:    subject,

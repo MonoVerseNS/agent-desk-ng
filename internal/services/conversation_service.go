@@ -169,13 +169,24 @@ func (s *conversationService) countNotFinishedByCustomerID(db *gorm.DB, customer
 	if customerID <= 0 {
 		return 0
 	}
-	return repositories.ConversationRepository.Count(db, s.notFinishedCnd(customerID))
+	return repositories.ConversationRepository.Count(db, s.notFinishedCnd(customerID, 0))
 }
 
 // notFinishedCnd is the single definition of "still open" so the resume path,
 // the cap and any future query cannot drift apart.
-func (s *conversationService) notFinishedCnd(customerID int64) *sqls.Cnd {
+//
+// channelID scopes the resume to one channel, and it has to. Resuming purely by
+// customer meant a visitor with an open web chat who then emailed support landed
+// in their web thread, so their mail was answered in a medium they had left, and
+// the widget could rejoin a thread the customer can no longer see the replies
+// to. Listing stays customer-scoped on purpose, so the request switcher still
+// shows the whole history; only resume is per channel. A zero channelID means
+// "any channel", which is what the cap wants to count across.
+func (s *conversationService) notFinishedCnd(customerID, channelID int64) *sqls.Cnd {
 	cnd := sqls.NewCnd().Eq("customer_id", customerID)
+	if channelID > 0 {
+		cnd.Eq("channel_id", channelID)
+	}
 	cnd.In("status", []enums.IMConversationStatus{
 		enums.IMConversationStatusAIServing,
 		enums.IMConversationStatusPending,
@@ -184,11 +195,11 @@ func (s *conversationService) notFinishedCnd(customerID int64) *sqls.Cnd {
 	return cnd
 }
 
-func (s *conversationService) getLatestNotFinishedByCustomerID(db *gorm.DB, customerID int64) *models.Conversation {
+func (s *conversationService) getLatestNotFinishedByCustomerID(db *gorm.DB, customerID, channelID int64) *models.Conversation {
 	if customerID <= 0 {
 		return nil
 	}
-	cnd := s.notFinishedCnd(customerID)
+	cnd := s.notFinishedCnd(customerID, channelID)
 	cnd.Desc("id")
 	return repositories.ConversationRepository.FindOne(db, cnd)
 }
@@ -244,7 +255,7 @@ func (s *conversationService) Create(externalUser openidentity.ExternalUser, cha
 			return err
 		}
 		customerName := s.getCustomerName(ctx.Tx, customerID)
-		if existing := s.getLatestNotFinishedByCustomerID(ctx.Tx, customerID); existing != nil {
+		if existing := s.getLatestNotFinishedByCustomerID(ctx.Tx, customerID, channelID); existing != nil {
 			conversation = existing
 			if customerName != "" && existing.CustomerName != customerName {
 				if err := repositories.ConversationRepository.Updates(ctx.Tx, existing.ID, map[string]any{

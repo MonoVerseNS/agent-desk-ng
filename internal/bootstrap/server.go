@@ -235,7 +235,7 @@ func addRouter(app *gin.Engine) {
 	registerThirdSlackRoutes(thirdGroup.Group("/slack"))
 	registerThirdDiscordRoutes(thirdGroup.Group("/discord"))
 	registerThirdLarkRoutes(thirdGroup.Group("/lark"))
-	registerThirdEmailRoutes(thirdGroup.Group("/email"))
+	registerThirdEmailRoutes(thirdGroup.Group("/email"), limits)
 }
 
 type spaShellRewrite struct {

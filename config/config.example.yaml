@@ -121,6 +121,12 @@ conversation:
   # undo that by closing a conversation - they may need it kept open.
   # Unset or 0 means 3; use -1 to remove the cap entirely.
   customerMaxOpen: 3
+  # How long a chat still counts as being watched, in minutes. An email that
+  # arrives while a chat is live is appended to that chat and the visitor is
+  # asked to continue there, because they are present in the chat and absent
+  # from their inbox. Past this window the chat counts as abandoned and the
+  # email becomes its own conversation. Unset or 0 means 30.
+  emailChatLiveMinutes: 30
 
 storage:
   # Default file storage provider used for uploads. Supported values: local, oss.

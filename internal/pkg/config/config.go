@@ -245,6 +245,19 @@ type ConversationConfig struct {
 	// entirely, which is an explicit opt-out rather than something reached by
 	// omission.
 	CustomerMaxOpen int `yaml:"customerMaxOpen"`
+	// EmailChatLiveMinutes is how long a chat still counts as being watched. An
+	// email that arrives while a chat is live is answered in the chat instead of
+	// starting an email thread, because the visitor is present there and absent
+	// from their inbox. Past this window the chat is treated as abandoned and the
+	// email becomes the conversation.
+	EmailChatLiveMinutes int `yaml:"emailChatLiveMinutes"`
+}
+
+func (c ConversationConfig) EmailChatLiveWindow() time.Duration {
+	if c.EmailChatLiveMinutes <= 0 {
+		return 30 * time.Minute
+	}
+	return time.Duration(c.EmailChatLiveMinutes) * time.Minute
 }
 
 func (c ConversationConfig) MaxOpen() int {
@@ -570,6 +583,7 @@ func bindEnvironmentAliases(v *viper.Viper) {
 	_ = v.BindEnv("identity.secret", "AGENT_DESK_IDENTITY_SECRET", "AGENT_DESK_IDENTITY_HMAC_SECRET", "IDENTITY_HMAC_SECRET", "WIDGET_IDENTITY_SECRET")
 	_ = v.BindEnv("identity.maxAgeMinutes", "AGENT_DESK_IDENTITY_MAXAGEMINUTES", "IDENTITY_SIGNATURE_MAX_AGE_MINUTES")
 	_ = v.BindEnv("conversation.customerMaxOpen", "AGENT_DESK_CONVERSATION_CUSTOMERMAXOPEN", "CONVERSATION_CUSTOMER_MAX_OPEN")
+	_ = v.BindEnv("conversation.emailChatLiveMinutes", "AGENT_DESK_CONVERSATION_EMAILCHATLIVEMINUTES", "CONVERSATION_EMAIL_CHAT_LIVE_MINUTES")
 	_ = v.BindEnv("storage.default", "AGENT_DESK_STORAGE_DEFAULT", "STORAGE_DEFAULT", "STORAGE_TYPE")
 	_ = v.BindEnv("storage.local.root", "AGENT_DESK_STORAGE_LOCAL_ROOT", "STORAGE_LOCAL_ROOT")
 	_ = v.BindEnv("storage.local.baseUrl", "AGENT_DESK_STORAGE_LOCAL_BASEURL", "STORAGE_LOCAL_BASE_URL")
