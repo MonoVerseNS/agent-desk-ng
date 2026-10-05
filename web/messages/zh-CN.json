@@ -803,7 +803,16 @@
     "copiedWechatMenuUrl": "已复制公众号菜单链接",
     "wechatGuide2": "2. 将公众号自定义菜单跳转地址设置为上方链接。",
     "wechatGuide3": "3. 用户点击菜单后会直接进入客服聊天页。",
-    "processing": "处理中…"
+    "processing": "处理中…",
+    "smtpUseTls": "使用 TLS",
+    "smtpUseTlsHint": "加密与邮件服务器的连接。不勾选则使用系统级设置。",
+    "smtpAllowInsecure": "允许不安全连接",
+    "smtpAllowInsecureHint": "接受自签名证书，用于绑定本机测试 SMTP 服务器。真实邮箱切勿开启。",
+    "smtpTest": "测试邮件服务器连接",
+    "smtpTesting": "测试中…",
+    "smtpTestSuccess": "已连接到 {host}",
+    "smtpTestFailed": "无法连接邮件服务器",
+    "smtpTestSaveFirst": "请先保存渠道，然后再测试连接。"
   },
   "upload": {
     "imagePlaceholder": "点击上传图片",

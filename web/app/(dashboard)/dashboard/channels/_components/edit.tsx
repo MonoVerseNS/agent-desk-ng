@@ -7,6 +7,7 @@ import { z } from "zod/v4"
 import { CopyIcon, ExternalLinkIcon, RotateCcwIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { TestEmailConnectionButton } from "@/app/(dashboard)/dashboard/channels/_components/test-email-connection"
 import { getWidgetDemoPath } from "@/components/support-chat/demo-navigation"
 import { OptionCombobox } from "@/components/option-combobox"
 import { ProjectDialog } from "@/components/project-dialog"
@@ -82,6 +83,8 @@ type EmailChannelConfig = {
   smtpPort?: number
   smtpUser?: string
   smtpPassword?: string
+  smtpUseTls?: boolean
+  smtpAllowInsecure?: boolean
   webhookSecret?: string
 }
 
@@ -142,6 +145,8 @@ function createSchema(t: Translate) {
       smtpPort: z.coerce.number().int().optional(),
       smtpUser: z.string().trim(),
       smtpPassword: z.string().trim(),
+      smtpUseTls: z.boolean(),
+      smtpAllowInsecure: z.boolean(),
       slackBotToken: z.string().trim(),
       slackSigningSecret: z.string().trim(),
       slackAppId: z.string().trim(),
@@ -230,6 +235,8 @@ type EditForm = {
   smtpPort?: number
   smtpUser: string
   smtpPassword: string
+  smtpUseTls: boolean
+  smtpAllowInsecure: boolean
   slackBotToken: string
   slackSigningSecret: string
   slackAppId: string
@@ -275,6 +282,8 @@ function createEmptyForm(t: Translate): EditForm {
     smtpPort: 587,
     smtpUser: "",
     smtpPassword: "",
+    smtpUseTls: false,
+    smtpAllowInsecure: false,
     slackBotToken: "",
     slackSigningSecret: "",
     slackAppId: "",
@@ -401,6 +410,8 @@ function parseEmailChannelConfig(configJson: string): EmailChannelConfig {
       smtpPort: parsed.smtpPort,
       smtpUser: parsed.smtpUser?.trim() || "",
       smtpPassword: parsed.smtpPassword?.trim() || "",
+      smtpUseTls: parsed.smtpUseTls === true,
+      smtpAllowInsecure: parsed.smtpAllowInsecure === true,
       webhookSecret: parsed.webhookSecret?.trim() || "",
     }
   } catch {
@@ -532,6 +543,8 @@ function buildForm(item: AdminChannel | null, t: Translate): EditForm {
     smtpPort: emailConfig?.smtpPort ?? 587,
     smtpUser: emailConfig?.smtpUser ?? "",
     smtpPassword: emailConfig?.smtpPassword ?? "",
+    smtpUseTls: emailConfig?.smtpUseTls === true,
+    smtpAllowInsecure: emailConfig?.smtpAllowInsecure === true,
     slackBotToken: slackConfig?.botToken ?? "",
     slackSigningSecret: slackConfig?.signingSecret ?? "",
     slackAppId: slackConfig?.appId ?? "",
@@ -580,6 +593,8 @@ function buildPayload(form: EditForm, status: number, t: Translate): CreateAdmin
             smtpPort: form.smtpPort || 587,
             smtpUser: form.smtpUser.trim(),
             smtpPassword: form.smtpPassword.trim(),
+            smtpUseTls: form.smtpUseTls,
+            smtpAllowInsecure: form.smtpAllowInsecure,
             webhookSecret: form.webhookSecret.trim(),
           })
       : channelType === "telegram"
@@ -1127,6 +1142,35 @@ function ChannelFormBody({
                         </FieldContent>
                       </Field>
                     </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="flex items-start gap-2.5 rounded-md border border-border/70 p-3 text-sm">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 size-4 accent-primary"
+                          {...register("smtpUseTls")}
+                        />
+                        <span className="space-y-0.5">
+                          <span className="block font-medium">{t("channel.smtpUseTls")}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {t("channel.smtpUseTlsHint")}
+                          </span>
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-2.5 rounded-md border border-border/70 p-3 text-sm">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 size-4 accent-primary"
+                          {...register("smtpAllowInsecure")}
+                        />
+                        <span className="space-y-0.5">
+                          <span className="block font-medium">{t("channel.smtpAllowInsecure")}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {t("channel.smtpAllowInsecureHint")}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                    <TestEmailConnectionButton channelId={itemId} />
                   </div>
                 ) : null}
 

@@ -285,6 +285,10 @@ func registerDashboardChannelRoutes(group *gin.RouterGroup) {
 	group.POST("/update", dashboard.ChannelPostUpdate)
 	group.POST("/update_status", dashboard.ChannelPostUpdate_status)
 	group.Any("/wxwork/kf/accounts", dashboard.ChannelAnyWxworkKfAccounts)
+	// Verifying a bound mail server is a configuration action, so it sits under
+	// channel.update rather than inventing a permission nobody can be granted
+	// without a migration.
+	group.POST("/test_email", dashboard.ChannelPostTest_email)
 	group.Any("/wxwork/outbox/failed/list", dashboard.ChannelAnyWxworkOutboxFailedList)
 	group.POST("/wxwork/outbox/retry", dashboard.ChannelPostWxworkOutboxRetry)
 	group.POST("/wxwork/outbox/ignore", dashboard.ChannelPostWxworkOutboxIgnore)

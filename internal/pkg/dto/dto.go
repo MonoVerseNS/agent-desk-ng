@@ -76,6 +76,14 @@ type EmailChannelConfig struct {
 	SMTPPort          int    `json:"smtpPort,omitempty"`
 	SMTPUser          string `json:"smtpUser,omitempty"`
 	SMTPPassword      string `json:"smtpPassword,omitempty"`
+	// SMTPUseTLS is a pointer so "not set" stays distinguishable from an explicit
+	// false. A plain bool cannot say that, and inheriting the system value is the
+	// wrong answer for a channel deliberately bound to a plaintext test server.
+	SMTPUseTLS *bool `json:"smtpUseTls,omitempty"`
+	// SMTPAllowInsecure accepts a self-signed certificate and skips opportunistic
+	// STARTTLS, so a channel can be bound to a local test SMTP server. Never
+	// enable it for a real mailbox.
+	SMTPAllowInsecure bool   `json:"smtpAllowInsecure,omitempty"`
 	WebhookSecret     string `json:"webhookSecret,omitempty"`
 	WelcomeMessage    string `json:"welcomeMessage,omitempty"`
 }

@@ -10,7 +10,6 @@ import (
 
 	"agent-desk/internal/email"
 	"agent-desk/internal/models"
-	"agent-desk/internal/pkg/config"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/repositories"
 
@@ -118,78 +117,12 @@ func (s *emailOutboundService) processOutbox(outboxID int64) error {
 	}
 
 	// 2. Resolve sender config & system fallbacks
-	var sysEmail config.EmailConfig
-	if c := config.GetCurrent(); c != nil {
-		sysEmail = c.Email
-	}
-	fromEmail := strings.TrimSpace(cfg.EmailAddress)
-	if fromEmail == "" {
-		fromEmail = strings.TrimSpace(sysEmail.FromAddress)
-	}
-	if fromEmail == "" {
-		fromEmail = "support@example.com"
-	}
+	settings := resolveEmailDeliverySettings(cfg)
+	fromEmail := settings.FromEmail
+	fromName := settings.FromName
+	replyTo := settings.ReplyTo
 
-	fromName := strings.TrimSpace(cfg.SenderName)
-	if fromName == "" {
-		fromName = strings.TrimSpace(sysEmail.FromName)
-	}
-	if fromName == "" {
-		fromName = "Customer Support"
-	}
-
-	// Point replies at the channel's own inbound address rather than the mailbox
-	// the sending agent happens to authenticate with. Without this a reply lands
-	// in that person's inbox instead of back in AgentDesk, and the email thread
-	// stops being a support channel after the first answer.
-	replyTo := strings.TrimSpace(cfg.EmailAddress)
-	if replyTo == "" {
-		replyTo = strings.TrimSpace(cfg.ForwardingAddress)
-	}
-
-	provider := email.DeliveryProvider(strings.ToLower(strings.TrimSpace(cfg.Provider)))
-	if provider == "" || provider == "default" {
-		provider = email.DeliveryProvider(strings.ToLower(strings.TrimSpace(sysEmail.Provider)))
-	}
-	if provider == "" {
-		provider = email.ProviderSMTP
-	}
-
-	apiKey := cfg.APIKey
-	if apiKey == "" {
-		apiKey = sysEmail.APIKey
-	}
-
-	smtpHost := cfg.SMTPHost
-	if smtpHost == "" {
-		smtpHost = sysEmail.SMTPHost
-	}
-	smtpPort := cfg.SMTPPort
-	if smtpPort <= 0 {
-		smtpPort = sysEmail.SMTPPort
-	}
-	if smtpPort <= 0 {
-		smtpPort = 587
-	}
-	smtpUser := cfg.SMTPUser
-	if smtpUser == "" {
-		smtpUser = sysEmail.SMTPUser
-	}
-	smtpPassword := cfg.SMTPPassword
-	if smtpPassword == "" {
-		smtpPassword = sysEmail.SMTPPassword
-	}
-	smtpUseTLS := sysEmail.SMTPUseTLS
-
-	client := email.NewClient(email.ClientConfig{
-		Provider:     provider,
-		APIKey:       apiKey,
-		SMTPHost:     smtpHost,
-		SMTPPort:     smtpPort,
-		SMTPUser:     smtpUser,
-		SMTPPassword: smtpPassword,
-		SMTPUseTLS:   smtpUseTLS,
-	})
+	client := email.NewClient(settings.clientConfig())
 
 	// 3. Resolve threading headers and subject
 	lastInboundMessageID := ""
@@ -254,7 +187,7 @@ func (s *emailOutboundService) processOutbox(outboxID int64) error {
 		return s.handleOutboxError(outbox, sendErr.Error())
 	}
 
-	return s.markOutboxSent(outbox, fmt.Sprintf("sent to %s via %s", targetEmail, provider))
+	return s.markOutboxSent(outbox, fmt.Sprintf("sent to %s via %s", targetEmail, settings.Provider))
 }
 
 func (s *emailOutboundService) markOutboxSent(outbox *models.ChannelMessageOutbox, detail string) error {

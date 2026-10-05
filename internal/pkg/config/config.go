@@ -411,16 +411,20 @@ type DiscordConfig struct {
 
 // EmailConfig holds the email delivery provider settings.
 type EmailConfig struct {
-	Provider      string `yaml:"provider"`
-	FromAddress   string `yaml:"fromAddress"`
-	FromName      string `yaml:"fromName"`
-	APIKey        string `yaml:"apiKey"`
-	SMTPHost      string `yaml:"smtpHost"`
-	SMTPPort      int    `yaml:"smtpPort"`
-	SMTPUser      string `yaml:"smtpUser"`
-	SMTPPassword  string `yaml:"smtpPassword"`
-	SMTPUseTLS    bool   `yaml:"smtpUseTls"`
-	InboundSecret string `yaml:"inboundSecret"`
+	Provider     string `yaml:"provider"`
+	FromAddress  string `yaml:"fromAddress"`
+	FromName     string `yaml:"fromName"`
+	APIKey       string `yaml:"apiKey"`
+	SMTPHost     string `yaml:"smtpHost"`
+	SMTPPort     int    `yaml:"smtpPort"`
+	SMTPUser     string `yaml:"smtpUser"`
+	SMTPPassword string `yaml:"smtpPassword"`
+	SMTPUseTLS   bool   `yaml:"smtpUseTls"`
+	// SMTPAllowInsecure accepts a self-signed certificate and skips opportunistic
+	// STARTTLS so a deployment can be pointed at a local test SMTP server. It
+	// weakens transport security and must stay off for real mailboxes.
+	SMTPAllowInsecure bool   `yaml:"smtpAllowInsecure"`
+	InboundSecret     string `yaml:"inboundSecret"`
 }
 
 // SlackConfig holds deployment-wide Slack app credentials. A channel may carry
@@ -614,6 +618,7 @@ func bindEnvironmentAliases(v *viper.Viper) {
 	_ = v.BindEnv("email.smtpUser", "SMTP_USER", "EMAIL_SMTP_USER", "AGENT_DESK_EMAIL_SMTPUSER")
 	_ = v.BindEnv("email.smtpPassword", "SMTP_PASSWORD", "SMTP_PASS", "AGENT_DESK_EMAIL_SMTPPASSWORD")
 	_ = v.BindEnv("email.smtpUseTls", "SMTP_USE_TLS", "SMTP_SSL", "AGENT_DESK_EMAIL_SMTPUSETLS")
+	_ = v.BindEnv("email.smtpAllowInsecure", "SMTP_ALLOW_INSECURE", "AGENT_DESK_EMAIL_SMTPALLOWINSECURE")
 	_ = v.BindEnv("email.inboundSecret", "EMAIL_INBOUND_SECRET", "EMAIL_WEBHOOK_SECRET", "AGENT_DESK_EMAIL_INBOUNDSECRET")
 }
 

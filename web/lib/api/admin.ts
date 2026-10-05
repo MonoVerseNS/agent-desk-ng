@@ -1150,6 +1150,24 @@ export function fetchUsersAll(query?: Record<string, string | number | undefined
   )
 }
 
+export type SMTPProbeResult = {
+  host: string
+  port: number
+  provider: string
+  capabilities: string[]
+  starttlsOffered: boolean
+  tlsEstablished: boolean
+  authAccepted: boolean
+  authAttempted: boolean
+}
+
+export function testChannelEmail(channelId: number) {
+  return request<SMTPProbeResult>("/api/dashboard/channel/test_email", {
+    method: "POST",
+    body: JSON.stringify({ id: channelId }),
+  })
+}
+
 export function createUser(payload: CreateAdminUserPayload) {
   return request<CreateUserResult>("/api/dashboard/user/create", {
     method: "POST",

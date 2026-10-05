@@ -356,6 +356,12 @@ func (c *emailClient) sendViaSMTP(ctx context.Context, req SendEmailParams) erro
 	tlsConfig := &tls.Config{
 		ServerName: c.cfg.SMTPHost,
 	}
+	if c.cfg.SMTPAllowInsecure {
+		// Test-server escape hatch. Verification is skipped rather than STARTTLS
+		// being declined outright, so a self-signed local server still gets an
+		// encrypted hop; only the trust check is waived.
+		tlsConfig.InsecureSkipVerify = true
+	}
 
 	var client *smtp.Client
 	var err error
@@ -381,7 +387,14 @@ func (c *emailClient) sendViaSMTP(ctx context.Context, req SendEmailParams) erro
 			return fmt.Errorf("failed to create smtp client: %w", err)
 		}
 		if ok, _ := client.Extension("STARTTLS"); ok {
-			if err = client.StartTLS(tlsConfig); err != nil {
+			// Opportunistic upgrade. A test server that advertises STARTTLS with a
+			// self-signed certificate would fail verification here and take the
+			// whole send down, so the binding can opt out of the upgrade instead.
+			if c.cfg.SMTPAllowInsecure {
+				if err = client.StartTLS(&tls.Config{ServerName: c.cfg.SMTPHost, InsecureSkipVerify: true}); err != nil {
+					return fmt.Errorf("failed to starttls: %w", err)
+				}
+			} else if err = client.StartTLS(tlsConfig); err != nil {
 				return fmt.Errorf("failed to starttls: %w", err)
 			}
 			tlsEstablished = true

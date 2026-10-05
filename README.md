@@ -98,6 +98,10 @@ The email channel works as a full request medium: a visitor's mail becomes a con
 - **Where a request lands.** If the visitor still has a live chat open, the email is appended to that chat instead of starting an email thread - they are present in the chat and absent from their inbox - and they are emailed a note asking them to continue there. Once the chat has gone quiet it counts as abandoned and the email becomes its own conversation. The window is `conversation.emailChatLiveMinutes`, 30 minutes by default.
 - **Replies.** `Reply-To` points at the channel's own inbound address, so a reply comes back to AgentDesk rather than to the agent's mailbox. Threads hold through the `[#id]` token in the subject and through `In-Reply-To`.
 - **Outbound delivery** goes through an outbox with retries, over SMTP, Brevo, SendGrid, Resend, Postmark or Mailgun.
+- **Binding a channel to an SMTP server.** Each email channel can carry its own host, port, credentials and TLS settings, falling back to the deployment defaults for anything it leaves unset. Two of those settings are per channel on purpose:
+  - `smtpUseTls` is tri-state. An unchecked box means "inherit", not "off", so a channel can be bound to a plaintext local test server without changing the global setting for everyone else.
+  - `smtpAllowInsecure` accepts a self-signed certificate. It exists for pointing a channel at a test server such as Mailpit or MailHog and must never be enabled for a real mailbox.
+- **Verifying a binding.** `POST /api/dashboard/channel/test_email` opens a connection using the same settings resolution and the same transport rules as the real send, and reports what the server offered: whether it advertises STARTTLS, whether TLS was established, which capabilities it has, and whether the credentials were accepted. The probe sends no mail. Binding is then a checked action instead of a guess - otherwise a wrong host or password only shows up by filing a real request and watching the outbox retry five times.
 
 ```yaml
 email:
@@ -109,8 +113,11 @@ email:
   smtpUser: support@example.com
   smtpPassword: ...
   smtpUseTls: true
+  smtpAllowInsecure: false   # test servers only
   inboundSecret: ...    # fallback when a channel has no secret of its own
 ```
+
+To develop against a local catcher, run Mailpit or MailHog, then set the channel's SMTP host to it, port 1025, leave the credentials empty, and enable `smtpAllowInsecure`.
 
 ### Fixes
 

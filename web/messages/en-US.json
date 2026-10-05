@@ -803,7 +803,16 @@
     "copiedWechatMenuUrl": "WeChat menu link copied.",
     "wechatGuide2": "2. Set your WeChat custom menu URL to the link above.",
     "wechatGuide3": "3. Users will open the support chat directly after tapping the menu item.",
-    "processing": "Working..."
+    "processing": "Working...",
+    "smtpUseTls": "Use TLS",
+    "smtpUseTlsHint": "Encrypt the connection to the mail server. Leave off to inherit the system setting.",
+    "smtpAllowInsecure": "Allow insecure connection",
+    "smtpAllowInsecureHint": "Accept a self-signed certificate, for binding a local test SMTP server. Never enable for a real mailbox.",
+    "smtpTest": "Test mail server connection",
+    "smtpTesting": "Testing...",
+    "smtpTestSuccess": "Connected to {host}",
+    "smtpTestFailed": "Could not reach the mail server",
+    "smtpTestSaveFirst": "Save the channel before testing the connection."
   },
   "upload": {
     "imagePlaceholder": "Upload image",

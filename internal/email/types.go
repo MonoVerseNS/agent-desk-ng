@@ -46,7 +46,12 @@ type ClientConfig struct {
 	SMTPUser     string
 	SMTPPassword string
 	SMTPUseTLS   bool
-	Domain       string // For Mailgun (e.g. mg.example.com)
+	// SMTPAllowInsecure skips certificate verification and refuses opportunistic
+	// STARTTLS. It exists so a channel can be bound to a self-signed test server
+	// such as Mailpit or MailHog; it weakens transport security and must never be
+	// set for a real mailbox.
+	SMTPAllowInsecure bool
+	Domain            string // For Mailgun (e.g. mg.example.com)
 }
 
 // InboundEmailPayload represents normalized parsed inbound email.
