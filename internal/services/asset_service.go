@@ -211,5 +211,5 @@ func (s *assetService) buildFilenameFromMime(mimeType string) string {
 	case "text/plain":
 		ext = ".txt"
 	}
-	return "wxwork_" + strings.ReplaceAll(uuid.NewString(), "-", "") + ext
+	return "upload_" + strings.ReplaceAll(uuid.NewString(), "-", "") + ext
 }

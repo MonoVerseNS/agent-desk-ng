@@ -968,8 +968,6 @@ func (s *conversationService) GetConversationExternalIdentity(conversation *mode
 
 func externalSourceForChannelType(channelType string) enums.ExternalSource {
 	switch strings.TrimSpace(channelType) {
-	case enums.ChannelTypeWxWorkKF:
-		return enums.ExternalSourceWxWorkKF
 	case enums.ChannelTypeWeb:
 		return enums.ExternalSourceGuest
 	default:

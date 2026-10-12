@@ -335,6 +335,62 @@ func NormalizeToolCodeAlias(toolCode string) string {
 	return toolCode
 }
 
+func SanitizeToolFunctionName(toolCode string) string {
+	toolCode = strings.TrimSpace(toolCode)
+	if toolCode == "" {
+		return ""
+	}
+	var sb strings.Builder
+	sb.Grow(len(toolCode))
+	for _, r := range toolCode {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			sb.WriteRune(r)
+		} else {
+			sb.WriteByte('_')
+		}
+	}
+	return sb.String()
+}
+
+func ResolveToolFunctionName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" || name == "tool_search" || name == "conversation_decision" {
+		return name
+	}
+	if _, ok := toolSpecByCode[name]; ok {
+		return NormalizeToolCodeAlias(name)
+	}
+	if canonical, ok := toolAliasToCanonical[name]; ok {
+		return canonical
+	}
+	for _, spec := range RegisteredToolSpecs {
+		if SanitizeToolFunctionName(spec.Code) == name {
+			return spec.Code
+		}
+		for _, alias := range spec.Aliases {
+			if SanitizeToolFunctionName(alias) == name {
+				return spec.Code
+			}
+		}
+	}
+	if spec, ok := toolSpecByName[name]; ok {
+		return spec.Code
+	}
+	if strings.HasPrefix(name, "skill_") {
+		return "skill/" + strings.TrimPrefix(name, "skill_")
+	}
+	if strings.HasPrefix(name, "workflow_") {
+		return "workflow/" + strings.TrimPrefix(name, "workflow_")
+	}
+	if strings.HasPrefix(name, "builtin_") {
+		return "builtin/" + strings.TrimPrefix(name, "builtin_")
+	}
+	if strings.HasPrefix(name, "graph_") {
+		return "graph/" + strings.TrimPrefix(name, "graph_")
+	}
+	return name
+}
+
 func BuildToolAppendices(hasDynamicMCPTools bool, toolCodes map[string]string) []string {
 	return BuildToolAppendicesForCodes(hasDynamicMCPTools, toolCodesFromMap(toolCodes))
 }

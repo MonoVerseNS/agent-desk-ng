@@ -22,10 +22,6 @@ func Init() {
 	})
 
 	addFunc(c, "@every 5s", func() {
-		count := services.WxWorkKFOutboundService.DispatchPendingOutbox()
-		if count > 0 {
-			slog.Info("wxwork kf outbox dispatched", "count", count)
-		}
 		tgCount := services.TelegramOutboundService.DispatchPendingOutbox()
 		if tgCount > 0 {
 			slog.Info("telegram outbox dispatched", "count", tgCount)
@@ -41,10 +37,6 @@ func Init() {
 		discordCount := services.DiscordOutboundService.DispatchPendingOutbox()
 		if discordCount > 0 {
 			slog.Info("discord outbox dispatched", "count", discordCount)
-		}
-		larkCount := services.LarkOutboundService.DispatchPendingOutbox()
-		if larkCount > 0 {
-			slog.Info("lark outbox dispatched", "count", larkCount)
 		}
 		emailCount := services.EmailOutboundService.DispatchPendingOutbox()
 		if emailCount > 0 {

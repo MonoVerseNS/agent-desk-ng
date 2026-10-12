@@ -11,10 +11,6 @@ type UpdateProfileRequest struct {
 	Email    *string `json:"email"`
 }
 
-type WxWorkExchangeRequest struct {
-	Ticket string `json:"ticket"`
-}
-
 type OIDCExchangeRequest struct {
 	Ticket string `json:"ticket"`
 }

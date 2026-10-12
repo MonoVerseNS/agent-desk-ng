@@ -62,3 +62,34 @@ func TestRegisteredToolTextKeepsChineseLocale(t *testing.T) {
 		t.Fatalf("unexpected chinese description: %q", description)
 	}
 }
+
+func TestSanitizeToolFunctionName(t *testing.T) {
+	cases := map[string]string{
+		"builtin/knowledge_retrieve":   "builtin_knowledge_retrieve",
+		"graph/triage_service_request": "graph_triage_service_request",
+		"skill/12":                     "skill_12",
+		"workflow/99":                  "workflow_99",
+		"tool_search":                  "tool_search",
+	}
+	for input, expected := range cases {
+		if got := SanitizeToolFunctionName(input); got != expected {
+			t.Errorf("SanitizeToolFunctionName(%q) = %q, want %q", input, got, expected)
+		}
+	}
+}
+
+func TestResolveToolFunctionName(t *testing.T) {
+	cases := map[string]string{
+		"builtin_knowledge_retrieve":   "builtin/knowledge_retrieve",
+		"graph_triage_service_request": "graph/triage_service_request",
+		"knowledge_retrieve":           "builtin/knowledge_retrieve",
+		"skill_12":                     "skill/12",
+		"workflow_99":                  "workflow/99",
+		"tool_search":                  "tool_search",
+	}
+	for input, expected := range cases {
+		if got := ResolveToolFunctionName(input); got != expected {
+			t.Errorf("ResolveToolFunctionName(%q) = %q, want %q", input, got, expected)
+		}
+	}
+}

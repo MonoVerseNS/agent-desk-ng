@@ -104,8 +104,6 @@ var (
 	PermissionChannelDelete = Permission{Name: "删除接入渠道", Code: "channel.delete", Type: "api", GroupName: "channel", Method: "POST", APIPath: "/api/dashboard/channel/delete", SortNo: 628}
 
 	// 企微 Outbox 相关权限
-	PermissionWxWorkOutboxView   = Permission{Name: "查看企微 Outbox", Code: "wxworkOutbox.view", Type: "api", GroupName: "wxworkOutbox", Method: "ANY", APIPath: "/api/dashboard/channel/wxwork/outbox/failed/list", SortNo: 629}
-	PermissionWxWorkOutboxUpdate = Permission{Name: "处置企微 Outbox", Code: "wxworkOutbox.update", Type: "api", GroupName: "wxworkOutbox", Method: "POST", APIPath: "/api/dashboard/channel/wxwork/outbox/retry", SortNo: 630}
 
 	// 客户相关权限
 	PermissionCustomerView   = Permission{Name: "查看客户", Code: "customer.view", Type: "api", GroupName: "customer", Method: "POST", APIPath: "/api/dashboard/customer/list", SortNo: 630}
@@ -239,8 +237,6 @@ var Permissions = []Permission{
 	PermissionChannelCreate,
 	PermissionChannelUpdate,
 	PermissionChannelDelete,
-	PermissionWxWorkOutboxView,
-	PermissionWxWorkOutboxUpdate,
 	PermissionCustomerView,
 	PermissionCustomerCreate,
 	PermissionCustomerUpdate,
@@ -383,7 +379,6 @@ var builtinPermissionResourceLabels = map[string]string{
 	"tag":               "tags",
 	"company":           "companies",
 	"channel":           "channels",
-	"wxworkOutbox":      "WeCom outbox records",
 	"customer":          "customers",
 	"agent":             "agents",
 	"agentTeam":         "agent teams",
@@ -408,7 +403,6 @@ var builtinPermissionNameOverrides = map[string]string{
 	"ticket.progress":                 "Update ticket progress",
 	"agent.config":                    "Configure agent service rules",
 	"agentTeamSchedule.batchGenerate": "Batch generate agent team schedules",
-	"wxworkOutbox.update":             "Handle WeCom outbox records",
 	"mcp.view":                        "View MCP debug information",
 	"mcp.call":                        "Call MCP tools",
 }
@@ -439,7 +433,7 @@ var RolePermissions = map[string][]Permission{
 		PermissionQuickReplyView, PermissionQuickReplyCreate, PermissionQuickReplyUpdate, PermissionQuickReplyDelete,
 		PermissionTagView, PermissionTagCreate, PermissionTagUpdate, PermissionTagDelete,
 		PermissionCompanyView, PermissionCompanyCreate, PermissionCompanyUpdate, PermissionCompanyDelete,
-		PermissionChannelView, PermissionChannelCreate, PermissionChannelUpdate, PermissionChannelDelete, PermissionWxWorkOutboxView, PermissionWxWorkOutboxUpdate,
+		PermissionChannelView, PermissionChannelCreate, PermissionChannelUpdate, PermissionChannelDelete,
 		PermissionCustomerView, PermissionCustomerCreate, PermissionCustomerUpdate, PermissionCustomerDelete,
 		PermissionAgentView, PermissionAgentCreate, PermissionAgentUpdate, PermissionAgentDelete, PermissionAgentUpdateStatus, PermissionAgentConfig,
 		PermissionAgentTeamView, PermissionAgentTeamCreate, PermissionAgentTeamUpdate, PermissionAgentTeamDelete,

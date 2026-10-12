@@ -544,12 +544,16 @@ func agentLoopToolDefinitions(turn agentLoopTurn) []ai.ToolDefinition {
 		if code == "" {
 			continue
 		}
-		if _, exists := seen[code]; exists {
+		wireName := toolx.SanitizeToolFunctionName(code)
+		if wireName == "" {
 			continue
 		}
-		seen[code] = struct{}{}
+		if _, exists := seen[wireName]; exists {
+			continue
+		}
+		seen[wireName] = struct{}{}
 		definitions = append(definitions, ai.ToolDefinition{
-			Name:        code,
+			Name:        wireName,
 			Description: "Execute the configured capability " + code + " with its arguments.",
 			Parameters:  map[string]any{"type": "object", "additionalProperties": true},
 		})
@@ -631,6 +635,14 @@ func (e *AgentLoopEngine) toolSearchExecutor(runInput RunInput, turn agentLoopTu
 		toolCode, arguments, err := resolveAgentLoopToolCall(call)
 		if err != nil {
 			return "", err
+		}
+		if !slices.Contains(turn.AllowedTools, toolCode) {
+			for _, allowed := range turn.AllowedTools {
+				if toolx.SanitizeToolFunctionName(allowed) == call.Name || toolx.SanitizeToolFunctionName(allowed) == toolCode {
+					toolCode = allowed
+					break
+				}
+			}
 		}
 		if !slices.Contains(turn.AllowedTools, toolCode) {
 			return "", fmt.Errorf("capability is not configured for this Agent: %s", toolCode)
@@ -727,9 +739,10 @@ func resolveAgentLoopToolCall(call ai.ToolCall) (string, map[string]any, error) 
 		if err := json.Unmarshal([]byte(call.Arguments), &request); err != nil {
 			return "", nil, fmt.Errorf("invalid tool_search arguments: %w", err)
 		}
-		return strings.TrimSpace(request.ToolCode), request.Arguments, nil
+		toolCode := strings.TrimSpace(request.ToolCode)
+		return toolx.ResolveToolFunctionName(toolCode), request.Arguments, nil
 	}
-	toolCode := strings.TrimSpace(call.Name)
+	toolCode := toolx.ResolveToolFunctionName(strings.TrimSpace(call.Name))
 	if toolCode == "" {
 		return "", nil, fmt.Errorf("agent loop tool name is required")
 	}

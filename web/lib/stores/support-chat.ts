@@ -213,6 +213,7 @@ function t(key: string) {
 
 export const useSupportChatStore = create<SupportChatStore>((set, get) => {
   const realtime = createRealtimeConnectionManager({
+    beforeConnect: () => ensureCustomerSession(),
     createSocket: createImRealtimeConnection,
     canReconnect: () => Boolean(get().isOpen && get().conversation?.id),
     onStatusChange: (status) => {

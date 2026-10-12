@@ -4,11 +4,8 @@ import {
   Building2Icon,
   Gamepad2Icon,
   MailIcon,
-  MessagesSquareIcon,
-  MessageSquareMoreIcon,
   SendIcon,
   SlackIcon,
-  BirdIcon,
 } from "lucide-react"
 
 import {
@@ -34,12 +31,6 @@ function getChannelTypeLabel(channelType: string, t: (key: string) => string) {
   if (channelType === "email") {
     return t("channel.typeEmail")
   }
-  if (channelType === "wechat_mp") {
-    return t("channel.typeWechatMp")
-  }
-  if (channelType === "wxwork_kf") {
-    return t("channel.typeWxworkKf")
-  }
   if (channelType === "telegram") {
     return t("channel.typeTelegram")
   }
@@ -51,9 +42,6 @@ function getChannelTypeLabel(channelType: string, t: (key: string) => string) {
   }
   if (channelType === "discord") {
     return t("channel.typeDiscord")
-  }
-  if (channelType === "lark") {
-    return t("channel.typeLark")
   }
   return t("channel.typeWeb")
 }
@@ -72,12 +60,6 @@ function ChannelIcon({ channelType }: { channelType: string }) {
   if (channelType === "email") {
     return <MailIcon className="size-4" />
   }
-  if (channelType === "wechat_mp") {
-    return <MessagesSquareIcon className="size-4" />
-  }
-  if (channelType === "wxwork_kf") {
-    return <MessageSquareMoreIcon className="size-4" />
-  }
   if (channelType === "telegram" || channelType === "zalo_oa") {
     return <SendIcon className="size-4" />
   }
@@ -86,9 +68,6 @@ function ChannelIcon({ channelType }: { channelType: string }) {
   }
   if (channelType === "discord") {
     return <Gamepad2Icon className="size-4" />
-  }
-  if (channelType === "lark") {
-    return <BirdIcon className="size-4" />
   }
   return <Building2Icon className="size-4" />
 }
@@ -108,11 +87,8 @@ export default function DashboardChannelsPage() {
     { value: "email", label: t("channel.typeEmail") },
     { value: "telegram", label: t("channel.typeTelegram") },
     { value: "discord", label: t("channel.typeDiscord") },
-    { value: "lark", label: t("channel.typeLark") },
     { value: "slack", label: t("channel.typeSlack") },
     { value: "zalo_oa", label: t("channel.typeZaloOa") },
-    { value: "wechat_mp", label: t("channel.typeWechatMp") },
-    { value: "wxwork_kf", label: t("channel.typeWxworkKf") },
   ]
 
   return (

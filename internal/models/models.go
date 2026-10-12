@@ -29,9 +29,6 @@ var Models = []any{
 	&ConversationParticipant{},
 	&ConversationReadState{},
 	&Message{},
-	&WxWorkKFSyncState{},
-	&WxWorkKFConversation{},
-	&WxWorkKFMessageRef{},
 	&ChannelMessageOutbox{},
 	&ConversationAssignment{},
 	&ConversationTag{},
@@ -267,7 +264,7 @@ type CustomerIdentity struct {
 type CustomerContact struct {
 	ID           int64             `gorm:"primaryKey;autoIncrement"`
 	CustomerID   int64             `gorm:"type:bigint;not null;index;uniqueIndex:uk_customer_contact"`                  // CustomerID 为所属客户ID。
-	ContactType  enums.ContactType `gorm:"type:varchar(30);not null;default:'';index;uniqueIndex:uk_customer_contact"`  // ContactType 为联系方式类型：mobile/email/wechat/other。
+	ContactType  enums.ContactType `gorm:"type:varchar(30);not null;default:'';index;uniqueIndex:uk_customer_contact"`  // ContactType 为联系方式类型：mobile/email/other。
 	ContactValue string            `gorm:"type:varchar(200);not null;default:'';index;uniqueIndex:uk_customer_contact"` // ContactValue 为联系方式值。
 	IsPrimary    bool              `gorm:"not null;default:false;index"`                                                // IsPrimary 表示是否主联系方式。
 	IsVerified   bool              `gorm:"not null;default:false;index"`                                                // IsVerified 表示是否已验证。
@@ -461,62 +458,12 @@ type Message struct {
 	AuditFields
 }
 
-// WxWorkKFSyncState 企业微信客服消息同步状态表。
-//
-//	按 open_kfid 记录企业微信客服消息同步游标，用于 SyncMsg 增量拉取。
-type WxWorkKFSyncState struct {
-	ID         int64        `gorm:"primaryKey;autoIncrement"`                         // ID 为同步状态主键。
-	OpenKfID   string       `gorm:"type:varchar(64);not null;default:'';uniqueIndex"` // OpenKfID 为企业微信客服账号ID。
-	NextCursor string       `gorm:"type:varchar(128);not null;default:''"`            // NextCursor 为下一次增量同步使用的游标。
-	LastSyncAt *time.Time   `gorm:"index"`                                            // LastSyncAt 为最近一次成功同步时间。
-	Status     enums.Status `gorm:"type:int;not null;default:0;index"`                // Status 为同步状态记录状态。
-	Remark     string       `gorm:"type:text"`                                        // Remark 为同步异常、人工备注等补充信息。
-	AuditFields
-}
-
-// WxWorkKFConversation 企业微信客服渠道会话映射表。
-//
-//	维护平台会话与企业微信客服会话上下文的对应关系，供入站同步和下行发送复用。
-type WxWorkKFConversation struct {
-	ID             int64        `gorm:"primaryKey;autoIncrement"`                                   // ID 为渠道会话映射主键。
-	ConversationID int64        `gorm:"type:bigint;not null;uniqueIndex"`                           // ConversationID 为平台会话ID，一条平台会话仅对应一条当前有效渠道映射。
-	ChannelID      int64        `gorm:"type:bigint;not null;default:0;index"`                       // ChannelID 为所属接入渠道ID，用于标识该会话来自哪个企业微信渠道配置。
-	OpenKfID       string       `gorm:"type:varchar(64);not null;default:'';index:idx_openkf_ext"`  // OpenKfID 为企业微信客服账号ID。
-	ExternalUserID string       `gorm:"type:varchar(128);not null;default:'';index:idx_openkf_ext"` // ExternalUserID 为企业微信客户ID。
-	ServicerUserID string       `gorm:"type:varchar(128);not null;default:'';index"`                // ServicerUserID 为企业微信当前接待客服成员UserID。
-	SessionStatus  string       `gorm:"type:varchar(30);not null;default:'';index"`                 // SessionStatus 为微信侧会话状态快照，如接入中、转接中、已结束。
-	LastWxMsgID    string       `gorm:"type:varchar(64);not null;default:'';index"`                 // LastWxMsgID 为最近一次同步到的微信消息ID。
-	LastWxMsgTime  *time.Time   `gorm:"index"`                                                      // LastWxMsgTime 为最近一次微信消息时间。
-	RawProfile     string       `gorm:"type:text"`                                                  // RawProfile 为微信侧原始会话补充信息JSON。
-	Status         enums.Status `gorm:"type:int;not null;default:0;index"`                          // Status 为渠道会话映射状态。
-	AuditFields
-}
-
-// WxWorkKFMessageRef 企业微信客服消息映射表。
-//
-//	用于实现微信消息幂等消费，并保存平台消息与微信消息的双向映射关系。
-type WxWorkKFMessageRef struct {
-	ID             int64        `gorm:"primaryKey;autoIncrement"`                         // ID 为消息映射主键。
-	ConversationID int64        `gorm:"type:bigint;not null;default:0;index"`             // ConversationID 为所属平台会话ID。
-	MessageID      int64        `gorm:"type:bigint;not null;default:0;index"`             // MessageID 为所属平台消息ID；仅渠道消息尚未生成平台消息时可暂为0。
-	WxMsgID        string       `gorm:"type:varchar(64);not null;default:'';uniqueIndex"` // WxMsgID 为企业微信消息ID，用于幂等去重。
-	Direction      string       `gorm:"type:varchar(20);not null;default:'';index"`       // Direction 为消息方向，如 in/out。
-	Origin         int          `gorm:"type:int;not null;default:0;index"`                // Origin 为企业微信消息来源值，如客户发送、系统事件、企微客户端发送。
-	OpenKfID       string       `gorm:"type:varchar(64);not null;default:'';index"`       // OpenKfID 为发送或接收该消息的客服账号ID。
-	ExternalUserID string       `gorm:"type:varchar(128);not null;default:'';index"`      // ExternalUserID 为消息对应的企业微信客户ID。
-	SendStatus     string       `gorm:"type:varchar(30);not null;default:'';index"`       // SendStatus 为渠道发送状态快照，如 sent、failed。
-	FailReason     string       `gorm:"type:text"`                                        // FailReason 为渠道发送失败原因或补偿说明。
-	RawPayload     string       `gorm:"type:text"`                                        // RawPayload 为企业微信原始消息JSON。
-	Status         enums.Status `gorm:"type:int;not null;default:0;index"`                // Status 为消息映射状态。
-	AuditFields
-}
-
 // ChannelMessageOutbox 外部渠道消息投递任务表。
 //
 //	用于记录平台消息提交后的渠道发送任务，保证第三方发送动作与主事务解耦。
 type ChannelMessageOutbox struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement"`                                                  // ID 为投递任务主键。
-	ChannelType    string     `gorm:"type:varchar(30);not null;default:'';index;uniqueIndex:uk_channel_message"` // ChannelType 为目标渠道类型，如 wxwork_kf。
+	ChannelType    string     `gorm:"type:varchar(30);not null;default:'';index;uniqueIndex:uk_channel_message"` // ChannelType 为目标渠道类型，如 email。
 	ConversationID int64      `gorm:"type:bigint;not null;default:0;index"`                                      // ConversationID 为所属平台会话ID。
 	MessageID      int64      `gorm:"type:bigint;not null;default:0;uniqueIndex:uk_channel_message"`             // MessageID 为待投递的平台消息ID。
 	Payload        string     `gorm:"type:text"`                                                                 // Payload 为渠道发送所需的标准化请求数据JSON。
@@ -744,13 +691,13 @@ type AIWorkflowNodeRun struct {
 // Channel 接入渠道配置。
 //
 //	用于统一描述系统的外部接入入口。不同渠道类型共享统一的接入配置骨架，
-//	例如网页客服渠道（web）和企业微信客服渠道（wxwork_kf）。
+//	例如网页客服渠道（web）和邮件渠道（email）。
 //	渠道本身负责定义“入口如何识别、默认接入哪个 AI Agent、渠道专属配置是什么”，
 //	而具体消息收发、会话映射等运行时数据由各自的渠道业务表承载。
 type Channel struct {
 	ID                            int64  `gorm:"primaryKey;autoIncrement"`                         // ID 为渠道主键。
 	Name                          string `gorm:"type:varchar(100);not null;default:'';index"`      // Name 为渠道名称，用于后台展示和业务识别，例如“官网客服”“企业微信主客服”。
-	ChannelType                   string `gorm:"type:varchar(30);not null;default:'';index"`       // ChannelType 为渠道类型，决定该渠道的接入方式和配置解释规则。当前规划的典型取值包括：web、wxwork_kf。
+	ChannelType                   string `gorm:"type:varchar(30);not null;default:'';index"`       // ChannelType 为渠道类型，决定该渠道的接入方式和配置解释规则。当前规划的典型取值包括：web、email。
 	ChannelID                     string `gorm:"type:varchar(64);not null;default:'';uniqueIndex"` // ChannelID 为渠道入口标识，由系统自动生成。对 web 渠道，该字段用于前端通过 X-Channel-Id 标识接入来源；对其他渠道，作为统一的系统内稳定渠道标识保留。
 	AIAgentID                     int64  `gorm:"type:bigint;not null;default:0;index"`             // AIAgentID 为该渠道默认接入的 AI Agent。 当外部客户通过该渠道首次进入系统且尚未命中现有未结束会话时，系统会使用该 AI Agent 作为会话默认接待实例。
 	AIAgentRolloutPercent         int    `gorm:"type:int;not null;default:100"`                    // AIAgentRolloutPercent 为该渠道对 AI 自动回复施加的灰度百分比，100 表示不额外限制。
@@ -758,7 +705,6 @@ type Channel struct {
 	// ConfigJSON 为渠道专属扩展配置，使用 JSON 存储。
 	// 例如：
 	// 1. web 渠道可记录允许域名、品牌配置等；
-	// 2. wxwork_kf 渠道可记录 openKfId、欢迎语策略等。
 	// 该字段只存储渠道类型私有配置，不承载通用主字段。
 	ConfigJSON string       `gorm:"type:text"`
 	Status     enums.Status `gorm:"type:int;not null;default:0;index"` // Status 为渠道状态。禁用后，该渠道不再允许新会话接入；删除时采用软删除状态保留历史关联数据。

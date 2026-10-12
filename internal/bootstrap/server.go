@@ -25,7 +25,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
 
-	_ "agent-desk/internal/services/wx_callback_handlers"
 )
 
 func NewServer() (*gin.Engine, error) {
@@ -230,12 +229,10 @@ func addRouter(app *gin.Engine) {
 	registerDashboardMCPRoutes(dashboardGroup.Group("/mcp"))
 
 	thirdGroup := app.Group("/api/third")
-	registerThirdWechatRoutes(thirdGroup.Group("/wechat"))
 	registerThirdTelegramRoutes(thirdGroup.Group("/telegram"))
 	registerThirdZaloRoutes(thirdGroup.Group("/zalo"))
 	registerThirdSlackRoutes(thirdGroup.Group("/slack"))
 	registerThirdDiscordRoutes(thirdGroup.Group("/discord"))
-	registerThirdLarkRoutes(thirdGroup.Group("/lark"))
 	registerThirdEmailRoutes(thirdGroup.Group("/email"), limits)
 }
 

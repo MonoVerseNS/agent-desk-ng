@@ -193,30 +193,6 @@ export type AdminChannel = {
   remark: string
 }
 
-export type WxWorkKFAccount = {
-  openKfId: string
-  name: string
-  avatar: string
-  managePrivilege: boolean
-}
-
-export type ChannelMessageOutbox = {
-  id: number
-  channelType: string
-  conversationId: number
-  messageId: number
-  payload: string
-  sendStatus: string
-  retryCount: number
-  nextRetryAt: string
-  lastError: string
-  sentAt: string
-  createdAt: string
-  updatedAt: string
-  createUserName: string
-  updateUserName: string
-}
-
 export type CreateAdminChannelPayload = {
   channelType: string
   aiAgentId: number
@@ -927,32 +903,6 @@ export function fetchChannels(
 
 export function fetchChannel(id: number) {
   return request<AdminChannel>(`/api/dashboard/channel/${id}`)
-}
-
-export function fetchWxWorkKFAccounts() {
-  return request<WxWorkKFAccount[]>("/api/dashboard/channel/wxwork/kf/accounts")
-}
-
-export function fetchWxWorkOutboxFailures(
-  query?: Record<string, string | number | undefined>
-) {
-  return request<PageResult<ChannelMessageOutbox>>(
-    `/api/dashboard/channel/wxwork/outbox/failed/list${toQueryString(query)}`
-  )
-}
-
-export function retryWxWorkOutbox(id: number) {
-  return request<void>("/api/dashboard/channel/wxwork/outbox/retry", {
-    method: "POST",
-    body: JSON.stringify({ id }),
-  })
-}
-
-export function ignoreWxWorkOutbox(id: number) {
-  return request<void>("/api/dashboard/channel/wxwork/outbox/ignore", {
-    method: "POST",
-    body: JSON.stringify({ id }),
-  })
 }
 
 export function createChannel(payload: CreateAdminChannelPayload) {

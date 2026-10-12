@@ -2,9 +2,7 @@ package services
 
 import (
 	"agent-desk/internal/models"
-	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/enums"
-	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/repositories"
 	"encoding/json"
 	"log/slog"
@@ -76,54 +74,6 @@ func (s *channelMessageOutboxService) Delete(id int64) {
 // GetByMessageID retrieves the outbox entry by message ID and channel type.
 func (s *channelMessageOutboxService) GetByMessageID(channelType string, messageID int64) *models.ChannelMessageOutbox {
 	return repositories.ChannelMessageOutboxRepository.Take(sqls.DB(), "channel_type = ? AND message_id = ?", channelType, messageID)
-}
-
-func (s *channelMessageOutboxService) EnqueueWxWorkKFMessage(conversation *models.Conversation, message *models.Message) error {
-	if conversation == nil || message == nil {
-		return nil
-	}
-	channel := ChannelService.Get(conversation.ChannelID)
-	if channel == nil || channel.ChannelType != enums.ChannelTypeWxWorkKF {
-		return nil
-	}
-	if message.SenderType != enums.IMSenderTypeAgent && message.SenderType != enums.IMSenderTypeAI {
-		return nil
-	}
-	if message.MessageType != enums.IMMessageTypeText && message.MessageType != enums.IMMessageTypeHTML {
-		return nil
-	}
-	if existing := s.GetByMessageID(enums.ChannelTypeWxWorkKF, message.ID); existing != nil {
-		return nil
-	}
-
-	payload, err := json.Marshal(map[string]any{
-		"conversationId": conversation.ID,
-		"messageId":      message.ID,
-		"messageType":    message.MessageType,
-		"content":        strings.TrimSpace(message.Content),
-		"payload":        strings.TrimSpace(message.Payload),
-		"senderId":       message.SenderID,
-	})
-	if err != nil {
-		return err
-	}
-
-	now := time.Now()
-	return s.Create(&models.ChannelMessageOutbox{
-		ChannelType:    enums.ChannelTypeWxWorkKF,
-		ConversationID: conversation.ID,
-		MessageID:      message.ID,
-		Payload:        string(payload),
-		SendStatus:     string(enums.ChannelMessageOutboxStatusPending),
-		AuditFields: models.AuditFields{
-			CreatedAt:      now,
-			CreateUserID:   message.UpdateUserID,
-			CreateUserName: message.UpdateUserName,
-			UpdatedAt:      now,
-			UpdateUserID:   message.UpdateUserID,
-			UpdateUserName: message.UpdateUserName,
-		},
-	})
 }
 
 func (s *channelMessageOutboxService) EnqueueTelegramMessage(conversation *models.Conversation, message *models.Message) error {
@@ -451,68 +401,6 @@ func (s *channelMessageOutboxService) EnqueueDiscordMessage(conversation *models
 	return nil
 }
 
-func (s *channelMessageOutboxService) EnqueueLarkMessage(conversation *models.Conversation, message *models.Message) error {
-	if conversation == nil || message == nil {
-		return nil
-	}
-	channel := ChannelService.Get(conversation.ChannelID)
-	if channel == nil || channel.ChannelType != enums.ChannelTypeLark {
-		return nil
-	}
-	if message.SenderType != enums.IMSenderTypeAgent && message.SenderType != enums.IMSenderTypeAI {
-		return nil
-	}
-	if message.MessageType != enums.IMMessageTypeText && message.MessageType != enums.IMMessageTypeHTML && message.MessageType != enums.IMMessageTypeImage && message.MessageType != enums.IMMessageTypeAttachment {
-		return nil
-	}
-	if existing := s.GetByMessageID(enums.ChannelTypeLark, message.ID); existing != nil {
-		return nil
-	}
-
-	payload, err := json.Marshal(map[string]any{
-		"conversationId": conversation.ID,
-		"messageId":      message.ID,
-		"messageType":    message.MessageType,
-		"content":        strings.TrimSpace(message.Content),
-		"payload":        strings.TrimSpace(message.Payload),
-		"senderId":       message.SenderID,
-	})
-	if err != nil {
-		return err
-	}
-
-	now := time.Now()
-	err = s.Create(&models.ChannelMessageOutbox{
-		ChannelType:    enums.ChannelTypeLark,
-		ConversationID: conversation.ID,
-		MessageID:      message.ID,
-		Payload:        string(payload),
-		SendStatus:     string(enums.ChannelMessageOutboxStatusPending),
-		AuditFields: models.AuditFields{
-			CreatedAt:      now,
-			CreateUserID:   message.UpdateUserID,
-			CreateUserName: message.UpdateUserName,
-			UpdatedAt:      now,
-			UpdateUserID:   message.UpdateUserID,
-			UpdateUserName: message.UpdateUserName,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("recovered from panic in lark outbound dispatch", "error", r)
-			}
-		}()
-		LarkOutboundService.DispatchPendingOutbox()
-	}()
-
-	return nil
-}
-
 func (s *channelMessageOutboxService) ListPending(channelType string, limit int) []models.ChannelMessageOutbox {
 	if limit <= 0 {
 		limit = 20
@@ -535,47 +423,4 @@ func (s *channelMessageOutboxService) ListPending(channelType string, limit int)
 	// starving newer pending sends.
 	cnd.Where("next_retry_at IS NULL OR next_retry_at <= ?", now)
 	return s.Find(cnd)
-}
-
-func (s *channelMessageOutboxService) RetryWxWorkFailure(id int64, operator *dto.AuthPrincipal) error {
-	item := s.Get(id)
-	if item == nil || item.ChannelType != enums.ChannelTypeWxWorkKF {
-		return errorsx.InvalidParam("outbox record does not exist")
-	}
-	if item.SendStatus != string(enums.ChannelMessageOutboxStatusFailed) &&
-		item.SendStatus != string(enums.ChannelMessageOutboxStatusIgnored) {
-		return errorsx.InvalidParam("only failed or ignored outbox records can be retried")
-	}
-	now := time.Now()
-	columns := map[string]interface{}{
-		"send_status":   string(enums.ChannelMessageOutboxStatusPending),
-		"next_retry_at": nil,
-		"updated_at":    now,
-	}
-	if operator != nil {
-		columns["update_user_id"] = operator.UserID
-		columns["update_user_name"] = operator.Username
-	}
-	return s.Updates(id, columns)
-}
-
-func (s *channelMessageOutboxService) IgnoreWxWorkFailure(id int64, operator *dto.AuthPrincipal) error {
-	item := s.Get(id)
-	if item == nil || item.ChannelType != enums.ChannelTypeWxWorkKF {
-		return errorsx.InvalidParam("outbox record does not exist")
-	}
-	if item.SendStatus != string(enums.ChannelMessageOutboxStatusFailed) {
-		return errorsx.InvalidParam("only failed outbox records can be ignored")
-	}
-	now := time.Now()
-	columns := map[string]interface{}{
-		"send_status":   string(enums.ChannelMessageOutboxStatusIgnored),
-		"next_retry_at": nil,
-		"updated_at":    now,
-	}
-	if operator != nil {
-		columns["update_user_id"] = operator.UserID
-		columns["update_user_name"] = operator.Username
-	}
-	return s.Updates(id, columns)
 }

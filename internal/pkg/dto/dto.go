@@ -13,23 +13,12 @@ type AuthPrincipal struct {
 	Permissions []string
 }
 
-type WxWorkKFChannelConfig struct {
-	OpenKfID string `json:"openKfId"`
-}
-
 type WebChannelConfig struct {
 	Title           string `json:"title"`
 	Subtitle        string `json:"subtitle"`
 	ThemeColor      string `json:"themeColor"`
 	Position        string `json:"position"`
 	Width           string `json:"width"`
-	UserTokenSecret string `json:"userTokenSecret,omitempty"`
-}
-
-type WechatMPChannelConfig struct {
-	Title           string `json:"title"`
-	Subtitle        string `json:"subtitle"`
-	ThemeColor      string `json:"themeColor"`
 	UserTokenSecret string `json:"userTokenSecret,omitempty"`
 }
 
@@ -57,13 +46,6 @@ type SlackChannelConfig struct {
 	TeamID         string `json:"teamId,omitempty"`         // Slack Workspace Team ID
 	TeamName       string `json:"teamName,omitempty"`       // Slack Workspace Team Name
 	DefaultChannel string `json:"defaultChannel,omitempty"` // Default channel to post
-}
-
-type LarkChannelConfig struct {
-	AppID             string `json:"appId,omitempty"`             // Lark custom app App ID (cli_...)
-	AppSecret         string `json:"appSecret,omitempty"`         // Lark custom app App Secret
-	VerificationToken string `json:"verificationToken,omitempty"` // Event subscription Verification Token
-	Domain            string `json:"domain,omitempty"`            // lark (default) | feishu
 }
 
 type EmailChannelConfig struct {

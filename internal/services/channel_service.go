@@ -4,13 +4,11 @@ import (
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
-	"agent-desk/internal/pkg/dto/response"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/httpx"
 	"agent-desk/internal/pkg/utils"
 	"agent-desk/internal/repositories"
-	"agent-desk/internal/wxwork"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -22,7 +20,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/common/strs"
 	"github.com/mlogclub/simple/sqls"
-	"github.com/silenceper/wechat/v2/work/kf"
 )
 
 var ChannelService = newChannelService()
@@ -186,57 +183,6 @@ func (s *channelService) DeleteChannel(id int64, operator *dto.AuthPrincipal) er
 	})
 }
 
-func (s *channelService) ParseWxWorkKFChannelConfig(raw string) (*dto.WxWorkKFChannelConfig, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return &dto.WxWorkKFChannelConfig{}, nil
-	}
-	cfg := &dto.WxWorkKFChannelConfig{}
-	if err := json.Unmarshal([]byte(raw), cfg); err != nil {
-		return nil, err
-	}
-	cfg.OpenKfID = strings.TrimSpace(cfg.OpenKfID)
-	return cfg, nil
-}
-
-func (s *channelService) ListWxWorkKFAccounts() ([]response.WxWorkKFAccountResponse, error) {
-	if !wxwork.Enabled() || wxwork.GetWorkCli() == nil {
-		return nil, errorsx.BusinessErrorI18n(1, "error.wxwork.configIncomplete")
-	}
-	cli, err := wxwork.GetWorkCli().GetKF()
-	if err != nil {
-		return nil, err
-	}
-
-	const limit = 100
-	accounts := make([]response.WxWorkKFAccountResponse, 0)
-	for offset := 0; ; offset += limit {
-		result, err := cli.AccountPaging(&kf.AccountPagingRequest{
-			Offset: offset,
-			Limit:  limit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, item := range result.AccountList {
-			openKfID := strings.TrimSpace(item.OpenKFID)
-			if openKfID == "" {
-				continue
-			}
-			accounts = append(accounts, response.WxWorkKFAccountResponse{
-				OpenKfID:        openKfID,
-				Name:            strings.TrimSpace(item.Name),
-				Avatar:          strings.TrimSpace(item.Avatar),
-				ManagePrivilege: item.ManagePrivilege,
-			})
-		}
-		if len(result.AccountList) < limit {
-			break
-		}
-	}
-	return accounts, nil
-}
-
 func (s *channelService) ParseWebChannelConfig(raw string) (*dto.WebChannelConfig, error) {
 	raw = strings.TrimSpace(raw)
 	cfg := &dto.WebChannelConfig{
@@ -275,30 +221,6 @@ func (s *channelService) ParseWebChannelConfig(raw string) (*dto.WebChannelConfi
 	return cfg, nil
 }
 
-func (s *channelService) ParseWechatMPChannelConfig(raw string) (*dto.WechatMPChannelConfig, error) {
-	raw = strings.TrimSpace(raw)
-	cfg := &dto.WechatMPChannelConfig{
-		Title:      "Official Account Support",
-		Subtitle:   "How can we help?",
-		ThemeColor: "#2563eb",
-	}
-	if raw != "" {
-		if err := json.Unmarshal([]byte(raw), cfg); err != nil {
-			return nil, err
-		}
-	}
-	cfg.Title = strings.TrimSpace(cfg.Title)
-	if cfg.Title == "" {
-		cfg.Title = "Official Account Support"
-	}
-	cfg.Subtitle = strings.TrimSpace(cfg.Subtitle)
-	cfg.ThemeColor = strings.TrimSpace(cfg.ThemeColor)
-	if cfg.ThemeColor == "" {
-		cfg.ThemeColor = "#2563eb"
-	}
-	cfg.UserTokenSecret = strings.TrimSpace(cfg.UserTokenSecret)
-	return cfg, nil
-}
 
 func (s *channelService) ParseTelegramChannelConfig(raw string) (*dto.TelegramChannelConfig, error) {
 	raw = strings.TrimSpace(raw)
@@ -366,26 +288,6 @@ func (s *channelService) ParseDiscordChannelConfig(raw string) (*dto.DiscordChan
 	cfg.PublicKey = strings.TrimSpace(cfg.PublicKey)
 	cfg.WebhookSecret = strings.TrimSpace(cfg.WebhookSecret)
 	cfg.WelcomeMessage = strings.TrimSpace(cfg.WelcomeMessage)
-	return cfg, nil
-}
-
-func (s *channelService) ParseLarkChannelConfig(raw string) (*dto.LarkChannelConfig, error) {
-	raw = strings.TrimSpace(raw)
-	cfg := &dto.LarkChannelConfig{}
-	if raw != "" {
-		if err := json.Unmarshal([]byte(raw), cfg); err != nil {
-			return nil, err
-		}
-	}
-	cfg.AppID = strings.TrimSpace(cfg.AppID)
-	cfg.AppSecret = strings.TrimSpace(cfg.AppSecret)
-	cfg.VerificationToken = strings.TrimSpace(cfg.VerificationToken)
-	switch strings.ToLower(strings.TrimSpace(cfg.Domain)) {
-	case "feishu":
-		cfg.Domain = "feishu"
-	default:
-		cfg.Domain = "lark"
-	}
 	return cfg, nil
 }
 
@@ -524,12 +426,6 @@ func (s *channelService) GetUserTokenSecret(channel *models.Channel) string {
 			return ""
 		}
 		return strings.TrimSpace(cfg.UserTokenSecret)
-	case enums.ChannelTypeWechatMP:
-		cfg, err := s.ParseWechatMPChannelConfig(channel.ConfigJSON)
-		if err != nil {
-			return ""
-		}
-		return strings.TrimSpace(cfg.UserTokenSecret)
 	default:
 		return ""
 	}
@@ -543,7 +439,7 @@ func (s *channelService) ResetUserTokenSecret(channelID int64, operator *dto.Aut
 	if channel == nil || channel.Status == enums.StatusDeleted {
 		return "", errorsx.InvalidParamI18n("error.e0208")
 	}
-	if channel.ChannelType != enums.ChannelTypeWeb && channel.ChannelType != enums.ChannelTypeWechatMP {
+	if channel.ChannelType != enums.ChannelTypeWeb {
 		return "", errorsx.InvalidParamI18n("error.e0196")
 	}
 	secret, err := generateUserTokenSecret()
@@ -554,17 +450,6 @@ func (s *channelService) ResetUserTokenSecret(channelID int64, operator *dto.Aut
 	switch channel.ChannelType {
 	case enums.ChannelTypeWeb:
 		cfg, err := s.ParseWebChannelConfig(channel.ConfigJSON)
-		if err != nil {
-			return "", err
-		}
-		cfg.UserTokenSecret = secret
-		raw, err := json.Marshal(cfg)
-		if err != nil {
-			return "", err
-		}
-		configJSON = string(raw)
-	case enums.ChannelTypeWechatMP:
-		cfg, err := s.ParseWechatMPChannelConfig(channel.ConfigJSON)
 		if err != nil {
 			return "", err
 		}
@@ -594,27 +479,6 @@ func generateUserTokenSecret() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
-func (s *channelService) GetEnabledWxWorkKFChannelByOpenKfID(openKfID string) *models.Channel {
-	openKfID = strings.TrimSpace(openKfID)
-	if openKfID == "" {
-		return nil
-	}
-	channels := s.Find(sqls.NewCnd().
-		Eq("channel_type", enums.ChannelTypeWxWorkKF).
-		Eq("status", enums.StatusOk).
-		Asc("id"))
-	for i := range channels {
-		cfg, err := s.ParseWxWorkKFChannelConfig(channels[i].ConfigJSON)
-		if err != nil {
-			continue
-		}
-		if cfg != nil && cfg.OpenKfID == openKfID {
-			return &channels[i]
-		}
-	}
-	return nil
-}
-
 func (s *channelService) GetEnabledChannel(ctx *gin.Context) *models.Channel {
 	channelID := httpx.GetChannelID(ctx)
 	channel := repositories.ChannelRepository.GetByChannelID(sqls.DB(), channelID)
@@ -629,7 +493,7 @@ func (s *channelService) GetEnabledChannel(ctx *gin.Context) *models.Channel {
 
 func (s *channelService) buildChannelModel(id int64, req request.CreateChannelRequest) (*models.Channel, error) {
 	channelType := strings.TrimSpace(req.ChannelType)
-	if channelType != enums.ChannelTypeWeb && channelType != enums.ChannelTypeWechatMP && channelType != enums.ChannelTypeWxWorkKF && channelType != enums.ChannelTypeTelegram && channelType != enums.ChannelTypeZaloOA && channelType != enums.ChannelTypeSlack && channelType != enums.ChannelTypeDiscord && channelType != enums.ChannelTypeLark && channelType != enums.ChannelTypeEmail {
+	if channelType != enums.ChannelTypeWeb && channelType != enums.ChannelTypeTelegram && channelType != enums.ChannelTypeZaloOA && channelType != enums.ChannelTypeSlack && channelType != enums.ChannelTypeDiscord && channelType != enums.ChannelTypeEmail {
 		return nil, errorsx.InvalidParamI18n("error.e0250")
 	}
 	name := strings.TrimSpace(req.Name)
@@ -693,46 +557,6 @@ func (s *channelService) buildChannelModel(id int64, req request.CreateChannelRe
 			return nil, err
 		}
 		configJSON = string(configBytes)
-	case enums.ChannelTypeWechatMP:
-		if channelID == "" {
-			channelID = strs.UUID()
-		}
-		if exists := s.Take("channel_id = ? AND status <> ? AND id <> ?", channelID, enums.StatusDeleted, id); exists != nil {
-			return nil, errorsx.InvalidParamI18n("error.e0248")
-		}
-		cfg, err := s.ParseWechatMPChannelConfig(configJSON)
-		if err != nil {
-			return nil, errorsx.InvalidParamI18n("error.e0201")
-		}
-		if strings.TrimSpace(cfg.UserTokenSecret) == "" {
-			secret, err := generateUserTokenSecret()
-			if err != nil {
-				return nil, err
-			}
-			cfg.UserTokenSecret = secret
-		}
-		configBytes, err := json.Marshal(cfg)
-		if err != nil {
-			return nil, err
-		}
-		configJSON = string(configBytes)
-	case enums.ChannelTypeWxWorkKF:
-		if channelID == "" {
-			channelID = strs.UUID()
-		}
-		if exists := s.Take("channel_id = ? AND status <> ? AND id <> ?", channelID, enums.StatusDeleted, id); exists != nil {
-			return nil, errorsx.InvalidParamI18n("error.e0248")
-		}
-		cfg, err := s.ParseWxWorkKFChannelConfig(configJSON)
-		if err != nil {
-			return nil, errorsx.InvalidParamI18n("error.e0102")
-		}
-		if cfg == nil || cfg.OpenKfID == "" {
-			return nil, errorsx.InvalidParamI18n("error.e0103")
-		}
-		if channel := s.GetEnabledWxWorkKFChannelByOpenKfID(cfg.OpenKfID); channel != nil && channel.ID != id {
-			return nil, errorsx.InvalidParamI18n("error.e0069")
-		}
 	case enums.ChannelTypeTelegram:
 		if channelID == "" {
 			channelID = strs.UUID()
@@ -823,31 +647,6 @@ func (s *channelService) buildChannelModel(id int64, req request.CreateChannelRe
 			return nil, err
 		}
 		configJSON = string(configBytes)
-	case enums.ChannelTypeLark:
-		if channelID == "" {
-			channelID = strs.UUID()
-		}
-		if exists := s.Take("channel_id = ? AND status <> ? AND id <> ?", channelID, enums.StatusDeleted, id); exists != nil {
-			return nil, errorsx.InvalidParamI18n("error.e0248")
-		}
-		cfg, err := s.ParseLarkChannelConfig(configJSON)
-		if err != nil {
-			return nil, errorsx.InvalidParam("invalid lark channel configuration")
-		}
-		if cfg == nil || cfg.AppID == "" || cfg.AppSecret == "" {
-			return nil, errorsx.InvalidParam("lark appId and appSecret are required")
-		}
-		if cfg.VerificationToken == "" {
-			if secret, err := generateUserTokenSecret(); err == nil {
-				cfg.VerificationToken = secret
-			}
-		}
-		configBytes, err := json.Marshal(cfg)
-		if err != nil {
-			return nil, err
-		}
-		configJSON = string(configBytes)
-
 	case enums.ChannelTypeEmail:
 		if channelID == "" {
 			channelID = strs.UUID()

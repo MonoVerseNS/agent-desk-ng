@@ -59,9 +59,9 @@ func TestAgentLoopRegistersDirectCapabilityAliases(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"tool_search",
-		"builtin/conversation_context",
-		"graph/triage_service_request",
-		"workflow/47",
+		"builtin_conversation_context",
+		"graph_triage_service_request",
+		"workflow_47",
 	} {
 		if !names[expected] {
 			t.Fatalf("missing registered function alias %q: %#v", expected, definitions)
@@ -150,6 +150,31 @@ func TestAgentLoopDirectCapabilityAliasUsesSamePolicyBoundary(t *testing.T) {
 	}
 	if state.SkillContext.SkillID() != skill.ID || !strings.Contains(result, skill.Instruction) {
 		t.Fatalf("direct capability was not routed through Skill activation: state=%#v result=%q", state, result)
+	}
+	if len(calls) != 1 || calls[0].ToolCode != "skill/7" || calls[0].Status != "completed" {
+		t.Fatalf("unexpected direct capability audit: %#v", calls)
+	}
+}
+
+func TestAgentLoopDirectSanitizedCapabilityAliasRoutesCorrectly(t *testing.T) {
+	skill := models.SkillDefinition{
+		ID: 7, Name: "售后升级处理", Instruction: "先确认升级诉求。", Status: enums.StatusOk,
+	}
+	turn := agentLoopTurn{
+		AllowedTools: []string{"skill/7"},
+		ToolPolicy:   parseAgentLoopToolPolicy(""),
+		Skills:       map[int64]models.SkillDefinition{skill.ID: skill},
+	}
+	state := agentLoopExecutionState{}
+	var calls []svc.AgentLoopToolCallInput
+	execute := NewAgentLoopEngine().toolSearchExecutor(RunInput{}, turn, &state, &calls)
+
+	result, err := execute(context.Background(), ai.ToolCall{Name: "skill_7", Arguments: `{}`})
+	if err != nil {
+		t.Fatalf("execute sanitized direct capability alias: %v", err)
+	}
+	if state.SkillContext.SkillID() != skill.ID || !strings.Contains(result, skill.Instruction) {
+		t.Fatalf("sanitized direct capability was not routed through Skill activation: state=%#v result=%q", state, result)
 	}
 	if len(calls) != 1 || calls[0].ToolCode != "skill/7" || calls[0].Status != "completed" {
 		t.Fatalf("unexpected direct capability audit: %#v", calls)
@@ -385,4 +410,53 @@ func TestAgentTurnPublishesAllConfiguredCapabilityKinds(t *testing.T) {
 func jsonInt64List(id int64) string {
 	data, _ := json.Marshal([]int64{id})
 	return strings.Trim(string(data), "[]")
+}
+
+func TestAgentTurnCatalogFormatAndInstruction(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open in-memory db: %v", err)
+	}
+	if err := db.AutoMigrate(&models.SkillDefinition{}); err != nil {
+		t.Fatalf("migrate Skill: %v", err)
+	}
+	sqls.SetDB(db)
+	skill := models.SkillDefinition{Name: "订单查询", Description: "查询订单状态", Status: enums.StatusOk}
+	if err := db.Create(&skill).Error; err != nil {
+		t.Fatalf("create Skill: %v", err)
+	}
+	mcp, _ := json.Marshal([]request.AIAgentMCPToolRequest{{
+		ToolCode: "crm/get_customer", ServerCode: "crm", ToolName: "get_customer",
+		RiskLevel: "read",
+	}})
+	agent := models.AIAgent{SkillIDs: jsonInt64List(skill.ID), AllowedMCPTools: string(mcp)}
+	snapshot := &svc.AgentRevisionSnapshot{
+		Agent: agent,
+		WorkflowBindings: []svc.AgentRevisionWorkflowBinding{{
+			WorkflowVersionID: 23, ToolName: "创建工单", TriggerInstruction: "用户要求创建工单",
+		}},
+	}
+	engine := NewAgentLoopEngine()
+	engine.retrieve = nil
+	engine.history = nil
+	turn := engine.prepareTurn(context.Background(), RunInput{AIAgent: agent}, snapshot)
+
+	expectedDirectFunctions := []string{
+		"direct function: builtin_conversation_context",
+		"direct function: builtin_knowledge_retrieve",
+		"direct function: graph_triage_service_request",
+		"direct function: skill_" + jsonInt64List(skill.ID),
+		"direct function: workflow_23",
+		"direct function: crm_get_customer",
+	}
+	for _, expected := range expectedDirectFunctions {
+		if !strings.Contains(turn.SystemPrompt, expected) {
+			t.Fatalf("expected direct function %q in system prompt:\n%s", expected, turn.SystemPrompt)
+		}
+	}
+
+	prohibition := "Never pass a capability code containing slashes as a tool function name; use the exact direct function name provided in the catalog or call tool_search with toolCode."
+	if !strings.Contains(turn.SystemPrompt, prohibition) {
+		t.Fatalf("expected prohibition instruction in system prompt:\n%s", turn.SystemPrompt)
+	}
 }

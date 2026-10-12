@@ -87,3 +87,14 @@ func handleConversationAssignedInAppNotification(ctx context.Context, event even
 	}
 	return nil
 }
+
+func conversationAssignedNotifyTitle(assignType string) string {
+	switch strings.TrimSpace(assignType) {
+	case events.ConversationAssignTypeTransfer:
+		return i18nx.Get("notification.conversationTransferred.title")
+	case events.ConversationAssignTypeAutoAssign:
+		return i18nx.Get("notification.conversationAutoAssigned.title")
+	default:
+		return i18nx.Get("notification.conversationAssigned.title")
+	}
+}

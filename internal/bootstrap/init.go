@@ -7,7 +7,6 @@ import (
 	"agent-desk/internal/pkg/i18nx"
 	"agent-desk/internal/pkg/logx"
 	"agent-desk/internal/services/cronx"
-	"agent-desk/internal/wxwork"
 	"context"
 	"log/slog"
 
@@ -44,8 +43,6 @@ func Init(configPath string) error {
 
 	// 启动任务调度器
 	cronx.Init()
-
-	wxwork.Init()
 	if err := oidcclient.Init(context.Background()); err != nil {
 		slog.Warn("init oidc at startup failed (will retry lazily on request)", "error", err)
 	}

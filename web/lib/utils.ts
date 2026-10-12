@@ -48,3 +48,31 @@ export function formatDateTime(value?: string | number | Date | null) {
 
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
+
+export function parseApiTimestamp(
+  value?: string | number | Date | null
+): number {
+  if (value === null || value === undefined) {
+    return 0
+  }
+  if (value instanceof Date) {
+    const time = value.getTime()
+    return Number.isFinite(time) ? time : 0
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0
+  }
+  if (typeof value !== "string") {
+    return 0
+  }
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return 0
+  }
+  let normalized = trimmed.replace(" ", "T")
+  if (!/(Z|[+-]\d{2}(?::?\d{2})?)$/i.test(normalized)) {
+    normalized += "Z"
+  }
+  const timestamp = Date.parse(normalized)
+  return Number.isFinite(timestamp) ? timestamp : 0
+}

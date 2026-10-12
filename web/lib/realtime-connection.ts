@@ -4,6 +4,7 @@ export type RealtimeConnectionStatus = "connecting" | "connected" | "disconnecte
 
 type RealtimeConnectionManagerOptions = {
   createSocket: () => WebSocket
+  beforeConnect?: () => Promise<unknown> | unknown
   canReconnect?: () => boolean
   onStatusChange?: (status: RealtimeConnectionStatus) => void
   onSocketChange?: (socket: WebSocket | null) => void
@@ -31,21 +32,22 @@ export function createRealtimeConnectionManager(
   options: RealtimeConnectionManagerOptions
 ) {
   let socket: WebSocket | null = null
-  let reconnectTimer: number | null = null
-  let pingTimer: number | null = null
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let pingTimer: ReturnType<typeof setInterval> | null = null
   let reconnectAttempt = 0
   let reconnectEnabled = false
+  let connectEpoch = 0
 
   const clearReconnectTimer = () => {
     if (reconnectTimer !== null) {
-      window.clearTimeout(reconnectTimer)
+      globalThis.clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
   }
 
   const clearPingTimer = () => {
     if (pingTimer !== null) {
-      window.clearInterval(pingTimer)
+      globalThis.clearInterval(pingTimer)
       pingTimer = null
     }
   }
@@ -75,16 +77,16 @@ export function createRealtimeConnectionManager(
       options.reconnectMaxDelayMs ?? DEFAULT_RECONNECT_MAX_DELAY_MS
     )
     options.onStatusChange?.("connecting")
-    reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = globalThis.setTimeout(() => {
       reconnectTimer = null
       reconnectAttempt += 1
       if (canReconnect()) {
-        connect()
+        void connect()
       }
     }, delay)
   }
 
-  const connect = () => {
+  const connect = async () => {
     reconnectEnabled = true
     if (!(options.canReconnect?.() ?? true)) {
       return
@@ -93,6 +95,30 @@ export function createRealtimeConnectionManager(
     disconnect({ reconnect: true, updateStatus: false })
     reconnectEnabled = true
     options.onStatusChange?.("connecting")
+
+    const currentEpoch = ++connectEpoch
+
+    if (options.beforeConnect) {
+      try {
+        await options.beforeConnect()
+      } catch (error) {
+        if (currentEpoch !== connectEpoch || !reconnectEnabled) {
+          return
+        }
+        options.onStatusChange?.("disconnected")
+        options.onConnectError?.(error)
+        scheduleReconnect()
+        return
+      }
+    }
+
+    if (
+      currentEpoch !== connectEpoch ||
+      !reconnectEnabled ||
+      !(options.canReconnect?.() ?? true)
+    ) {
+      return
+    }
 
     let nextSocket: WebSocket
     try {
@@ -116,7 +142,7 @@ export function createRealtimeConnectionManager(
       options.onStatusChange?.("connected")
       const buildPingMessage =
         options.buildPingMessage ?? (() => JSON.stringify({ type: "ping" }))
-      pingTimer = window.setInterval(() => {
+      pingTimer = globalThis.setInterval(() => {
         if (nextSocket.readyState === WebSocket.OPEN) {
           nextSocket.send(buildPingMessage())
         }

@@ -20,13 +20,6 @@ type ChannelResponse struct {
 	Remark                        string       `json:"remark"`
 }
 
-type WxWorkKFAccountResponse struct {
-	OpenKfID        string `json:"openKfId"`
-	Name            string `json:"name"`
-	Avatar          string `json:"avatar"`
-	ManagePrivilege bool   `json:"managePrivilege"`
-}
-
 type ChannelMessageOutboxResponse struct {
 	ID             int64  `json:"id"`
 	ChannelType    string `json:"channelType"`

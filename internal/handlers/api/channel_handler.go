@@ -56,18 +56,6 @@ func resolveWidgetConfig(channelType, rawConfig string) (*webLikeWidgetConfig, e
 			Position:   cfg.Position,
 			Width:      cfg.Width,
 		}, nil
-	case enums.ChannelTypeWechatMP:
-		cfg, err := services.ChannelService.ParseWechatMPChannelConfig(rawConfig)
-		if err != nil {
-			return nil, err
-		}
-		return &webLikeWidgetConfig{
-			Title:      cfg.Title,
-			Subtitle:   cfg.Subtitle,
-			ThemeColor: cfg.ThemeColor,
-			Position:   "right",
-			Width:      "100%",
-		}, nil
 	default:
 		return nil, errorsx.InvalidParamI18n("error.e0313")
 	}

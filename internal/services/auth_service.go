@@ -306,7 +306,7 @@ func (s *authService) issueTokens(ctx *sqls.TxContext, user *models.User, client
 
 	return &response.LoginResponse{
 		AccessToken: accessToken,
-		ExpiresAt:   now.Add(tokenTTL).Format(time.DateTime),
+		ExpiresAt:   now.Add(tokenTTL).UTC().Format(time.RFC3339),
 		User: &response.AuthUserResponse{
 			ID:       user.ID,
 			Username: user.Username,

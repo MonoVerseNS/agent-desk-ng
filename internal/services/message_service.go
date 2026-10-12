@@ -532,15 +532,6 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 	WsService.PublishMessageCreated(conversation, message)
 	WsService.PublishConversationChanged(conversation, enums.IMRealtimeEventConversationUpdated)
 
-	// 企业微信客服消息入队，异步发送
-	if enqueueErr := ChannelMessageOutboxService.EnqueueWxWorkKFMessage(conversation, message); enqueueErr != nil {
-		slog.Error("enqueue wxwork kf outbox failed",
-			"conversation_id", conversation.ID,
-			"message_id", message.ID,
-			"error", enqueueErr,
-		)
-	}
-
 	// Telegram 渠道消息入队，异步发送
 	if enqueueErr := ChannelMessageOutboxService.EnqueueTelegramMessage(conversation, message); enqueueErr != nil {
 		slog.Error("enqueue telegram outbox failed",
@@ -571,15 +562,6 @@ func (s *messageService) sendValidatedMessage(conversation *models.Conversation,
 	// Discord 渠道消息入队，异步发送
 	if enqueueErr := ChannelMessageOutboxService.EnqueueDiscordMessage(conversation, message); enqueueErr != nil {
 		slog.Error("enqueue discord outbox failed",
-			"conversation_id", conversation.ID,
-			"message_id", message.ID,
-			"error", enqueueErr,
-		)
-	}
-
-	// Lark 渠道消息入队，异步发送
-	if enqueueErr := ChannelMessageOutboxService.EnqueueLarkMessage(conversation, message); enqueueErr != nil {
-		slog.Error("enqueue lark outbox failed",
 			"conversation_id", conversation.ID,
 			"message_id", message.ID,
 			"error", enqueueErr,

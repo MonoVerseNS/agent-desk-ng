@@ -17,7 +17,7 @@ const portalRoot = "/support"
 
 // Resolve classifies the `next` destination of a login start.
 //
-// Enterprise SSO (OIDC, WeCom) provisions a User with
+// Enterprise SSO (OIDC) provisions a User with
 // enums.UserTypeEmployee and a staff role, and never links that user to a
 // Customer. So a visitor signing in through the portal over SSO would receive a
 // staff session with no history and no customer identity behind it - an

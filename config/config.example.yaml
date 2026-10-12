@@ -66,11 +66,11 @@ logger:
   addSource: false
 
 auth:
-  # Enable username and password login. When set to false, users must sign in with SSO (e.g. OIDC or WeCom).
+  # Enable username and password login. When set to false, users must sign in with SSO (e.g. OIDC).
   # Default is true.
   passwordLoginEnabled: true
   # Login access token lifetime, in hours. Values <= 0 fall back to 12 hours.
-  # Applies to password login, OIDC login, and WeCom login sessions.
+  # Applies to password login and OIDC login sessions.
   tokenTTLHours: 12
   # Maximum failed password attempts allowed within the lock window.
   # Values <= 0 disable credential lockout.
@@ -198,48 +198,3 @@ oidc:
     - openid
     - profile
     - email
-
-wxWork:
-  # Whether to enable WeCom features.
-  # When set to false, the WeCom SDK is not initialized, and login, customer service callbacks, and app notifications are unavailable.
-  enabled: false
-  # WeCom corporate ID.
-  # Example: wwxxxxxxxxxxxxxxxx, from the WeCom admin console.
-  corpId: 
-  # WeCom app secret.
-  # Used by the backend to obtain access tokens and user identities. Keep it confidential.
-  corpSecret: ""
-  # AgentID of the WeCom custom app.
-  # Used for web authorization when scope=snsapi_privateinfo.
-  agentId: 
-  # WeCom web authorization callback URL.
-  # Must be a full URL pointing to the backend endpoint:
-  # Example: http://127.0.0.1:8083/api/auth/wxwork_callback
-  # In production, use an official domain that WeCom can access, and make sure the domain is configured in the WeCom admin console.
-  oauthRedirect: ""
-  # Signing secret for the WeCom login state.
-  # Used for tamper protection and replay protection. A separate random string is recommended.
-  # If left empty, the code falls back to corpSecret, but this is not recommended.
-  stateSecret: ""
-  # Private key for decrypting WeCom callbacks.
-  # Not used by the current login flow. Reserved for message callbacks and similar scenarios.
-  rsaPrivateKey: ""
-  # WeCom callback token.
-  # Not used by the current login flow. Reserved for message callbacks and similar scenarios.
-  token: ""
-  # WeCom message encryption/decryption EncodingAESKey.
-  # Not used by the current login flow. Reserved for message callbacks and similar scenarios.
-  encodingAESKey: ""
-
-  notify:
-    # Whether to enable WeCom app message notifications.
-    enabled: false
-    # Default list of system user IDs to receive notifications. If the target business user has a bound WeCom identity, that user is preferred.
-    # System user IDs are mapped to WeCom member IDs through identity bindings before messages are sent.
-    toUsers: []
-    # Whether to send confidential messages.
-    safe: false
-    # Whether to enable duplicate message checks.
-    enableDuplicateCheck: true
-    # Duplicate message check window, in seconds.
-    duplicateCheckInterval: 1800

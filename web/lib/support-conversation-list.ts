@@ -12,6 +12,38 @@ import type { ImConversation } from "./api/im"
 export const CLOSED_IM_CONVERSATION_STATUS = 4
 
 /**
+ * Parses an API timestamp string into a millisecond timestamp.
+ * If the string does not specify a timezone offset, it is interpreted as UTC.
+ */
+export function parseApiTimestamp(
+  value?: string | number | Date | null
+): number {
+  if (value === null || value === undefined) {
+    return 0
+  }
+  if (value instanceof Date) {
+    const time = value.getTime()
+    return Number.isFinite(time) ? time : 0
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0
+  }
+  if (typeof value !== "string") {
+    return 0
+  }
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return 0
+  }
+  let normalized = trimmed.replace(" ", "T")
+  if (!/(Z|[+-]\d{2}(?::?\d{2})?)$/i.test(normalized)) {
+    normalized += "Z"
+  }
+  const timestamp = Date.parse(normalized)
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+/**
  * A request counts as open until it is closed, rather than by listing the open
  * statuses. The server's own definition is "status is one of ai_serving,
  * pending, active", so any new status it introduces is open by default here
@@ -32,8 +64,8 @@ function recencyTimestamp(conversation: ImConversation): number {
     if (!value) {
       continue
     }
-    const parsed = Date.parse(value.replace(" ", "T"))
-    if (!Number.isNaN(parsed)) {
+    const parsed = parseApiTimestamp(value)
+    if (parsed > 0) {
       return parsed
     }
   }

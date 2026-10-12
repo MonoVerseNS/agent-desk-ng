@@ -26,16 +26,6 @@ export async function loginWithPassword(payload: LoginRequest) {
   return data
 }
 
-export async function exchangeWxWorkTicket(ticket: string) {
-  const data = await request<AuthSession>("/api/auth/wxwork_exchange", {
-    method: "POST",
-    body: JSON.stringify({ ticket }),
-    skipAuth: true,
-  })
-  writeSession(data)
-  return data
-}
-
 export async function exchangeOIDCTicket(ticket: string) {
   const data = await request<AuthSession>("/api/auth/oidc_exchange", {
     method: "POST",

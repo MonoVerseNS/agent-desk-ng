@@ -40,7 +40,7 @@ describe("isDashboardNavItemActive", () => {
     )
     assert.equal(
       isDashboardNavItemActive(
-        "/dashboard/wxwork-outbox",
+        "/dashboard/channels-archive",
         "/dashboard/channels"
       ),
       false

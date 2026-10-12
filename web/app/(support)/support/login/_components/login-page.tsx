@@ -35,7 +35,7 @@ export function SupportLoginPage() {
   // The server sends this back when enterprise SSO is started from the portal,
   // so a bookmarked or hand-crafted SSO link explains itself instead of
   // bouncing the visitor silently.
-  const ssoRejectedError = oidcError || searchParams.get("wxworkError")
+  const ssoRejectedError = oidcError
   const passwordLoginEnabled = publicConfig?.passwordLoginEnabled !== false
   // Enterprise SSO is deliberately not offered here. The server rejects it for a
   // portal destination, because it provisions a staff account that carries no

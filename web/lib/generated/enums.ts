@@ -75,24 +75,20 @@ export const ContactTypeLabels: Record<ContactType, string> = {
 
 export enum ExternalSource {
   Guest = "guest",
-  WxWorkKF = "wxwork_kf",
   User = "user",
   Telegram = "telegram",
   ZaloOA = "zalo_oa",
   Slack = "slack",
   Discord = "discord",
-  Lark = "lark",
   Email = "email",
 }
 export const ExternalSourceLabels: Record<ExternalSource, string> = {
   [ExternalSource.Guest]: "访客",
-  [ExternalSource.WxWorkKF]: "企业微信客服",
   [ExternalSource.User]: "用户",
   [ExternalSource.Telegram]: "Telegram",
   [ExternalSource.ZaloOA]: "Zalo OA",
   [ExternalSource.Slack]: "Slack",
   [ExternalSource.Discord]: "Discord",
-  [ExternalSource.Lark]: "Lark",
   [ExternalSource.Email]: "Email",
 }
 
@@ -359,13 +355,9 @@ export const StatusLabels: Record<Status, string> = {
 }
 
 export enum ThirdProvider {
-  WxWork = "wxwork",
-  Dingtalk = "dingtalk",
   OIDC = "oidc",
 }
 export const ThirdProviderLabels: Record<ThirdProvider, string> = {
-  [ThirdProvider.WxWork]: "企业微信",
-  [ThirdProvider.Dingtalk]: "钉钉",
   [ThirdProvider.OIDC]: "OIDC",
 }
 

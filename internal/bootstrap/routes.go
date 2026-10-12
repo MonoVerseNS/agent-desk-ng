@@ -70,10 +70,6 @@ func registerApiAuthRoutes(group *gin.RouterGroup, limits publicRateLimits) {
 	group.GET("/profile", api.Profile)
 	group.POST("/profile/update", api.UpdateProfile)
 	group.POST("/profile/avatar/upload", api.UploadProfileAvatar)
-	group.GET("/wxwork_callback", api.WxWorkCallback)
-	group.POST("/wxwork_exchange", api.WxWorkExchange)
-	group.GET("/wxwork_login", api.WxWorkLogin)
-	group.GET("/wxwork_qr_login", api.WxWorkQRLogin)
 	group.GET("/oidc_callback", api.OIDCCallback)
 	group.GET("/callback/custom", api.OIDCCallback)
 	group.POST("/oidc_exchange", api.OIDCExchange)
@@ -289,14 +285,10 @@ func registerDashboardChannelRoutes(group *gin.RouterGroup) {
 	group.POST("/rollback_ai_agent_rollout", dashboard.ChannelPostRollback_ai_agent_rollout)
 	group.POST("/update", dashboard.ChannelPostUpdate)
 	group.POST("/update_status", dashboard.ChannelPostUpdate_status)
-	group.Any("/wxwork/kf/accounts", dashboard.ChannelAnyWxworkKfAccounts)
 	// Verifying a bound mail server is a configuration action, so it sits under
 	// channel.update rather than inventing a permission nobody can be granted
 	// without a migration.
 	group.POST("/test_email", dashboard.ChannelPostTest_email)
-	group.Any("/wxwork/outbox/failed/list", dashboard.ChannelAnyWxworkOutboxFailedList)
-	group.POST("/wxwork/outbox/retry", dashboard.ChannelPostWxworkOutboxRetry)
-	group.POST("/wxwork/outbox/ignore", dashboard.ChannelPostWxworkOutboxIgnore)
 }
 
 func registerDashboardAgentRoutes(group *gin.RouterGroup) {
@@ -492,11 +484,6 @@ func registerDashboardMCPRoutes(group *gin.RouterGroup) {
 	group.POST("/test_connection", dashboard.MCPPostTest_connection)
 }
 
-func registerThirdWechatRoutes(group *gin.RouterGroup) {
-	group.GET("/callback", third.WechatGetCallback)
-	group.POST("/callback", third.WechatPostCallback)
-}
-
 func registerThirdTelegramRoutes(group *gin.RouterGroup) {
 	group.POST("/webhook", third.TelegramPostWebhook)
 	group.POST("/webhook/:channel_id", third.TelegramPostWebhook)
@@ -515,11 +502,6 @@ func registerThirdSlackRoutes(group *gin.RouterGroup) {
 func registerThirdDiscordRoutes(group *gin.RouterGroup) {
 	group.POST("/webhook", third.DiscordPostWebhook)
 	group.POST("/webhook/:channel_id", third.DiscordPostWebhook)
-}
-
-func registerThirdLarkRoutes(group *gin.RouterGroup) {
-	group.POST("/webhook", third.LarkPostWebhook)
-	group.POST("/webhook/:channel_id", third.LarkPostWebhook)
 }
 
 func registerThirdEmailRoutes(group *gin.RouterGroup, limits publicRateLimits) {

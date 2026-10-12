@@ -24,10 +24,8 @@ import {
   type AIAgent,
   type AdminChannel,
   type CreateAdminChannelPayload,
-  type WxWorkKFAccount,
   fetchAIAgentsAll,
   fetchChannel,
-  fetchWxWorkKFAccounts,
 	rollbackChannelAIAgentRollout,
   resetChannelUserTokenSecret,
 } from "@/lib/api/admin"
@@ -49,13 +47,6 @@ type WebChannelConfig = {
   themeColor?: string
   position?: "left" | "right"
   width?: string
-  userTokenSecret?: string
-}
-
-type WechatMPChannelConfig = {
-  title?: string
-  subtitle?: string
-  themeColor?: string
   userTokenSecret?: string
 }
 
@@ -98,12 +89,6 @@ type SlackChannelConfig = {
   webhookSecret?: string
 }
 
-type LarkChannelConfig = {
-  appId?: string
-  appSecret?: string
-  verificationToken?: string
-}
-
 type DiscordChannelConfig = {
   guildId?: string
   guildName?: string
@@ -125,11 +110,10 @@ function getDefaultWebChannelConfig(t: Translate): Required<WebChannelConfig> {
 function createSchema(t: Translate) {
   return z
     .object({
-      channelType: z.enum(["web", "wechat_mp", "wxwork_kf", "telegram", "zalo_oa", "email", "slack", "lark", "discord"], t("channel.typeRequired")),
+      channelType: z.enum(["web", "telegram", "zalo_oa", "email", "slack", "discord"], t("channel.typeRequired")),
       aiAgentId: z.string().trim().regex(/^\d+$/, t("channel.agentRequired")),
 		aiAgentRolloutPercent: z.coerce.number().int().min(1).max(100),
       name: z.string().trim().min(1, t("channel.nameRequired")),
-      openKfId: z.string().trim(),
       botToken: z.string().trim(),
       botUsername: z.string().trim(),
       webhookSecret: z.string().trim(),
@@ -150,9 +134,6 @@ function createSchema(t: Translate) {
       slackBotToken: z.string().trim(),
       slackSigningSecret: z.string().trim(),
       slackAppId: z.string().trim(),
-      larkAppId: z.string().trim(),
-      larkAppSecret: z.string().trim(),
-      larkVerificationToken: z.string().trim(),
       slackTeamId: z.string().trim(),
       slackTeamName: z.string().trim(),
       slackDefaultChannel: z.string().trim(),
@@ -169,13 +150,6 @@ function createSchema(t: Translate) {
       remark: z.string().trim(),
     })
     .superRefine((values, ctx) => {
-      if (values.channelType === "wxwork_kf" && !values.openKfId.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["openKfId"],
-          message: t("channel.wxworkAccountRequired"),
-        })
-      }
       if (values.channelType === "email" && !values.emailAddress.trim()) {
         ctx.addIssue({
           code: "custom",
@@ -204,22 +178,14 @@ function createSchema(t: Translate) {
           message: t("channel.slackBotTokenRequired"),
         })
       }
-      if (values.channelType === "lark" && (!values.larkAppId.trim() || !values.larkAppSecret.trim())) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["larkAppId"],
-          message: t("channel.larkCredentialsRequired"),
-        })
-      }
     })
 }
 
 type EditForm = {
-  channelType: "web" | "wechat_mp" | "wxwork_kf" | "telegram" | "zalo_oa" | "email" | "slack" | "lark" | "discord"
+  channelType: "web" | "telegram" | "zalo_oa" | "email" | "slack" | "discord"
   aiAgentId: string
 	aiAgentRolloutPercent: number
   name: string
-  openKfId: string
   botToken: string
   botUsername: string
   webhookSecret: string
@@ -240,9 +206,6 @@ type EditForm = {
   slackBotToken: string
   slackSigningSecret: string
   slackAppId: string
-  larkAppId: string
-  larkAppSecret: string
-  larkVerificationToken: string
   slackTeamId: string
   slackTeamName: string
   slackDefaultChannel: string
@@ -266,7 +229,6 @@ function createEmptyForm(t: Translate): EditForm {
     aiAgentId: "",
 		aiAgentRolloutPercent: 100,
     name: "",
-    openKfId: "",
     botToken: "",
     botUsername: "",
     webhookSecret: "",
@@ -287,9 +249,6 @@ function createEmptyForm(t: Translate): EditForm {
     slackBotToken: "",
     slackSigningSecret: "",
     slackAppId: "",
-    larkAppId: "",
-    larkAppSecret: "",
-    larkVerificationToken: "",
     slackTeamId: "",
     slackTeamName: "",
     slackDefaultChannel: "",
@@ -304,18 +263,6 @@ function createEmptyForm(t: Translate): EditForm {
     widgetWidth: defaultWebChannelConfig.width,
     userTokenSecret: "",
     remark: "",
-  }
-}
-
-function parseOpenKfId(configJson: string): string {
-  if (!configJson.trim()) {
-    return ""
-  }
-  try {
-    const parsed = JSON.parse(configJson) as { openKfId?: string }
-    return typeof parsed.openKfId === "string" ? parsed.openKfId.trim() : ""
-  } catch {
-    return ""
   }
 }
 
@@ -362,20 +309,6 @@ function parseSlackChannelConfig(configJson: string): SlackChannelConfig {
       teamName: parsed.teamName?.trim() || "",
       defaultChannel: parsed.defaultChannel?.trim() || "",
       webhookSecret: parsed.webhookSecret?.trim() || "",
-    }
-  } catch {
-    return {}
-  }
-}
-
-function parseLarkChannelConfig(configJson: string): LarkChannelConfig {
-  if (!configJson.trim()) return {}
-  try {
-    const parsed = JSON.parse(configJson) as LarkChannelConfig
-    return {
-      appId: parsed.appId?.trim() || "",
-      appSecret: parsed.appSecret?.trim() || "",
-      verificationToken: parsed.verificationToken?.trim() || "",
     }
   } catch {
     return {}
@@ -441,47 +374,17 @@ function parseWebChannelConfig(configJson: string, t: Translate): Required<WebCh
   }
 }
 
-function parseWechatMPChannelConfig(configJson: string, t: Translate): Required<WechatMPChannelConfig> {
-  const defaultWebChannelConfig = getDefaultWebChannelConfig(t)
-  const fallback = {
-    title: t("channel.defaultTitleWechat"),
-    subtitle: defaultWebChannelConfig.subtitle,
-    themeColor: defaultWebChannelConfig.themeColor,
-    userTokenSecret: "",
-  }
-  if (!configJson.trim()) {
-    return fallback
-  }
-  try {
-    const parsed = JSON.parse(configJson) as WechatMPChannelConfig
-    return {
-      title: parsed.title?.trim() || fallback.title,
-      subtitle: parsed.subtitle?.trim() ?? fallback.subtitle,
-      themeColor:
-        parsed.themeColor?.trim() || defaultWebChannelConfig.themeColor,
-      userTokenSecret: parsed.userTokenSecret?.trim() || "",
-    }
-  } catch {
-    return fallback
-  }
-}
-
 function buildForm(item: AdminChannel | null, t: Translate): EditForm {
   if (!item) {
     return createEmptyForm(t)
   }
-  const isWechatMP = item.channelType === "wechat_mp"
   const isTelegram = item.channelType === "telegram"
   const isZaloOA = item.channelType === "zalo_oa"
   const isEmail = item.channelType === "email"
   const isSlack = item.channelType === "slack"
-  const isLark = item.channelType === "lark"
   const isDiscord = item.channelType === "discord"
 
   const webConfig = parseWebChannelConfig(item.configJson, t)
-  const wechatConfig = isWechatMP
-    ? parseWechatMPChannelConfig(item.configJson, t)
-    : null
   const telegramConfig = isTelegram
     ? parseTelegramChannelConfig(item.configJson)
     : null
@@ -495,35 +398,21 @@ function buildForm(item: AdminChannel | null, t: Translate): EditForm {
   const discordConfig = isDiscord
     ? parseDiscordChannelConfig(item.configJson)
     : null
-  const larkConfig = isLark
-    ? parseLarkChannelConfig(item.configJson)
-    : null
   const emailConfig = isEmail
     ? parseEmailChannelConfig(item.configJson)
     : null
   return {
     channelType:
-      item.channelType === "wxwork_kf"
-        ? "wxwork_kf"
-        : item.channelType === "email"
-          ? "email"
-        : item.channelType === "telegram"
-          ? "telegram"
-          : item.channelType === "zalo_oa"
-            ? "zalo_oa"
-            : item.channelType === "slack"
-              ? "slack"
-              : item.channelType === "lark"
-                ? "lark"
-                : item.channelType === "discord"
-                  ? "discord"
-                : item.channelType === "wechat_mp"
-                  ? "wechat_mp"
-                  : "web",
+      item.channelType === "email" ||
+      item.channelType === "telegram" ||
+      item.channelType === "zalo_oa" ||
+      item.channelType === "slack" ||
+      item.channelType === "discord"
+        ? item.channelType
+        : "web",
     aiAgentId: item.aiAgentId > 0 ? String(item.aiAgentId) : "",
 		aiAgentRolloutPercent: item.aiAgentRolloutPercent || 100,
     name: item.name,
-    openKfId: parseOpenKfId(item.configJson),
     botToken: telegramConfig?.botToken ?? "",
     botUsername: telegramConfig?.botUsername ?? "",
     webhookSecret:
@@ -554,16 +443,13 @@ function buildForm(item: AdminChannel | null, t: Translate): EditForm {
     discordGuildId: discordConfig?.guildId ?? "",
     discordGuildName: discordConfig?.guildName ?? "",
     discordBotToken: discordConfig?.botToken ?? "",
-    larkAppId: larkConfig?.appId ?? "",
-    larkAppSecret: larkConfig?.appSecret ?? "",
-    larkVerificationToken: larkConfig?.verificationToken ?? "",
 
-    widgetTitle: wechatConfig?.title ?? webConfig.title,
-    widgetSubtitle: wechatConfig?.subtitle ?? webConfig.subtitle,
-    widgetThemeColor: wechatConfig?.themeColor ?? webConfig.themeColor,
+    widgetTitle: webConfig.title,
+    widgetSubtitle: webConfig.subtitle,
+    widgetThemeColor: webConfig.themeColor,
     widgetPosition: webConfig.position,
     widgetWidth: webConfig.width,
-    userTokenSecret: wechatConfig?.userTokenSecret ?? webConfig.userTokenSecret,
+    userTokenSecret: webConfig.userTokenSecret,
     remark: item.remark || "",
   }
 }
@@ -574,16 +460,14 @@ function buildPayload(form: EditForm, status: number, t: Translate): CreateAdmin
   const webLikeConfig = {
     title:
       form.widgetTitle.trim() ||
-      (channelType === "wechat_mp" ? t("channel.defaultTitleWechat") : defaultWebChannelConfig.title),
+      defaultWebChannelConfig.title,
     subtitle: form.widgetSubtitle.trim(),
     themeColor:
       form.widgetThemeColor.trim() || defaultWebChannelConfig.themeColor,
     userTokenSecret: form.userTokenSecret.trim(),
   }
   const configJson =
-    channelType === "wxwork_kf"
-      ? JSON.stringify({ openKfId: form.openKfId.trim() })
-      : channelType === "email"
+    channelType === "email"
         ? JSON.stringify({
             emailAddress: form.emailAddress.trim(),
             senderName: form.senderName.trim(),
@@ -628,15 +512,7 @@ function buildPayload(form: EditForm, status: number, t: Translate): CreateAdmin
                   botToken: form.discordBotToken.trim(),
                   webhookSecret: form.webhookSecret.trim(),
                 })
-            : channelType === "lark"
-              ? JSON.stringify({
-                  appId: form.larkAppId.trim(),
-                  appSecret: form.larkAppSecret.trim(),
-                  verificationToken: form.larkVerificationToken.trim(),
-                })
-              : channelType === "wechat_mp"
-              ? JSON.stringify(webLikeConfig)
-              : JSON.stringify({
+            : JSON.stringify({
                   ...webLikeConfig,
                   position: form.widgetPosition || defaultWebChannelConfig.position,
                   width: form.widgetWidth.trim() || defaultWebChannelConfig.width,
@@ -702,9 +578,6 @@ function ChannelFormBody({
   )
   const [loading, setLoading] = useState(false)
   const [aiAgents, setAIAgents] = useState<AIAgent[]>([])
-  const [wxWorkKFAccounts, setWxWorkKFAccounts] = useState<WxWorkKFAccount[]>([])
-  const [wxWorkKFAccountsLoading, setWxWorkKFAccountsLoading] = useState(false)
-  const [wxWorkKFAccountsError, setWxWorkKFAccountsError] = useState("")
   const [channelDetail, setChannelDetail] = useState<AdminChannel | null>(null)
 	const [rollingBackRollout, setRollingBackRollout] = useState(false)
   const [currentStatus, setCurrentStatus] = useState(0)
@@ -726,7 +599,6 @@ function ChannelFormBody({
   } = form
   const channelType = useWatch({ control, name: "channelType" })
   const aiAgentId = useWatch({ control, name: "aiAgentId" })
-  const openKfId = useWatch({ control, name: "openKfId" })
   const userTokenSecret = useWatch({ control, name: "userTokenSecret" })
   const emailProvider = useWatch({ control, name: "emailProvider" })
 	const previousRolloutPercent = channelDetail?.previousAiAgentRolloutPercent ?? 0
@@ -785,48 +657,11 @@ function ChannelFormBody({
     void loadDetail()
   }, [emptyForm, itemId, reset, t])
 
-  useEffect(() => {
-    if (
-      channelType !== "wxwork_kf" ||
-      wxWorkKFAccounts.length > 0 ||
-      wxWorkKFAccountsLoading ||
-      wxWorkKFAccountsError
-    ) {
-      return
-    }
-    async function loadWxWorkKFAccounts() {
-      setWxWorkKFAccountsLoading(true)
-      setWxWorkKFAccountsError("")
-      try {
-        const data = await fetchWxWorkKFAccounts()
-        setWxWorkKFAccounts(data)
-      } catch (error) {
-        console.error("Failed to load WeCom KF accounts:", error)
-        setWxWorkKFAccountsError(
-          error instanceof Error ? error.message : t("channel.loadWxworkAccountsFailed")
-        )
-      } finally {
-        setWxWorkKFAccountsLoading(false)
-      }
-    }
-    void loadWxWorkKFAccounts()
-  }, [
-    channelType,
-    wxWorkKFAccounts.length,
-    wxWorkKFAccountsError,
-    wxWorkKFAccountsLoading,
-    t,
-  ])
-
   const selectedAIAgent = aiAgents.find((item) => String(item.id) === aiAgentId)
   const aiAgentOptions = aiAgents.map((item) => ({
     value: String(item.id),
     label: isAgentChannelBindable(item) ? item.name : `${item.name} · ${t("aiAgent.agentNotPublishedShort")}`,
     disabled: !isAgentChannelBindable(item),
-  }))
-  const wxWorkKFAccountOptions = wxWorkKFAccounts.map((item) => ({
-    value: item.openKfId,
-    label: item.name ? `${item.name} (${item.openKfId})` : item.openKfId,
   }))
   const channelTypeOptions = [
     { value: "web", label: t("channel.typeWeb") },
@@ -834,24 +669,11 @@ function ChannelFormBody({
     { value: "slack", label: t("channel.typeSlack") },
     { value: "discord", label: t("channel.typeDiscord") },
 
-    { value: "wechat_mp", label: t("channel.typeWechatMp") },
-    { value: "wxwork_kf", label: t("channel.typeWxworkKf") },
   ] as const
   const widgetPositionOptions = [
     { value: "right", label: t("channel.positionRight") },
     { value: "left", label: t("channel.positionLeft") },
   ] as const
-  if (
-    channelType === "wxwork_kf" &&
-    openKfId &&
-    !wxWorkKFAccountOptions.some((item) => item.value === openKfId)
-  ) {
-    wxWorkKFAccountOptions.unshift({
-      value: openKfId,
-      label: openKfId,
-    })
-  }
-
   async function onFormSubmit(values: EditForm) {
     const selected = aiAgents.find((item) => String(item.id) === values.aiAgentId)
     if (!isAgentChannelBindable(selected)) {
@@ -1000,11 +822,7 @@ function ChannelFormBody({
             <div>
               <div className="text-sm font-medium">{t("channel.configTitle")}</div>
               <div className="text-xs text-muted-foreground">
-                {channelType === "wxwork_kf"
-                  ? t("channel.configWxworkDescription")
-                  : channelType === "wechat_mp"
-                    ? t("channel.configWechatDescription")
-                    : t("channel.configWebDescription")}
+                {t("channel.configWebDescription")}
               </div>
             </div>
 
@@ -1374,58 +1192,6 @@ function ChannelFormBody({
               </div>
             ) : null}
 
-            {channelType === "lark" ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field data-invalid={!!errors.larkAppId}>
-                    <FieldLabel htmlFor="channel-lark-appid">{t("channel.larkAppId")}</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        id="channel-lark-appid"
-                        placeholder="cli_..."
-                        {...register("larkAppId")}
-                      />
-                      <FieldError errors={[errors.larkAppId]} />
-                    </FieldContent>
-                  </Field>
-
-                  <Field data-invalid={!!errors.larkAppSecret}>
-                    <FieldLabel htmlFor="channel-lark-secret">{t("channel.larkAppSecret")}</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        id="channel-lark-secret"
-                        type="password"
-                        placeholder="Lark App Secret"
-                        {...register("larkAppSecret")}
-                      />
-                      <FieldError errors={[errors.larkAppSecret]} />
-                    </FieldContent>
-                  </Field>
-                </div>
-
-                <Field data-invalid={!!errors.larkVerificationToken}>
-                  <FieldLabel htmlFor="channel-lark-token">{t("channel.larkVerificationToken")}</FieldLabel>
-                  <FieldContent>
-                    <Input
-                      id="channel-lark-token"
-                      type="password"
-                      placeholder="Lark Verification Token"
-                      {...register("larkVerificationToken")}
-                    />
-                    <FieldError errors={[errors.larkVerificationToken]} />
-                  </FieldContent>
-                </Field>
-
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-                  <div className="font-medium text-foreground">{t("channel.larkSetupTitle")}</div>
-                  <div className="mt-1">{t("channel.larkSetupDescription")}</div>
-                  <div className="mt-2 font-mono text-[11px]">
-                    {t("channel.inboundWebhookUrl")}: /api/third/lark/webhook
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
             {channelType === "telegram" ? (
               <div className="space-y-4">
                 <Field data-invalid={!!errors.botToken}>
@@ -1474,35 +1240,7 @@ function ChannelFormBody({
               </div>
             ) : null}
 
-            {channelType === "wxwork_kf" ? (
-              <Field data-invalid={!!errors.openKfId}>
-                <FieldLabel>{t("channel.wxworkAccount")}</FieldLabel>
-                <FieldContent>
-                  <Controller
-                    control={control}
-                    name="openKfId"
-                    render={({ field }) => (
-                      <OptionCombobox
-                        value={field.value}
-                        options={wxWorkKFAccountOptions}
-                        placeholder={
-                          wxWorkKFAccountsLoading ? t("channel.loadingWxworkAccount") : t("channel.selectWxworkAccount")
-                        }
-                        searchPlaceholder={t("channel.searchWxworkAccount")}
-                        emptyText={
-                          wxWorkKFAccountsError || t("channel.emptyWxworkAccount")
-                        }
-                        disabled={wxWorkKFAccountsLoading}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                  <FieldError errors={[errors.openKfId]} />
-                </FieldContent>
-              </Field>
-            ) : null}
-
-            {channelType === "web" || channelType === "wechat_mp" ? (
+            {channelType === "web" ? (
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field data-invalid={!!errors.widgetTitle}>
@@ -1619,11 +1357,7 @@ function ChannelFormBody({
                     </Field>
                   )}
                 </div>
-                {channelType === "wechat_mp" ? (
-                  <WechatMPAccessGuide channelId={channelDetail?.channelId || ""} />
-                ) : (
-                  <WebAccessGuide channelId={channelDetail?.channelId || ""} />
-                )}
+                <WebAccessGuide channelId={channelDetail?.channelId || ""} />
               </>
             ) : null}
           </div>
@@ -1772,93 +1506,6 @@ function WebAccessGuide({ channelId }: { channelId: string }) {
                 {t("channel.openTestPage")}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function WechatMPAccessGuide({ channelId }: { channelId: string }) {
-  const t = useI18n()
-  const [origin, setOrigin] = useState("")
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
-
-  const menuUrl = useMemo(() => {
-    if (!origin || !channelId) {
-      return ""
-    }
-    const url = new URL("/support/chat/", origin)
-    url.searchParams.set("channelId", channelId)
-    return url.toString()
-  }, [channelId, origin])
-
-  async function copyText(text: string) {
-    if (!text) {
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(text)
-      toast.success(t("channel.copiedWechatMenuUrl"))
-    } catch {
-      toast.error(t("channel.copyFailed"))
-    }
-  }
-
-  return (
-    <div className="space-y-4 border-t pt-4">
-      <div>
-        <div className="text-sm font-medium">{t("channel.wechatAccessInfo")}</div>
-        <div className="text-xs text-muted-foreground">
-          {channelId
-            ? t("channel.wechatAccessReady")
-            : t("channel.wechatAccessPending")}
-        </div>
-      </div>
-
-      {!channelId ? (
-        <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-          {t("channel.newChannelPending")}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">
-              {t("channel.wechatMenuUrl")}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input readOnly value={menuUrl} className="font-mono text-xs" />
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  title={t("channel.copyLink")}
-                  onClick={() => copyText(menuUrl)}
-                >
-                  <CopyIcon className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  title={t("channel.openLink")}
-                  onClick={() => window.open(menuUrl, "_blank", "noopener,noreferrer")}
-                >
-                  <ExternalLinkIcon className="size-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground">
-            <div className="font-medium text-foreground">{t("channel.accessGuide")}</div>
-            <div>{t("channel.webGuide1")}</div>
-            <div>{t("channel.wechatGuide2")}</div>
-            <div>{t("channel.wechatGuide3")}</div>
           </div>
         </div>
       )}

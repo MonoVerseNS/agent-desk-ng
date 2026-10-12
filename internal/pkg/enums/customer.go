@@ -12,7 +12,6 @@ type ContactType string
 const (
 	ContactTypeMobile ContactType = "mobile"
 	ContactTypeEmail  ContactType = "email"
-	ContactTypeWeChat ContactType = "wechat"
 	ContactTypeOther  ContactType = "other"
 )
 
@@ -29,7 +28,7 @@ func GetContactTypeLabel(contactType ContactType) string {
 // IsValidContactType 判断字符串是否为合法联系方式类型。
 func IsValidContactType(v string) bool {
 	switch ContactType(v) {
-	case ContactTypeMobile, ContactTypeEmail, ContactTypeWeChat, ContactTypeOther:
+	case ContactTypeMobile, ContactTypeEmail, ContactTypeOther:
 		return true
 	default:
 		return false

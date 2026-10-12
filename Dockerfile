@@ -21,6 +21,10 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 
 COPY web/ ./
 COPY --from=flowgram-editor-builder /src/web/public/flowgram-editor ./public/flowgram-editor
+
+ARG NEXT_PUBLIC_OPEN_IM_CHANNEL_ID=""
+ENV NEXT_PUBLIC_OPEN_IM_CHANNEL_ID=${NEXT_PUBLIC_OPEN_IM_CHANNEL_ID}
+
 RUN pnpm build:sdk && pnpm build
 
 FROM golang:1.26-alpine AS server-builder

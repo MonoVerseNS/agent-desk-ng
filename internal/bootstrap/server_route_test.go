@@ -126,9 +126,6 @@ func TestNewServerExposesPublicConfig(t *testing.T) {
 				BaseURL: "/storage",
 			},
 		},
-		WxWork: config.WxWorkConfig{
-			Enabled: true,
-		},
 		OIDC: config.OIDCConfig{
 			Enabled:      false,
 			ClientSecret: "must-not-leak",
@@ -152,7 +149,6 @@ func TestNewServerExposesPublicConfig(t *testing.T) {
 		Data    struct {
 			Language             string `json:"language"`
 			PasswordLoginEnabled bool   `json:"passwordLoginEnabled"`
-			WxWorkEnabled        bool   `json:"wxworkEnabled"`
 			OIDCEnabled          bool   `json:"oidcEnabled"`
 		} `json:"data"`
 	}
@@ -167,9 +163,6 @@ func TestNewServerExposesPublicConfig(t *testing.T) {
 	}
 	if !body.Data.PasswordLoginEnabled {
 		t.Fatalf("passwordLoginEnabled=false want true")
-	}
-	if !body.Data.WxWorkEnabled {
-		t.Fatalf("wxworkEnabled=false want true")
 	}
 	if body.Data.OIDCEnabled {
 		t.Fatalf("oidcEnabled=true want false")

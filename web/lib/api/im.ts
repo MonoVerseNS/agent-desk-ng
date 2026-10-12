@@ -1,7 +1,7 @@
 import { request } from "@/lib/api/client"
 import { translateCurrentMessage } from "@/i18n/messages"
 import { readSupportChatRuntimeConfig } from "@/lib/sdk/runtime-config"
-import { generateUUID } from "@/lib/utils"
+import { generateUUID, parseApiTimestamp } from "@/lib/utils"
 
 export type Paging = {
   page: number
@@ -174,9 +174,7 @@ function getRuntimeImConfig() {
 }
 
 function parseExpiresAt(value: string) {
-  const normalized = value.trim().replace(" ", "T")
-  const timestamp = Date.parse(normalized)
-  return Number.isFinite(timestamp) ? timestamp : 0
+  return parseApiTimestamp(value)
 }
 
 function isCustomerSessionValid(

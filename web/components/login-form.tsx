@@ -23,14 +23,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { KeyRoundIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react"
 
-function detectWxWorkEnvironment() {
-  if (typeof navigator === "undefined") {
-    return false
-  }
-  const userAgent = navigator.userAgent.toLowerCase()
-  return userAgent.includes("wxwork")
-}
-
 export function LoginForm({
   className,
   ...props
@@ -40,22 +32,20 @@ export function LoginForm({
   const searchParams = useSearchParams()
   const { session, ready } = useAuth()
   const [isPending, setIsPending] = useState(false)
-  const [isWxWorkEnv, setIsWxWorkEnv] = useState(false)
   const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null)
   const [publicConfigError, setPublicConfigError] = useState<string | null>(null)
   const nextPath = searchParams.get("next")
-  const wxworkError = searchParams.get("wxworkError")
   const oidcError = searchParams.get("oidcError")
   const redirectPath =
     nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard"
   const enabledProviderCount =
-    Number(publicConfig?.wxworkEnabled) + Number(publicConfig?.oidcEnabled)
+    Number(publicConfig?.oidcEnabled)
   const isPasswordLoginEnabled = publicConfig?.passwordLoginEnabled !== false
 
   // Redirect-only mode: when OIDC is the only login transport, skip the
   // chooser and go straight to the provider. Suppressed while the session
   // probe is in flight (an already-signed-in visitor goes to their
-  // destination instead of the IdP), in WxWork-only environments, and when
+  // destination instead of the IdP), and when
   // the provider bounced back with ?oidcError= - otherwise this would loop.
   const shouldRedirectToOIDC = Boolean(
     ready &&
@@ -63,7 +53,6 @@ export function LoginForm({
       publicConfig &&
       publicConfig.oidcEnabled &&
       !publicConfig.passwordLoginEnabled &&
-      !publicConfig.wxworkEnabled &&
       !oidcError,
   )
 
@@ -81,20 +70,10 @@ export function LoginForm({
   }, [redirectPath, router, session])
 
   useEffect(() => {
-    if (wxworkError) {
-      toast.error(wxworkError)
-    }
-  }, [wxworkError])
-
-  useEffect(() => {
     if (oidcError) {
       toast.error(oidcError)
     }
   }, [oidcError])
-
-  useEffect(() => {
-    setIsWxWorkEnv(detectWxWorkEnvironment())
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -252,28 +231,6 @@ export function LoginForm({
                       enabledProviderCount === 1 || !isPasswordLoginEnabled ? "grid-cols-1" : "grid-cols-2"
                     )}
                   >
-                    {publicConfig.wxworkEnabled ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        aria-label={t("auth.wxworkSignIn")}
-                        onClick={() => {
-                          const path = isWxWorkEnv
-                            ? "/api/auth/wxwork_login"
-                            : "/api/auth/wxwork_qr_login"
-                          window.location.href = `${path}?next=${encodeURIComponent(redirectPath)}`
-                        }}
-                      >
-                        <Image
-                          src="/images/wxwork.svg"
-                          alt=""
-                          width={16}
-                          height={16}
-                          className="size-4 shrink-0"
-                        />
-                        <span>{t("auth.wxworkSignIn")}</span>
-                      </Button>
-                    ) : null}
                     {publicConfig.oidcEnabled ? (
                       <Button
                         type="button"
