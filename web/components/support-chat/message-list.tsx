@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react"
 
+import { AgentActivityBubble } from "@/components/chat/agent-activity-bubble"
 import { ConversationMessageBubble } from "@/components/chat/conversation-message-bubble"
 import { ConversationMessageRow } from "@/components/chat/conversation-message-row"
 import {
@@ -21,13 +22,16 @@ import { useImageLightbox } from "@/components/image-lightbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import type { AgentActivityInfo } from "@/lib/agent-activity-state"
 import type { ImMessage } from "@/lib/api/im"
 import { renderIMMessageHTML } from "@/lib/im-message"
+import { useSupportChatStore } from "@/lib/stores/support-chat"
 import { cn, formatDateTime } from "@/lib/utils"
 import { useI18n } from "@/i18n/provider"
 
 type SupportChatMessageListProps = {
   messages?: ImMessage[] | null
+  agentActivity?: AgentActivityInfo | null
   onNearBottomVisible?: () => void
   hasMoreOlder?: boolean
   loadingOlder?: boolean
@@ -77,6 +81,7 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
   function SupportChatMessageList(
     {
       messages,
+      agentActivity,
       onNearBottomVisible,
       hasMoreOlder = false,
       loadingOlder = false,
@@ -90,6 +95,10 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
     const onNearBottomVisibleRef = useRef(onNearBottomVisible)
     const safeMessages = Array.isArray(messages) ? messages : []
 
+    const storeAgentActivity = useSupportChatStore((state) => state.activeAgentActivity)
+    const resolvedAgentActivity = agentActivity !== undefined ? agentActivity : storeAgentActivity
+    const prevActivityRef = useRef<AgentActivityInfo | null>(null)
+
     useEffect(() => {
       onNearBottomVisibleRef.current = onNearBottomVisible
     }, [onNearBottomVisible])
@@ -97,6 +106,16 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
     const scrollToBottom = useCallback(() => {
       scrollerRef.current?.scrollToBottom()
     }, [])
+
+    useEffect(() => {
+      const wasActive = Boolean(prevActivityRef.current)
+      const isNowActive = Boolean(resolvedAgentActivity)
+      prevActivityRef.current = resolvedAgentActivity
+
+      if (!wasActive && isNowActive && shouldStickToBottomRef.current) {
+        scrollToBottom()
+      }
+    }, [resolvedAgentActivity, scrollToBottom])
 
     const handleImageSettled = useCallback(() => {
       if (shouldStickToBottomRef.current) {
@@ -146,7 +165,7 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
           ) : null
         }
       >
-        {safeMessages.length === 0 ? (
+        {safeMessages.length === 0 && !resolvedAgentActivity ? (
           <div className="flex min-h-32 items-center justify-center px-3 py-6 text-center text-sm leading-6 text-muted-foreground">
             {t("supportChat.emptyPrompt")}
           </div>
@@ -172,6 +191,13 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
             </ConversationMessageScrollerItem>
           )
         })}
+
+        {resolvedAgentActivity ? (
+          <AgentActivityBubble
+            stepCode={resolvedAgentActivity.stepCode}
+            toolName={resolvedAgentActivity.toolName}
+          />
+        ) : null}
       </ConversationMessageScroller>
     )
   }

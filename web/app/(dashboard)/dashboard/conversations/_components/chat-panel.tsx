@@ -25,6 +25,7 @@ import {
   type ConversationMessageScrollerHandle,
 } from "@/components/chat/conversation-message-scroller";
 import { ConversationMessageBubble } from "@/components/chat/conversation-message-bubble";
+import { AgentActivityBubble } from "@/components/chat/agent-activity-bubble";
 import { ImMessageHTML } from "@/components/im-message-html";
 import { useImageLightbox } from "@/components/image-lightbox";
 import { JsonTreeViewer } from "@/components/json-tree-viewer";
@@ -163,6 +164,9 @@ export function ChatPanel() {
   const setConversationFilter = useAgentConversationsStore(
     (state) => state.setConversationFilter,
   );
+  const activeAgentActivity = useAgentConversationsStore(
+    (state) => state.activeAgentActivity,
+  );
   const messagesScrollerRef = useRef<ConversationMessageScrollerHandle | null>(
     null,
   );
@@ -243,6 +247,22 @@ export function ChatPanel() {
       window.removeEventListener("focus", handleFocus);
     };
   }, [maybeMarkConversationRead]);
+
+  const prevActivityRef = useRef<typeof activeAgentActivity>(null);
+
+  useEffect(() => {
+    const wasActive = Boolean(prevActivityRef.current);
+    const isNowActive = Boolean(
+      activeAgentActivity &&
+        conversation &&
+        activeAgentActivity.conversationId === conversation.id,
+    );
+    prevActivityRef.current = activeAgentActivity;
+
+    if (!wasActive && isNowActive && shouldStickToBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [activeAgentActivity, conversation, scrollToBottom]);
 
   const handleLoadOlder = async () => {
     if (messagesLoadingMore || !messagesHasMore) {
@@ -330,6 +350,14 @@ export function ChatPanel() {
     );
   }
 
+  const showAgentActivity =
+    !loading &&
+    Boolean(
+      activeAgentActivity &&
+        conversation &&
+        activeAgentActivity.conversationId === conversation.id,
+    );
+
   const messagesScroll = (
     <ConversationMessageScroller
       key={conversation.id}
@@ -382,11 +410,17 @@ export function ChatPanel() {
             />
           </ConversationMessageScrollerItem>
         ))
-      ) : (
+      ) : !showAgentActivity ? (
         <div className="py-8 text-center text-sm text-muted-foreground">
           {t("conversation.emptyMessages")}
         </div>
-      )}
+      ) : null}
+      {showAgentActivity && activeAgentActivity ? (
+        <AgentActivityBubble
+          stepCode={activeAgentActivity.stepCode}
+          toolName={activeAgentActivity.toolName}
+        />
+      ) : null}
     </ConversationMessageScroller>
   );
 
