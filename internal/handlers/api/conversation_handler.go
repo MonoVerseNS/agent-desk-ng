@@ -150,3 +150,27 @@ func ConversationPostClose(ctx *gin.Context) {
 	}
 	httpx.WriteJSON(ctx, nil)
 }
+
+func ConversationPostSatisfaction(ctx *gin.Context) {
+	if services.ChannelService.GetEnabledChannel(ctx) == nil {
+		httpx.WriteJSON(ctx, httpx.JsonErrorMsg(ctx, "error.e0211"))
+		return
+	}
+	external := httpx.GetExternalUser(ctx)
+	if external == nil {
+		httpx.WriteJSON(ctx, httpx.JsonErrorMsg(ctx, "error.e0150"))
+		return
+	}
+
+	req := request.SubmitSatisfactionRequest{}
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+	item, err := services.ConversationSatisfactionService.SubmitSatisfaction(req.ConversationID, *external, req.Score, req.Feedback)
+	if err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+	httpx.WriteJSON(ctx, builders.BuildSatisfactionResponse(item))
+}

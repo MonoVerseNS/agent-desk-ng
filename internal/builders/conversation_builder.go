@@ -69,7 +69,23 @@ func BuildConversationWithLocale(item *models.Conversation, locale string) respo
 			}
 		}
 	}
+	if sat := services.ConversationSatisfactionService.GetByConversationID(item.ID); sat != nil {
+		ret.Satisfaction = BuildSatisfactionResponse(sat)
+	}
 	return ret
+}
+
+func BuildSatisfactionResponse(item *models.ConversationSatisfaction) *response.ConversationSatisfactionResponse {
+	if item == nil {
+		return nil
+	}
+	return &response.ConversationSatisfactionResponse{
+		ID:             item.ID,
+		ConversationID: item.ConversationID,
+		Score:          item.Score,
+		Feedback:       item.Feedback,
+		CreatedAt:      utils.FormatTime(item.CreatedAt),
+	}
 }
 
 // conversationSummaryTokens are the markers BuildRuntimeMessageText and

@@ -95,6 +95,7 @@ func registerApiConversationRoutes(group *gin.RouterGroup) {
 	group.POST("/close", api.ConversationPostClose)
 	group.POST("/create", api.ConversationPostCreate)
 	group.POST("/create_or_match", api.ConversationPostCreate_or_match)
+	group.POST("/satisfaction", api.ConversationPostSatisfaction)
 }
 
 func registerApiMessageRoutes(group *gin.RouterGroup, limits publicRateLimits) {
