@@ -279,10 +279,35 @@ func (e RealtimeAgentActivityEvent) EventPayload() RealtimeEventPayload {
 	return e.Payload
 }
 
+type RealtimeOperatorPresencePayload struct {
+	ConversationID int64  `json:"conversationId"`
+	UserID         int64  `json:"userId"`
+	Username       string `json:"username"`
+	Nickname       string `json:"nickname"`
+	Action         string `json:"action"` // "viewing", "typing", "left"
+	At             string `json:"at"`
+}
+
+func (RealtimeOperatorPresencePayload) realtimeEventPayload() {}
+
+type RealtimeOperatorPresenceEvent struct {
+	Payload RealtimeOperatorPresencePayload
+}
+
+func (e RealtimeOperatorPresenceEvent) EventType() string {
+	return enums.IMRealtimeEventOperatorPresence
+}
+
+func (e RealtimeOperatorPresenceEvent) EventPayload() RealtimeEventPayload {
+	return e.Payload
+}
+
 type realtimeClientMessage struct {
-	Type    string   `json:"type"`
-	Topics  []string `json:"topics,omitempty"`
-	EventID string   `json:"eventId,omitempty"`
+	Type           string   `json:"type"`
+	Topics         []string `json:"topics,omitempty"`
+	EventID        string   `json:"eventId,omitempty"`
+	ConversationID int64    `json:"conversationId,omitempty"`
+	Action         string   `json:"action,omitempty"`
 }
 
 type ClientSession struct {

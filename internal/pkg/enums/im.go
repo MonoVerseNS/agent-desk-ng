@@ -256,6 +256,7 @@ const (
 	IMRealtimeEventNotificationCreated     = "notification.created"
 	IMRealtimeEventCustomerSessionRefresh  = "customer_session.refresh"
 	IMRealtimeEventAgentActivity           = "agent.activity"
+	IMRealtimeEventOperatorPresence        = "operator.presence"
 )
 
 const (
@@ -263,6 +264,7 @@ const (
 	IMRealtimeClientTypeSubscribe   = "subscribe"
 	IMRealtimeClientTypeUnsubscribe = "unsubscribe"
 	IMRealtimeClientTypeAck         = "ack"
+	IMRealtimeClientTypePresence    = "presence"
 )
 
 const (

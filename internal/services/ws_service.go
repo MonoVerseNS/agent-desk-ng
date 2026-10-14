@@ -176,46 +176,57 @@ func (s *wsService) readPump(session *ClientSession) {
 			return
 		}
 		session.touch()
+		s.handleClientMessage(session, body)
+	}
+}
 
-		input := realtimeClientMessage{}
-		if err := json.Unmarshal(body, &input); err != nil {
-			session.enqueueEvent(s.newEvent("", RealtimeResyncRequiredEvent{
-				Payload: RealtimeResyncRequiredPayload{
-					Reason: enums.IMRealtimeResyncReasonInvalidPayload,
-				},
-			}))
-			continue
-		}
+func (s *wsService) handleClientMessage(session *ClientSession, payload []byte) {
+	input := realtimeClientMessage{}
+	if err := json.Unmarshal(payload, &input); err != nil {
+		session.enqueueEvent(s.newEvent("", RealtimeResyncRequiredEvent{
+			Payload: RealtimeResyncRequiredPayload{
+				Reason: enums.IMRealtimeResyncReasonInvalidPayload,
+			},
+		}))
+		return
+	}
 
-		switch strings.TrimSpace(input.Type) {
-		case enums.IMRealtimeClientTypePing:
-			session.enqueueEvent(s.newEvent("", RealtimePongEvent{}))
-		case enums.IMRealtimeClientTypeSubscribe:
-			topics := s.subscribeTopics(session, input.Topics)
-			if len(topics) > 0 {
-				session.enqueueEvent(s.newEvent("", RealtimeSubscribedEvent{
-					Payload: RealtimeTopicsPayload{Topics: topics},
-				}))
-			}
-		case enums.IMRealtimeClientTypeUnsubscribe:
-			topics := s.unsubscribeTopics(session, input.Topics)
-			if len(topics) > 0 {
-				session.enqueueEvent(s.newEvent("", RealtimeUnsubscribedEvent{
-					Payload: RealtimeTopicsPayload{Topics: topics},
-				}))
-			}
-		case enums.IMRealtimeClientTypeAck:
-			slog.Debug("realtime event ack",
-				"connId", session.ID,
-				"eventId", strings.TrimSpace(input.EventID),
-			)
-		default:
-			session.enqueueEvent(s.newEvent("", RealtimeResyncRequiredEvent{
-				Payload: RealtimeResyncRequiredPayload{
-					Reason: enums.IMRealtimeResyncReasonUnsupportedMessageType,
-				},
+	switch strings.TrimSpace(input.Type) {
+	case enums.IMRealtimeClientTypePing:
+		session.enqueueEvent(s.newEvent("", RealtimePongEvent{}))
+	case enums.IMRealtimeClientTypeSubscribe:
+		topics := s.subscribeTopics(session, input.Topics)
+		if len(topics) > 0 {
+			session.enqueueEvent(s.newEvent("", RealtimeSubscribedEvent{
+				Payload: RealtimeTopicsPayload{Topics: topics},
 			}))
 		}
+	case enums.IMRealtimeClientTypeUnsubscribe:
+		topics := s.unsubscribeTopics(session, input.Topics)
+		if len(topics) > 0 {
+			session.enqueueEvent(s.newEvent("", RealtimeUnsubscribedEvent{
+				Payload: RealtimeTopicsPayload{Topics: topics},
+			}))
+		}
+	case enums.IMRealtimeClientTypeAck:
+		slog.Debug("realtime event ack",
+			"connId", session.ID,
+			"eventId", strings.TrimSpace(input.EventID),
+		)
+	case enums.IMRealtimeClientTypePresence:
+		if input.ConversationID > 0 && session.Principal != nil {
+			action := strings.TrimSpace(input.Action)
+			if action == "" {
+				action = "viewing"
+			}
+			s.PublishOperatorPresence(input.ConversationID, session.Principal, action, session.ID)
+		}
+	default:
+		session.enqueueEvent(s.newEvent("", RealtimeResyncRequiredEvent{
+			Payload: RealtimeResyncRequiredPayload{
+				Reason: enums.IMRealtimeResyncReasonUnsupportedMessageType,
+			},
+		}))
 	}
 }
 
@@ -478,6 +489,29 @@ func (s *wsService) PublishAgentActivity(conversation *models.Conversation, step
 	s.PublishToTopics(s.routeConversationTopics(conversation), event)
 }
 
+func (s *wsService) PublishOperatorPresence(conversationID int64, principal *dto.AuthPrincipal, action string, excludeConnID string) {
+	if conversationID <= 0 || principal == nil {
+		return
+	}
+	action = strings.TrimSpace(action)
+	if action == "" {
+		action = "viewing"
+	}
+	topic := s.conversationTopic(conversationID)
+	payload := RealtimeOperatorPresencePayload{
+		ConversationID: conversationID,
+		UserID:         principal.UserID,
+		Username:       principal.Username,
+		Nickname:       principal.Nickname,
+		Action:         action,
+		At:             time.Now().Format(time.RFC3339),
+	}
+	event := s.newEvent(topic, RealtimeOperatorPresenceEvent{Payload: payload})
+	s.publishTopicWithFilter(topic, event, func(session *ClientSession) bool {
+		return excludeConnID == "" || session.ID != excludeConnID
+	})
+}
+
 func (s *wsService) PublishResyncRequired(topics []string, reason string) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
@@ -520,7 +554,22 @@ func (s *wsService) PublishToTopic(topic string, event RealtimeEvent) {
 	s.PublishToTopics([]string{topic}, event)
 }
 
+func (s *wsService) publishTopicWithFilter(topic string, event RealtimeEvent, filter func(session *ClientSession) bool) {
+	topic = strings.TrimSpace(topic)
+	if topic == "" {
+		return
+	}
+	if event.Topic == "" {
+		event.Topic = topic
+	}
+	s.PublishToTopicsWithFilter([]string{topic}, event, filter)
+}
+
 func (s *wsService) PublishToTopics(topics []string, event RealtimeEvent) {
+	s.PublishToTopicsWithFilter(topics, event, nil)
+}
+
+func (s *wsService) PublishToTopicsWithFilter(topics []string, event RealtimeEvent, filter func(session *ClientSession) bool) {
 	normalized := normalizeRealtimeTopics(topics)
 	if len(normalized) == 0 {
 		return
@@ -538,6 +587,9 @@ func (s *wsService) PublishToTopics(topics []string, event RealtimeEvent) {
 	}
 
 	for _, session := range targets {
+		if filter != nil && !filter(session) {
+			continue
+		}
 		if session.enqueue(payload) {
 			continue
 		}
