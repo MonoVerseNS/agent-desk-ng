@@ -489,6 +489,19 @@
     "claiming": "认领中...",
     "confirmClaim": "确认认领"
   },
+  "csat": {
+    "title": "您对本次服务满意吗？",
+    "score1": "非常不满意",
+    "score2": "不满意",
+    "score3": "一般",
+    "score4": "满意",
+    "score5": "非常满意",
+    "commentPlaceholder": "说说您的建议或需要改进的地方...（选填）",
+    "submit": "提交评价",
+    "submitting": "提交中...",
+    "thankYou": "感谢您的评价！",
+    "alreadyRated": "您已评价本次服务：{score}/5"
+  },
   "promptStarters": {
     "title": "常用问题"
   },

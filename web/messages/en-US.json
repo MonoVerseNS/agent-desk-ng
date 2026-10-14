@@ -489,6 +489,19 @@
     "claiming": "Claiming...",
     "confirmClaim": "Claim"
   },
+  "csat": {
+    "title": "How would you rate our support?",
+    "score1": "Very dissatisfied",
+    "score2": "Dissatisfied",
+    "score3": "Neutral",
+    "score4": "Satisfied",
+    "score5": "Very satisfied",
+    "commentPlaceholder": "Tell us what could be improved... (optional)",
+    "submit": "Submit Rating",
+    "submitting": "Submitting...",
+    "thankYou": "Thank you for your feedback!",
+    "alreadyRated": "You rated this conversation {score}/5"
+  },
   "promptStarters": {
     "title": "Frequently Asked Questions"
   },
