@@ -359,6 +359,12 @@
     "confirmPassword": "Подтверждение пароля",
     "confirmPasswordPlaceholder": "Повторите новый пароль"
   },
+  "operatorPresence": {
+    "viewing": "{name} просматривает этот диалог",
+    "typing": "{name} печатает ответ...",
+    "multipleViewing": "{count} оператора просматривают этот диалог",
+    "collisionWarning": "В этом диалоге уже работает другой оператор во избежание дублирования ответов."
+  },
   "conversation": {
     "syncConversationDataFailed": "Не удалось синхронизировать данные диалога.",
     "syncMessagesFailed": "Не удалось синхронизировать сообщения.",
@@ -474,6 +480,7 @@
     "sendAttachment": "Отправить вложение",
     "searchQuickReplies": "Поиск быстрых ответов",
     "emptyQuickReplies": "Быстрых ответов пока нет",
+    "quickReplySlashHint": "Введите / для быстрого ответа",
     "enterToSend": "Enter — отправить",
     "send": "Отправить",
     "uploading": "Загрузка...",

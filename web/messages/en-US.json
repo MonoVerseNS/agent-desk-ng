@@ -359,6 +359,12 @@
     "confirmPassword": "Confirm Password",
     "confirmPasswordPlaceholder": "Re-enter your new password"
   },
+  "operatorPresence": {
+    "viewing": "{name} is viewing this conversation",
+    "typing": "{name} is typing a reply...",
+    "multipleViewing": "{count} operators are viewing this conversation",
+    "collisionWarning": "Another operator is active here to avoid duplicate replies."
+  },
   "conversation": {
     "syncConversationDataFailed": "Could not sync conversation data.",
     "syncMessagesFailed": "Could not sync messages.",
@@ -474,6 +480,7 @@
     "sendAttachment": "Send attachment",
     "searchQuickReplies": "Search quick replies",
     "emptyQuickReplies": "No quick replies yet",
+    "quickReplySlashHint": "Type / for quick replies",
     "enterToSend": "Enter to send",
     "send": "Send",
     "uploading": "Uploading...",

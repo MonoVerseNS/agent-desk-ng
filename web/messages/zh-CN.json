@@ -359,6 +359,12 @@
     "confirmPassword": "确认密码",
     "confirmPasswordPlaceholder": "请再次输入新密码"
   },
+  "operatorPresence": {
+    "viewing": "{name} 正在查看此会话",
+    "typing": "{name} 正在输入回复...",
+    "multipleViewing": "{count} 位客服正在查看此会话",
+    "collisionWarning": "其他客服正在处理此会话，请注意避免重复回复。"
+  },
   "conversation": {
     "syncConversationDataFailed": "同步会话数据失败",
     "syncMessagesFailed": "同步消息失败",
@@ -474,6 +480,7 @@
     "sendAttachment": "发送附件",
     "searchQuickReplies": "搜索快捷回复",
     "emptyQuickReplies": "暂无快捷回复",
+    "quickReplySlashHint": "输入 / 快捷回复",
     "enterToSend": "Enter 发送",
     "send": "发送",
     "uploading": "上传中...",
