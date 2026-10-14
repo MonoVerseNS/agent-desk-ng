@@ -10,6 +10,7 @@ import (
 	"agent-desk/internal/ai"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
+	"agent-desk/internal/pkg/errorsx"
 	"agent-desk/internal/pkg/i18nx"
 
 	"github.com/glebarez/sqlite"
@@ -156,8 +157,8 @@ func TestAICopilotService_BuildSuggestReplyPrompts_Locales(t *testing.T) {
 			if !strings.Contains(usrPrompt, tc.wantUserPrefix) {
 				t.Errorf("usrPrompt for locale %s did not contain %q, got: %s", tc.locale, tc.wantUserPrefix, usrPrompt)
 			}
-			if !strings.Contains(usrPrompt, transcript) {
-				t.Errorf("usrPrompt for locale %s did not contain transcript, got: %s", tc.locale, usrPrompt)
+			if !strings.Contains(usrPrompt, "<conversation_history>\n"+transcript+"\n</conversation_history>") {
+				t.Errorf("usrPrompt for locale %s did not contain tagged transcript, got: %s", tc.locale, usrPrompt)
 			}
 		})
 	}
@@ -198,10 +199,24 @@ func TestAICopilotService_BuildSummarizePrompts_Locales(t *testing.T) {
 			if !strings.Contains(usrPrompt, tc.wantUserPrefix) {
 				t.Errorf("usrPrompt for locale %s did not contain %q, got: %s", tc.locale, tc.wantUserPrefix, usrPrompt)
 			}
-			if !strings.Contains(usrPrompt, transcript) {
-				t.Errorf("usrPrompt for locale %s did not contain transcript, got: %s", tc.locale, usrPrompt)
+			if !strings.Contains(usrPrompt, "<conversation_history>\n"+transcript+"\n</conversation_history>") {
+				t.Errorf("usrPrompt for locale %s did not contain tagged transcript, got: %s", tc.locale, usrPrompt)
 			}
 		})
+	}
+}
+
+func TestAICopilotService_ExtractMessageText_RuneLimit(t *testing.T) {
+	svc := newAICopilotService()
+	longText := strings.Repeat("a", 2500)
+	msg := models.Message{
+		SenderType:  enums.IMSenderTypeCustomer,
+		MessageType: enums.IMMessageTypeText,
+		Content:     longText,
+	}
+	extracted := svc.extractMessageText(msg)
+	if len([]rune(extracted)) != 2000 {
+		t.Fatalf("expected extracted length to be 2000 runes, got %d", len([]rune(extracted)))
 	}
 }
 
@@ -220,6 +235,9 @@ func TestAICopilotService_SuggestReply_ValidationAndErrors(t *testing.T) {
 	_, err = svc.SuggestReply(ctx, 99999, "en-US")
 	if err == nil {
 		t.Fatal("expected error for non-existent conversation, got nil")
+	}
+	if i18nErr, ok := err.(*errorsx.I18nError); !ok || i18nErr.Key != "error.e0116" {
+		t.Fatalf("expected error.e0116 for not found conversation, got: %v", err)
 	}
 
 	// 3. Conversation exists but has no messages

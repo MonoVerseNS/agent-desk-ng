@@ -413,3 +413,53 @@ func ConversationPostRemove_tag(ctx *gin.Context) {
 	}
 	httpx.WriteJSON(ctx, nil)
 }
+
+func ConversationPostSuggest_reply(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionConversationView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+
+	req := request.SuggestReplyRequest{}
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+	if req.ConversationID <= 0 {
+		httpx.WriteJSON(ctx, httpx.JsonErrorMsg(ctx, "error.e0064"))
+		return
+	}
+
+	suggestion, err := services.AICopilotService.SuggestReply(ctx.Request.Context(), req.ConversationID, i18nx.Locale(ctx))
+	if err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+
+	httpx.WriteJSON(ctx, &response.SuggestReplyResponse{Suggestion: suggestion})
+}
+
+func ConversationPostSummarize(ctx *gin.Context) {
+	if _, err := services.AuthService.RequirePermission(ctx, constants.PermissionConversationView); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+
+	req := request.SummarizeConversationRequest{}
+	if err := params.ReadJSON(ctx, &req); err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+	if req.ConversationID <= 0 {
+		httpx.WriteJSON(ctx, httpx.JsonErrorMsg(ctx, "error.e0064"))
+		return
+	}
+
+	summary, err := services.AICopilotService.SummarizeConversation(ctx.Request.Context(), req.ConversationID, i18nx.Locale(ctx))
+	if err != nil {
+		httpx.WriteJSON(ctx, err)
+		return
+	}
+
+	httpx.WriteJSON(ctx, &response.ConversationSummaryResponse{Summary: summary})
+}

@@ -239,6 +239,8 @@ func registerDashboardConversationRoutes(group *gin.RouterGroup) {
 	group.POST("/recall_message", dashboard.ConversationPostRecall_message)
 	group.POST("/remove_tag", dashboard.ConversationPostRemove_tag)
 	group.POST("/send_message", dashboard.ConversationPostSend_message)
+	group.POST("/suggest_reply", dashboard.ConversationPostSuggest_reply)
+	group.POST("/summarize", dashboard.ConversationPostSummarize)
 	group.POST("/transfer", dashboard.ConversationPostTransfer)
 	group.POST("/upload_attachment", dashboard.ConversationPostUpload_attachment)
 	group.POST("/upload_image", dashboard.ConversationPostUpload_image)
