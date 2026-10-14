@@ -97,8 +97,6 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
 
     const storeAgentActivity = useSupportChatStore((state) => state.activeAgentActivity)
     const resolvedAgentActivity = agentActivity !== undefined ? agentActivity : storeAgentActivity
-    const prevActivityRef = useRef<AgentActivityInfo | null>(null)
-
     useEffect(() => {
       onNearBottomVisibleRef.current = onNearBottomVisible
     }, [onNearBottomVisible])
@@ -107,10 +105,12 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
       scrollerRef.current?.scrollToBottom()
     }, [])
 
+    const prevWasActiveRef = useRef(false)
+
     useEffect(() => {
-      const wasActive = Boolean(prevActivityRef.current)
+      const wasActive = prevWasActiveRef.current
       const isNowActive = Boolean(resolvedAgentActivity)
-      prevActivityRef.current = resolvedAgentActivity
+      prevWasActiveRef.current = isNowActive
 
       if (!wasActive && isNowActive && shouldStickToBottomRef.current) {
         scrollToBottom()

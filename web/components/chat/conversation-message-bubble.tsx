@@ -12,7 +12,7 @@ export type ConversationMessageVariant =
   | "system"
   | "recalled"
 
-type ConversationMessageBubbleProps = {
+type ConversationMessageBubbleProps = React.ComponentProps<"div"> & {
   variant: ConversationMessageVariant
   children: ReactNode
   className?: string
@@ -52,9 +52,10 @@ export function ConversationMessageBubble({
   variant,
   children,
   className,
+  ...props
 }: ConversationMessageBubbleProps) {
   return (
-    <Bubble variant={getBubbleVariant(variant)}>
+    <Bubble variant={getBubbleVariant(variant)} {...props}>
       <BubbleContent className={cn("rounded-2xl px-4 py-3 leading-6", getContentClassName(variant), className)}>
         {children}
       </BubbleContent>

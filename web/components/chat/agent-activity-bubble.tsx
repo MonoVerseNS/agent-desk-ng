@@ -39,7 +39,7 @@ export const AgentActivityBubble = memo(function AgentActivityBubble({
       avatar={
         <Avatar className="size-8">
           <AvatarFallback className="bg-primary/10 text-primary">
-            <BotIcon className="size-4" />
+            <BotIcon aria-hidden="true" className="size-4" />
           </AvatarFallback>
         </Avatar>
       }
@@ -48,9 +48,11 @@ export const AgentActivityBubble = memo(function AgentActivityBubble({
     >
       <ConversationMessageBubble
         variant="system"
+        role="status"
+        aria-live="polite"
         className="flex items-center gap-2 rounded-lg border border-solid border-border/60 bg-muted/50 px-3 py-2 text-xs text-muted-foreground shadow-sm"
       >
-        <Loader2Icon className="size-3.5 shrink-0 animate-spin text-primary" />
+        <Loader2Icon aria-hidden="true" className="size-3.5 shrink-0 animate-spin text-primary" />
         <span className="font-medium text-foreground/80">{label}</span>
       </ConversationMessageBubble>
     </ConversationMessageRow>

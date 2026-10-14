@@ -248,16 +248,20 @@ export function ChatPanel() {
     };
   }, [maybeMarkConversationRead]);
 
-  const prevActivityRef = useRef<typeof activeAgentActivity>(null);
+  const prevWasActiveRef = useRef(false);
 
   useEffect(() => {
-    const wasActive = Boolean(prevActivityRef.current);
+    prevWasActiveRef.current = false;
+  }, [conversation?.id]);
+
+  useEffect(() => {
     const isNowActive = Boolean(
       activeAgentActivity &&
         conversation &&
         activeAgentActivity.conversationId === conversation.id,
     );
-    prevActivityRef.current = activeAgentActivity;
+    const wasActive = prevWasActiveRef.current;
+    prevWasActiveRef.current = isNowActive;
 
     if (!wasActive && isNowActive && shouldStickToBottomRef.current) {
       scrollToBottom();
