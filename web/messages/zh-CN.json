@@ -524,6 +524,9 @@
     "closing": "结束中...",
     "confirmClose": "确认结束",
     "initFailed": "初始化失败",
+    "crashTitle": "出了点问题",
+    "crashDescription": "聊天遇到了意外问题，您的消息不会丢失。",
+    "crashReload": "重新加载聊天",
     "loadMessagesFailed": "加载消息失败",
     "syncMessagesFailed": "同步消息失败",
     "loadHistoryFailed": "加载历史消息失败",
@@ -2804,6 +2807,13 @@
     "qualitySaved": "质检结果已保存",
     "workflowAudit": "Workflow 节点审计",
     "viewWorkflowAudit": "查看节点审计"
+  },
+  "agentActivity": {
+    "thinking": "AI 思考中...",
+    "searchingKnowledge": "检索知识库中...",
+    "callingTool": "执行工具：{name}...",
+    "runningWorkflow": "执行流程：{name}...",
+    "default": "AI 正在处理您的请求..."
   },
   "wxworkOutbox": {
     "statusFailed": "失败",

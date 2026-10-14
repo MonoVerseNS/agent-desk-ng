@@ -524,6 +524,9 @@
     "closing": "Завершение...",
     "confirmClose": "Завершить диалог",
     "initFailed": "Не удалось начать чат.",
+    "crashTitle": "Что-то пошло не так",
+    "crashDescription": "В чате возникла непредвиденная проблема. Ваши сообщения сохранены.",
+    "crashReload": "Перезагрузить чат",
     "loadMessagesFailed": "Не удалось загрузить сообщения.",
     "syncMessagesFailed": "Не удалось синхронизировать сообщения.",
     "loadHistoryFailed": "Не удалось загрузить более ранние сообщения.",
@@ -2804,6 +2807,13 @@
     "qualitySaved": "Результат проверки сохранён",
     "workflowAudit": "Аудит узлов рабочего процесса",
     "viewWorkflowAudit": "Посмотреть аудит узлов"
+  },
+  "agentActivity": {
+    "thinking": "AI-ассистент думает...",
+    "searchingKnowledge": "Поиск в базе знаний...",
+    "callingTool": "Выполнение действия: {name}...",
+    "runningWorkflow": "Выполнение сценария: {name}...",
+    "default": "AI-ассистент обрабатывает запрос..."
   },
   "wxworkOutbox": {
     "statusFailed": "Ошибка",

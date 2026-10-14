@@ -524,6 +524,9 @@
     "closing": "Ending...",
     "confirmClose": "End Conversation",
     "initFailed": "Could not start the chat.",
+    "crashTitle": "Something went wrong",
+    "crashDescription": "The chat hit an unexpected problem. Your messages are safe.",
+    "crashReload": "Reload chat",
     "loadMessagesFailed": "Could not load messages.",
     "syncMessagesFailed": "Could not sync messages.",
     "loadHistoryFailed": "Could not load earlier messages.",
@@ -2804,6 +2807,13 @@
     "qualitySaved": "Inspection result saved",
     "workflowAudit": "Workflow Node Audit",
     "viewWorkflowAudit": "View Node Audit"
+  },
+  "agentActivity": {
+    "thinking": "AI Agent is thinking...",
+    "searchingKnowledge": "Searching knowledge base...",
+    "callingTool": "Executing action: {name}...",
+    "runningWorkflow": "Running workflow: {name}...",
+    "default": "AI Agent is working on your request..."
   },
   "wxworkOutbox": {
     "statusFailed": "Failed",
