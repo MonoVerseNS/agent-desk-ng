@@ -36,7 +36,10 @@ func einoAgentLoop(
 		return nil, err
 	}
 	if maxSteps <= 0 {
-		maxSteps = 6
+		maxSteps = 4
+	}
+	if maxSteps > 8 {
+		maxSteps = 8
 	}
 	tools := make([]einotool.BaseTool, 0, len(definitions))
 	for _, definition := range definitions {

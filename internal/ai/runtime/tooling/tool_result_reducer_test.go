@@ -42,3 +42,58 @@ func TestBuildReducedToolResultSummaryKeepsDistinctSegments(t *testing.T) {
 		t.Fatalf("distinct MCP result segments were lost: %q", summary)
 	}
 }
+
+func TestBuildReducedToolResultSummaryTruncatesAt2500Runes(t *testing.T) {
+	longText := strings.Repeat("x", 3000)
+	result := &mcps.ToolCallResult{
+		Content: []mcps.ToolResultContent{{
+			Type: "text",
+			Text: longText,
+		}},
+	}
+
+	summary := BuildReducedToolResultSummary(result)
+	expectedMarker := "[tool result reduced: original_length=3000, kept_length=2500]"
+	if !strings.Contains(summary, expectedMarker) {
+		t.Fatalf("expected reduction marker %q in summary, got: %q", expectedMarker, summary)
+	}
+
+	info := ParseReductionInfo(summary)
+	if !info.Reduced || info.OriginalChars != 3000 || info.KeptChars != 2500 {
+		t.Fatalf("unexpected ReductionInfo: %+v", info)
+	}
+
+	// Exactly 2500 runes should not be reduced
+	exactText := strings.Repeat("y", 2500)
+	exactResult := &mcps.ToolCallResult{
+		Content: []mcps.ToolResultContent{{
+			Type: "text",
+			Text: exactText,
+		}},
+	}
+	exactSummary := BuildReducedToolResultSummary(exactResult)
+	if strings.Contains(exactSummary, "[tool result reduced:") {
+		t.Fatalf("2500-rune payload should not be reduced, got: %q", exactSummary)
+	}
+	if exactSummary != exactText {
+		t.Fatalf("expected exact text, got length %d", len(exactSummary))
+	}
+
+	// Multibyte runes test
+	chineseText := strings.Repeat("测", 2600)
+	chineseResult := &mcps.ToolCallResult{
+		Content: []mcps.ToolResultContent{{
+			Type: "text",
+			Text: chineseText,
+		}},
+	}
+	chineseSummary := BuildReducedToolResultSummary(chineseResult)
+	expectedChineseMarker := "[tool result reduced: original_length=2600, kept_length=2500]"
+	if !strings.Contains(chineseSummary, expectedChineseMarker) {
+		t.Fatalf("expected multibyte reduction marker %q, got: %q", expectedChineseMarker, chineseSummary)
+	}
+	chineseInfo := ParseReductionInfo(chineseSummary)
+	if !chineseInfo.Reduced || chineseInfo.OriginalChars != 2600 || chineseInfo.KeptChars != 2500 {
+		t.Fatalf("unexpected chinese ReductionInfo: %+v", chineseInfo)
+	}
+}

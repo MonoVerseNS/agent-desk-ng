@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	maxToolResultSummaryChars = 4000
+	maxToolResultSummaryChars = 2500
 	maxToolResultSegments     = 12
 )
 

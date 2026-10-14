@@ -23,9 +23,17 @@ type agentLoopTurn struct {
 	ToolPolicy     agentLoopToolPolicy
 	Skills         map[int64]models.SkillDefinition
 	Workflows      map[int64]svc.AgentRevisionWorkflowBinding
+	MaxSteps       int
 }
 
 func (e *AgentLoopEngine) prepareTurn(ctx context.Context, req RunInput, snapshot *svc.AgentRevisionSnapshot) agentLoopTurn {
+	maxSteps := req.AIAgent.MaxSteps
+	if maxSteps <= 0 {
+		maxSteps = 4
+	}
+	if maxSteps > 8 {
+		maxSteps = 8
+	}
 	knowledgeContext, retrieverCount, retrieveErr := e.retrieveKnowledge(ctx, req.AIAgent, req.UserMessage.Content)
 	responsePolicy := evaluateAgentLoopResponsePolicy(req.AIAgent, knowledgeContext, retrieveErr)
 	systemPrompt := buildAgentLoopSystemPrompt(req.AIAgent, len(utils.SplitInt64s(req.AIAgent.KnowledgeIDs)) > 0, knowledgeContext, retrieveErr)
@@ -82,5 +90,6 @@ func (e *AgentLoopEngine) prepareTurn(ctx context.Context, req RunInput, snapsho
 		ToolPolicy:     parseAgentLoopToolPolicy(req.AIAgent.ToolPolicy),
 		Skills:         skills,
 		Workflows:      workflows,
+		MaxSteps:       maxSteps,
 	}
 }

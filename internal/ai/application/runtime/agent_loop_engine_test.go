@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -640,5 +641,146 @@ func TestAgentLoopToolSearchExecutorEmitsWorkflowActivity(t *testing.T) {
 	// Check that records captured the attempt
 	if len(calls) != 1 || calls[0].ToolCode != "workflow/42" {
 		t.Fatalf("unexpected calls: %#v", calls)
+	}
+}
+
+func TestAgentLoopEngineBuildUserPromptContextWindowLimits(t *testing.T) {
+	engine := NewAgentLoopEngine()
+	// Create 50 dummy messages in history
+	engine.history = func(conversationID int64, limit int) []models.Message {
+		messages := make([]models.Message, 50)
+		for i := 0; i < 50; i++ {
+			messages[i] = models.Message{
+				ID:          int64(i + 1),
+				SenderType:  enums.IMSenderTypeCustomer,
+				MessageType: enums.IMMessageTypeText,
+				Content:     fmt.Sprintf("message %d", i+1),
+			}
+		}
+		if limit < len(messages) {
+			return messages[:limit]
+		}
+		return messages
+	}
+
+	testCases := []struct {
+		name          string
+		contextWindow int
+		expectedCount int
+	}{
+		{"default when zero", 0, 10},
+		{"default when negative", -3, 10},
+		{"clamped to min 2", 1, 2},
+		{"within range", 15, 15},
+		{"clamped to max 30", 45, 30},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := RunInput{
+				Conversation: models.Conversation{ID: 1},
+				UserMessage:  models.Message{ID: 999, Content: "current query", SenderType: enums.IMSenderTypeCustomer, MessageType: enums.IMMessageTypeText},
+				AIAgent:      models.AIAgent{ContextWindow: tc.contextWindow},
+			}
+			prompt, count := engine.buildUserPrompt(req)
+			if count != tc.expectedCount {
+				t.Fatalf("expected history count %d, got %d (prompt=%q)", tc.expectedCount, count, prompt)
+			}
+		})
+	}
+}
+
+func TestAgentLoopEnginePrepareTurnMaxStepsBounds(t *testing.T) {
+	engine := NewAgentLoopEngine()
+	engine.retrieve = nil
+	engine.history = nil
+	snapshot := &svc.AgentRevisionSnapshot{}
+
+	testCases := []struct {
+		name          string
+		inputMaxSteps int
+		expectedSteps int
+	}{
+		{"default when zero", 0, 4},
+		{"default when negative", -2, 4},
+		{"clamped to max 8", 12, 8},
+		{"within range 6", 6, 6},
+		{"within range 2", 2, 2},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			turn := engine.prepareTurn(context.Background(), RunInput{
+				AIAgent: models.AIAgent{MaxSteps: tc.inputMaxSteps},
+			}, snapshot)
+			if turn.MaxSteps != tc.expectedSteps {
+				t.Fatalf("expected turn.MaxSteps %d, got %d", tc.expectedSteps, turn.MaxSteps)
+			}
+		})
+	}
+}
+
+func TestAgentLoopEngineRunPassesBoundedMaxSteps(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+strings.ReplaceAll(t.Name(), "/", "_")+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(
+		&models.AIConfig{}, &models.AIAgent{}, &models.AgentRevision{},
+		&models.Conversation{}, &models.Message{},
+		&models.AgentRun{}, &models.AgentStep{}, &models.AgentToolCall{},
+	); err != nil {
+		t.Fatalf("auto migrate: %v", err)
+	}
+	sqls.SetDB(db)
+
+	config := &models.AIConfig{Status: enums.StatusOk, ModelName: "test-model"}
+	if err := db.Create(config).Error; err != nil {
+		t.Fatalf("create config: %v", err)
+	}
+
+	definitionJSON, _ := json.Marshal(map[string]any{
+		"agent": map[string]any{"name": "test-agent", "maxSteps": 15},
+	})
+	agent := &models.AIAgent{Name: "test-agent", Status: enums.StatusOk, AIConfigID: config.ID, MaxSteps: 15}
+	if err := db.Create(agent).Error; err != nil {
+		t.Fatalf("create agent: %v", err)
+	}
+	revision := &models.AgentRevision{
+		AgentID: agent.ID, Status: enums.StatusOk, Revision: 1,
+		Definition: string(definitionJSON),
+	}
+	if err := db.Create(revision).Error; err != nil {
+		t.Fatalf("create revision: %v", err)
+	}
+	agent.PublishedRevisionID = revision.ID
+	if err := db.Save(agent).Error; err != nil {
+		t.Fatalf("save agent: %v", err)
+	}
+
+	var capturedMaxSteps int
+	engine := newAgentLoopEngineWithLoop(func(ctx context.Context, config models.AIConfig, sysPrompt, userPrompt string, tools []ai.ToolDefinition, maxSteps int, executor ai.ToolCallExecutor) (*ai.ToolLoopResult, error) {
+		capturedMaxSteps = maxSteps
+		return &ai.ToolLoopResult{
+			ChatCompletionResult: ai.ChatCompletionResult{
+				Content:   "Hello",
+				ModelName: "test-model",
+			},
+		}, nil
+	})
+	engine.retrieve = nil
+	engine.history = nil
+
+	_, err = engine.Run(context.Background(), RunInput{
+		Conversation: models.Conversation{ID: 100},
+		UserMessage:  models.Message{ID: 200, Content: "test", SenderType: enums.IMSenderTypeCustomer, MessageType: enums.IMMessageTypeText},
+		AIAgent:      *agent,
+		AIConfig:     *config,
+	})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	if capturedMaxSteps != 8 {
+		t.Fatalf("expected capturedMaxSteps to be capped at 8, got %d", capturedMaxSteps)
 	}
 }

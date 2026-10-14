@@ -92,10 +92,11 @@ func (e *AgentLoopEngine) Run(ctx context.Context, req RunInput) (res *RunResult
 	req.AIAgent = snapshot.Agent
 	req.AIConfig = snapshot.AIConfig
 	turn := e.prepareTurn(ctx, req, snapshot)
+	req.AIAgent.MaxSteps = turn.MaxSteps
 	var toolCalls []svc.AgentLoopToolCallInput
 	state := agentLoopExecutionState{}
 	definitions := append(agentLoopToolDefinitions(turn), agentLoopDecisionTool)
-	loopResult, loopErr := e.loop(ctx, req.AIConfig, turn.SystemPrompt, turn.UserPrompt, definitions, req.AIAgent.MaxSteps,
+	loopResult, loopErr := e.loop(ctx, req.AIConfig, turn.SystemPrompt, turn.UserPrompt, definitions, turn.MaxSteps,
 		e.toolSearchExecutor(req, turn, &state, &toolCalls))
 	if state.Interrupted != nil {
 		result := state.Interrupted
@@ -191,10 +192,13 @@ func normalizeAgentLoopReply(reply string, handoffRequested bool) (string, error
 func (e *AgentLoopEngine) buildUserPrompt(req RunInput) (string, int) {
 	limit := req.AIAgent.ContextWindow
 	if limit <= 0 {
-		limit = 12
+		limit = 10 // cost-effective default
 	}
-	if limit > 20 {
-		limit = 20
+	if limit < 2 {
+		limit = 2
+	}
+	if limit > 30 {
+		limit = 30
 	}
 	items := []models.Message(nil)
 	if e.history != nil && req.Conversation.ID > 0 {
