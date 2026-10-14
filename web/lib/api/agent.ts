@@ -1,4 +1,5 @@
 import { request } from "@/lib/api/client"
+import type { ConversationSatisfactionResponse } from "@/lib/api/im"
 
 export type Paging = {
   page: number
@@ -59,6 +60,7 @@ export type AgentConversation = {
   closedAt?: string
   tags?: AgentConversationTag[]
   participants?: AgentConversationParticipant[]
+  satisfaction?: ConversationSatisfactionResponse | null
 }
 
 export type AgentConversationDetail = AgentConversation & {

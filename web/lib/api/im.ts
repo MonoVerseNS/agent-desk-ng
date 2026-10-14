@@ -32,6 +32,27 @@ export type ImConversationParticipant = {
   status: number
 }
 
+export interface SubmitSatisfactionParams {
+  conversationId: number
+  score: number
+  feedback?: string
+}
+
+export interface ConversationSatisfactionResponse {
+  id: number
+  conversationId: number
+  score: number
+  feedback: string
+  createdAt: string
+}
+
+export type JsonResult<T> = {
+  errorCode: number
+  message: string
+  data: T
+  success: boolean
+}
+
 export type ImConversation = {
   id: number
   channelId: number
@@ -56,9 +77,11 @@ export type ImConversation = {
   closedAt?: string
   tags?: ImConversationTag[]
   participants?: ImConversationParticipant[]
+  satisfaction?: ConversationSatisfactionResponse | null
 }
 
 export type ImConversationDetail = ImConversation
+export type ConversationResponse = ImConversation
 
 export type ImMessage = {
   id: number
@@ -287,19 +310,21 @@ function createExchangeHeaders() {
   }
 }
 
-function createImHeaders() {
-  const sessionToken = getCustomerSessionToken()
+function createImHeaders(explicitToken?: string) {
+  const sessionToken = explicitToken || getCustomerSessionToken()
   if (!sessionToken) {
     throw new Error(translateCurrentMessage("api.customerSessionNotReady"))
   }
   return {
     ...createChannelHeaders(),
     Authorization: `Bearer ${sessionToken}`,
+    ...(explicitToken ? { "X-Customer-Session-Token": explicitToken } : {}),
   }
 }
 
 function createRequestOptions(
-  init?: RequestInit
+  init?: RequestInit,
+  explicitToken?: string
 ): RequestInit & {
   baseUrl?: string
   skipAuth?: boolean
@@ -309,7 +334,7 @@ function createRequestOptions(
     ...init,
     skipAuth: true,
     headers: {
-      ...createImHeaders(),
+      ...createImHeaders(explicitToken),
       ...(init?.headers as Record<string, string> | undefined),
     },
     onResponse: applyCustomerSessionHeaders,
@@ -488,3 +513,22 @@ export function uploadImAttachment(conversationId: number, file: File) {
     }),
   })
 }
+
+export const requestApi = request
+
+export async function submitConversationSatisfaction(
+  params: SubmitSatisfactionParams,
+  token?: string
+): Promise<ConversationSatisfactionResponse> {
+  return request<ConversationSatisfactionResponse>(
+    "/api/conversation/satisfaction",
+    createRequestOptions(
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      },
+      token
+    )
+  )
+}
+

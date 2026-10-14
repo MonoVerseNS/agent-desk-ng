@@ -12,12 +12,14 @@ import {
   AlertTriangleIcon,
   BotIcon,
   LockKeyholeIcon,
+  StarIcon,
   TimerIcon,
   UserCheckIcon,
   WorkflowIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConversationTransferDialog } from "@/components/conversation-actions/transfer-dialog";
 import {
   ConversationMessageScroller,
@@ -485,6 +487,41 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      {conversation.satisfaction ? (
+        <div className="flex shrink-0 items-center justify-between border-b border-border/80 bg-muted/30 px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("csat.title")}
+            </span>
+            {conversation.satisfaction.feedback ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge
+                      variant="secondary"
+                      className="cursor-pointer gap-1 border-amber-300/40 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                    />
+                  }
+                >
+                  <StarIcon className="size-3 fill-amber-400 text-amber-400" />
+                  <span>{conversation.satisfaction.score}/5</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs break-words">{conversation.satisfaction.feedback}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="gap-1 border-amber-300/40 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                <StarIcon className="size-3 fill-amber-400 text-amber-400" />
+                <span>{conversation.satisfaction.score}/5</span>
+              </Badge>
+            )}
+          </div>
+        </div>
+      ) : null}
       {isLgUp ? (
         <ResizablePanelGroup
           orientation="vertical"

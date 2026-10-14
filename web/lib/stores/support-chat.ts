@@ -15,6 +15,7 @@ import {
   uploadImAttachment,
   uploadImImage,
   applyCustomerSessionRefresh,
+  type ConversationSatisfactionResponse,
   type ImAsset,
   type ImConversation,
   type ImMessage,
@@ -209,6 +210,7 @@ export type SupportChatStore = {
   uploadMessageImage: (file: File) => Promise<ImAsset | null>
   sendAttachment: (file: File) => Promise<void>
   closeConversation: () => Promise<void>
+  setConversationSatisfaction: (satisfaction: ConversationSatisfactionResponse) => void
   retry: () => Promise<void>
 }
 
@@ -838,6 +840,14 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         })
         throw error
       }
+    },
+
+    setConversationSatisfaction: (satisfaction: ConversationSatisfactionResponse) => {
+      set((state) => ({
+        ...withActiveConversationPatch(state, {
+          satisfaction,
+        }),
+      }))
     },
 
     retry: async () => {

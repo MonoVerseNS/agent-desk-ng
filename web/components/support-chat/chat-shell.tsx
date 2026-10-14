@@ -20,11 +20,14 @@ import {
 } from "react"
 import { useShallow } from "zustand/react/shallow"
 
+import { SupportChatErrorBoundary } from "@/components/support-chat/chat-error-boundary"
 import { SupportChatConnectionStatus } from "@/components/support-chat/connection-status"
 import { SupportChatConversationSwitcher } from "@/components/support-chat/conversation-switcher"
 import { SupportChatNewRequestDialog } from "@/components/support-chat/new-request-dialog"
 import { getStandaloneClosedUrl } from "@/components/support-chat/close-navigation"
+import { CSATCard } from "@/components/support-chat/csat-card"
 import { CustomerMessageEditor } from "@/components/support-chat/customer-message-editor"
+import { getCustomerSessionToken } from "@/lib/api/im"
 import {
   SupportChatMessageList,
   type SupportChatMessageListHandle,
@@ -126,7 +129,7 @@ export function isEmbeddedInHost() {
  * the standalone support page render this, so the surrounding chrome decides
  * how much room it gets.
  */
-export function SupportChatPanel() {
+function SupportChatPanelContent() {
   const t = useI18n()
   useSupportChatSystemTheme()
 
@@ -160,6 +163,7 @@ export function SupportChatPanel() {
     disconnectSocket,
     markConversationRead,
     closeConversation,
+    setConversationSatisfaction,
   } = useSupportChatStore(
     useShallow((state) => ({
       title: state.title,
@@ -184,6 +188,7 @@ export function SupportChatPanel() {
       disconnectSocket: state.disconnectSocket,
       markConversationRead: state.markConversationRead,
       closeConversation: state.closeConversation,
+      setConversationSatisfaction: state.setConversationSatisfaction,
     }))
   )
   const safeMessages = Array.isArray(messages) ? messages : []
@@ -440,8 +445,18 @@ export function SupportChatPanel() {
             onLoadOlder={loadOlderMessages}
           />
           <div className="shrink-0 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_24px_rgba(15,23,42,0.05)] dark:bg-card/90 dark:shadow-none">
+            {conversation && (conversation.status === 4 || conversation.satisfaction) ? (
+              <div className="border-b border-border/60 p-3">
+                <CSATCard
+                  conversationId={conversation.id}
+                  customerToken={getCustomerSessionToken()}
+                  initialSatisfaction={conversation.satisfaction}
+                  onSubmitted={setConversationSatisfaction}
+                />
+              </div>
+            ) : null}
             <CustomerMessageEditor
-              disabled={!conversation}
+              disabled={!conversation || conversation.status === 4}
               onSend={handleSend}
               onUploadImage={uploadMessageImage}
               onSendAttachment={sendAttachment}
@@ -500,6 +515,14 @@ export function SupportChatPanel() {
         }}
       />
     </>
+  )
+}
+
+export function SupportChatPanel() {
+  return (
+    <SupportChatErrorBoundary>
+      <SupportChatPanelContent />
+    </SupportChatErrorBoundary>
   )
 }
 
