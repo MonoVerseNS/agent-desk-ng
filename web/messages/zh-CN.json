@@ -1442,7 +1442,18 @@
     "searchMCPTool": "搜索 MCP Tool",
     "emptyMCPTool": "没有可添加的 MCP Tool",
     "noMCPToolsHint": "不配置 MCP Tool 时，Agent 不会调用外部 MCP Tool。",
-    "removeMCPTool": "移除 MCP Tool {name}"
+    "removeMCPTool": "移除 MCP Tool {name}",
+    "sectionContextCosts": "上下文与成本优化",
+    "contextCostsDescription": "管理上下文历史消息窗口、单次推理步骤上限及工具响应体积。",
+    "contextWindow": "上下文历史消息数",
+    "contextWindowHelp": "单次调用带入的最近会话消息数（2–30）。调小可显著节省上下文 Token 消耗。",
+    "maxSteps": "单次最大推理步骤",
+    "maxStepsHelp": "单轮对话中允许的最大工具调用步数（1–8）。调低可防止死循环与 Token 暴增。",
+    "autoHandoffOnFailure": "AI异常或无答案时自动转人工",
+    "autoHandoffOnFailureHelp": "当 AI 模型报错、超出步数或知识库无答案时，立即将客户自动转接给人工客服。",
+    "handoffMessage": "转人工提示文案",
+    "handoffMessageHelp": "自动转人工时发送给客户的通知消息，避免客户认为请求被忽略。",
+    "handoffMessagePlaceholder": "正在为你接入人工客服，请稍候。"
   },
   "aiConfig": {
     "allStatuses": "全部状态",
