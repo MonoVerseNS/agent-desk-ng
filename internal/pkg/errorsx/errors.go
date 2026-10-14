@@ -24,6 +24,14 @@ func InvalidParamI18n(key string, args ...any) error {
 	return NewI18nError(CodeInvalidParam, key, args...)
 }
 
+func NotFound(message string) error {
+	return web.NewError(CodeInvalidParam, message)
+}
+
+func NotFoundI18n(key string, args ...any) error {
+	return NewI18nError(CodeInvalidParam, key, args...)
+}
+
 func BusinessError(code int, message string) error {
 	return web.NewError(CodeBusinessError+code, message)
 }
