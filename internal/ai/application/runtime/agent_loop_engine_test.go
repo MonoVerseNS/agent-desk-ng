@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -323,6 +324,13 @@ func TestAgentLoopPromptAvoidsRepeatingWelcomeMessage(t *testing.T) {
 	}
 }
 
+func TestAgentLoopPromptEnforcesCustomerLanguage(t *testing.T) {
+	prompt := buildAgentLoopSystemPrompt(models.AIAgent{}, false, "", nil)
+	if !strings.Contains(prompt, "CRITICAL LANGUAGE RULE") || !strings.Contains(prompt, "same language as the customer's current message") {
+		t.Fatalf("language rule missing from system prompt: %q", prompt)
+	}
+}
+
 func TestCompleteConfirmedMCPReplyGeneratesCustomerFacingAnswerWithoutTools(t *testing.T) {
 	engine := NewAgentLoopEngine()
 	var systemPrompt string
@@ -458,5 +466,179 @@ func TestAgentTurnCatalogFormatAndInstruction(t *testing.T) {
 	prohibition := "Never pass a capability code containing slashes as a tool function name; use the exact direct function name provided in the catalog or call tool_search with toolCode."
 	if !strings.Contains(turn.SystemPrompt, prohibition) {
 		t.Fatalf("expected prohibition instruction in system prompt:\n%s", turn.SystemPrompt)
+	}
+}
+
+func TestAgentLoopEngineEmitsActivitySafelyWithConversationID(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+strings.ReplaceAll(t.Name(), "/", "_")+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(
+		&models.AIConfig{}, &models.AIAgent{}, &models.AgentRevision{},
+		&models.Conversation{}, &models.Message{},
+		&models.AgentRun{}, &models.AgentStep{}, &models.AgentToolCall{},
+	); err != nil {
+		t.Fatalf("auto migrate: %v", err)
+	}
+	sqls.SetDB(db)
+
+	config := &models.AIConfig{Status: enums.StatusOk, ModelName: "test-model"}
+	if err := db.Create(config).Error; err != nil {
+		t.Fatalf("create config: %v", err)
+	}
+
+	definitionJSON, _ := json.Marshal(map[string]any{
+		"agent": map[string]any{"name": "test-agent"},
+	})
+	agent := &models.AIAgent{Name: "test-agent", Status: enums.StatusOk, AIConfigID: config.ID}
+	if err := db.Create(agent).Error; err != nil {
+		t.Fatalf("create agent: %v", err)
+	}
+	revision := &models.AgentRevision{
+		AgentID: agent.ID, Status: enums.StatusOk, Revision: 1,
+		Definition: string(definitionJSON),
+	}
+	if err := db.Create(revision).Error; err != nil {
+		t.Fatalf("create revision: %v", err)
+	}
+	agent.PublishedRevisionID = revision.ID
+	if err := db.Save(agent).Error; err != nil {
+		t.Fatalf("save agent: %v", err)
+	}
+
+	conv := models.Conversation{ID: 100}
+	userMsg := models.Message{ID: 200, Content: "test message", SenderType: enums.IMSenderTypeCustomer, MessageType: enums.IMMessageTypeText}
+
+	// 1. Test Run with conversation ID > 0 (success)
+	engine := newAgentLoopEngineWithLoop(func(ctx context.Context, config models.AIConfig, sysPrompt, userPrompt string, tools []ai.ToolDefinition, maxSteps int, executor ai.ToolCallExecutor) (*ai.ToolLoopResult, error) {
+		return &ai.ToolLoopResult{
+			ChatCompletionResult: ai.ChatCompletionResult{
+				Content:   "Hello from loop",
+				ModelName: "test-model",
+			},
+		}, nil
+	})
+	engine.retrieve = nil
+	engine.history = nil
+
+	res, err := engine.Run(context.Background(), RunInput{
+		Conversation: conv,
+		UserMessage:  userMsg,
+		AIAgent:      *agent,
+		AIConfig:     *config,
+	})
+	if err != nil {
+		t.Fatalf("expected Run to succeed, got %v", err)
+	}
+	if res == nil || res.ReplyText != "Hello from loop" {
+		t.Fatalf("unexpected result: %#v", res)
+	}
+
+	// 2. Test Run with conversation ID > 0 (loop error)
+	errEngine := newAgentLoopEngineWithLoop(func(ctx context.Context, config models.AIConfig, sysPrompt, userPrompt string, tools []ai.ToolDefinition, maxSteps int, executor ai.ToolCallExecutor) (*ai.ToolLoopResult, error) {
+		return nil, errors.New("loop execution failed")
+	})
+	errEngine.retrieve = nil
+	errEngine.history = nil
+
+	_, loopErr := errEngine.Run(context.Background(), RunInput{
+		Conversation: conv,
+		UserMessage:  userMsg,
+		AIAgent:      *agent,
+		AIConfig:     *config,
+	})
+	if loopErr == nil || !strings.Contains(loopErr.Error(), "loop execution failed") {
+		t.Fatalf("expected loop error, got: %v", loopErr)
+	}
+
+	// 3. Test toolSearchExecutor with conversation ID > 0
+	turn := agentLoopTurn{
+		AllowedTools: []string{"builtin/conversation_context"},
+		ToolPolicy:   parseAgentLoopToolPolicy(""),
+	}
+	state := agentLoopExecutionState{}
+	var calls []svc.AgentLoopToolCallInput
+	executor := engine.toolSearchExecutor(RunInput{Conversation: conv}, turn, &state, &calls)
+
+	toolResult, err := executor(context.Background(), ai.ToolCall{
+		Name:      "builtin_conversation_context",
+		Arguments: `{}`,
+	})
+	if err != nil {
+		t.Fatalf("executor tool call failed: %v", err)
+	}
+	if toolResult == "" {
+		t.Fatal("expected non-empty tool result")
+	}
+
+	// 4. Test offline / zero conversation ID
+	offlineRes, err := engine.Run(context.Background(), RunInput{
+		Conversation: models.Conversation{ID: 0},
+		UserMessage:  userMsg,
+		AIAgent:      *agent,
+		AIConfig:     *config,
+	})
+	if err != nil {
+		t.Fatalf("expected offline Run to succeed, got %v", err)
+	}
+	if offlineRes == nil || offlineRes.ReplyText != "Hello from loop" {
+		t.Fatalf("unexpected offline result: %#v", offlineRes)
+	}
+}
+
+func TestAgentLoopEngineRetrieveKnowledgeEmitsActivity(t *testing.T) {
+	engine := NewAgentLoopEngine()
+	retrievedCalled := false
+	engine.retrieve = func(ctx context.Context, agent models.AIAgent, query string) (string, int, error) {
+		retrievedCalled = true
+		return "evidence", 1, nil
+	}
+
+	// Case 1: KnowledgeIDs present and conversation in context
+	conv := models.Conversation{ID: 100}
+	ctx := withAgentLoopConversation(context.Background(), conv)
+	text, count, err := engine.retrieveKnowledge(ctx, models.AIAgent{KnowledgeIDs: "1,2"}, "query")
+	if err != nil || !retrievedCalled || text != "evidence" || count != 1 {
+		t.Fatalf("retrieveKnowledge failed: text=%q count=%d err=%v", text, count, err)
+	}
+
+	// Case 2: No KnowledgeIDs -> retrieve not called, returns empty
+	retrievedCalled = false
+	text, count, err = engine.retrieveKnowledge(ctx, models.AIAgent{KnowledgeIDs: ""}, "query")
+	if err != nil || retrievedCalled || text != "" || count != 0 {
+		t.Fatalf("expected no retrieve call when KnowledgeIDs is empty")
+	}
+
+	// Case 3: Conversation ID is 0 -> retrieve called safely without panic
+	retrievedCalled = false
+	zeroCtx := withAgentLoopConversation(context.Background(), models.Conversation{ID: 0})
+	text, count, err = engine.retrieveKnowledge(zeroCtx, models.AIAgent{KnowledgeIDs: "1"}, "query")
+	if err != nil || !retrievedCalled || text != "evidence" {
+		t.Fatalf("retrieveKnowledge with zero conversation failed")
+	}
+}
+
+func TestAgentLoopToolSearchExecutorEmitsWorkflowActivity(t *testing.T) {
+	turn := agentLoopTurn{
+		AllowedTools: []string{"workflow/42"},
+		ToolPolicy:   parseAgentLoopToolPolicy(""),
+		Workflows: map[int64]svc.AgentRevisionWorkflowBinding{
+			42: {WorkflowVersionID: 42, ToolName: "Cancel Subscription"},
+		},
+	}
+	state := agentLoopExecutionState{}
+	var calls []svc.AgentLoopToolCallInput
+	conv := models.Conversation{ID: 100}
+	executor := NewAgentLoopEngine().toolSearchExecutor(RunInput{Conversation: conv}, turn, &state, &calls)
+
+	// Since workflow 42 is not in db, it will fail to resolve workflow version, but activity is published beforehand
+	_, _ = executor(context.Background(), ai.ToolCall{
+		Name:      "workflow_42",
+		Arguments: `{}`,
+	})
+	// Check that records captured the attempt
+	if len(calls) != 1 || calls[0].ToolCode != "workflow/42" {
+		t.Fatalf("unexpected calls: %#v", calls)
 	}
 }

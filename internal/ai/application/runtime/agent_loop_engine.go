@@ -56,8 +56,33 @@ func newAgentLoopEngineWithLoop(loop func(context.Context, models.AIConfig, stri
 	return engine
 }
 
-func (e *AgentLoopEngine) Run(ctx context.Context, req RunInput) (*RunResult, error) {
+type agentLoopConversationContextKey struct{}
+
+func withAgentLoopConversation(ctx context.Context, conv models.Conversation) context.Context {
+	return context.WithValue(ctx, agentLoopConversationContextKey{}, conv)
+}
+
+func agentLoopConversationFromContext(ctx context.Context) (models.Conversation, bool) {
+	if ctx == nil {
+		return models.Conversation{}, false
+	}
+	conv, ok := ctx.Value(agentLoopConversationContextKey{}).(models.Conversation)
+	return conv, ok
+}
+
+func (e *AgentLoopEngine) Run(ctx context.Context, req RunInput) (res *RunResult, err error) {
 	startedAt := time.Now()
+	if req.Conversation.ID > 0 {
+		ctx = withAgentLoopConversation(ctx, req.Conversation)
+		svc.WsService.PublishAgentActivity(&req.Conversation, "thinking", "", "started")
+		defer func() {
+			if err != nil {
+				svc.WsService.PublishAgentActivity(&req.Conversation, "failed", "", "failed")
+			} else {
+				svc.WsService.PublishAgentActivity(&req.Conversation, "completed", "", "completed")
+			}
+		}()
+	}
 	req.UserMessage.Content = utils.BuildRuntimeMessageText(req.UserMessage.MessageType, req.UserMessage.Content)
 	snapshot, err := svc.AgentRevisionService.ResolvePublishedSnapshot(req.AIAgent, req.AIConfig)
 	if err != nil {
@@ -407,6 +432,9 @@ func (e *AgentLoopEngine) retrieveKnowledge(ctx context.Context, agent models.AI
 	if e.retrieve == nil || len(utils.SplitInt64s(agent.KnowledgeIDs)) == 0 {
 		return "", 0, nil
 	}
+	if conv, ok := agentLoopConversationFromContext(ctx); ok && conv.ID > 0 {
+		svc.WsService.PublishAgentActivity(&conv, "searching_knowledge", "", "running")
+	}
 	return e.retrieve(ctx, agent, query)
 }
 
@@ -666,6 +694,18 @@ func (e *AgentLoopEngine) toolSearchExecutor(runInput RunInput, turn agentLoopTu
 		case strings.HasPrefix(toolCode, "skill/"):
 			resultPreview, executeErr = activateAgentLoopSkill(toolCode, turn.Skills, state)
 		case strings.HasPrefix(toolCode, "workflow/"):
+			if runInput.Conversation.ID > 0 {
+				workflowName := call.Name
+				if versionID, parseErr := strconv.ParseInt(strings.TrimPrefix(toolCode, "workflow/"), 10, 64); parseErr == nil {
+					if binding, ok := turn.Workflows[versionID]; ok && strings.TrimSpace(binding.ToolName) != "" {
+						workflowName = strings.TrimSpace(binding.ToolName)
+					}
+				}
+				if workflowName == "tool_search" && toolCode != "" {
+					workflowName = toolCode
+				}
+				svc.WsService.PublishAgentActivity(&runInput.Conversation, "running_workflow", workflowName, "running")
+			}
 			definition.RiskLevel = aitooling.RiskLevelWrite
 			definition.RequireConfirmation = true
 			workflowPolicy := policy
@@ -674,6 +714,13 @@ func (e *AgentLoopEngine) toolSearchExecutor(runInput RunInput, turn agentLoopTu
 				resultPreview, executeErr = executeAgentLoopWorkflow(ctx, runInput, toolCode, turn.Workflows, state)
 			}
 		default:
+			if runInput.Conversation.ID > 0 {
+				toolName := call.Name
+				if toolName == "tool_search" && toolCode != "" {
+					toolName = toolCode
+				}
+				svc.WsService.PublishAgentActivity(&runInput.Conversation, "calling_tool", toolName, "running")
+			}
 			definition, resultPreview, executeErr = executeAgentLoopReadTool(ctx, runInput.Conversation, runInput.AIAgent, toolCode, arguments, policy)
 			if executeErr != nil && definition.Code == "" {
 				definition, resultPreview, executeErr = executeAgentLoopMCP(ctx, runInput, toolCode, arguments, policy, state)
@@ -1002,6 +1049,7 @@ func buildAgentLoopSystemPrompt(agent models.AIAgent, hasKnowledgeBase bool, kno
 	if prompt == "" {
 		prompt = "You are a customer service assistant. Answer accurately, ask for clarification when evidence is insufficient, and do not invent facts."
 	}
+	prompt += "\n\nCRITICAL LANGUAGE RULE: You MUST always detect and reply strictly in the same language as the customer's current message or inquiry (e.g., if the user writes in Russian, reply in Russian; if in English, reply in English; if in Spanish, reply in Spanish). Do NOT reply in Chinese or any other language unless the customer explicitly spoke or asked in that language."
 	prompt += "\n\nMaintain conversational continuity. If the immediately preceding assistant message already welcomed the customer and the current customer message is only a greeting, reply briefly without repeating the welcome wording, service capabilities, or service scope."
 	if retrieveErr != nil {
 		prompt += "\n\nKnowledge retrieval is temporarily unavailable for this message. You may answer greetings, acknowledgements, gratitude, farewells, and requests for clarification naturally. For product facts, policies, pricing, functions, procedures, timing, refunds, accounts, permissions, or after-sales questions, do not claim that any detail is verified. Explain that you cannot verify it now, ask one focused question when useful, or offer human handoff."
