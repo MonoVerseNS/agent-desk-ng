@@ -73,6 +73,7 @@ var Models = []any{
 	&AIWorkflowRun{},
 	&AIWorkflowNodeRun{},
 	&ConversationInterrupt{},
+	&ConversationSatisfaction{},
 	&SystemConfig{},
 }
 
@@ -408,6 +409,19 @@ type Conversation struct {
 	ClosedAt            *time.Time                      `gorm:"index"`                                       // ClosedAt 为会话关闭时间。
 	ClosedBy            int64                           `gorm:"type:bigint;not null;default:0;index"`        // ClosedBy 为关闭人用户ID，访客关闭时写0。
 	CloseReason         string                          `gorm:"type:varchar(255);not null;default:''"`       // CloseReason 为关闭原因。
+	AuditFields
+}
+
+// ConversationSatisfaction 会话满意度评价。
+type ConversationSatisfaction struct {
+	ID             int64  `gorm:"primaryKey;autoIncrement"`
+	ConversationID int64  `gorm:"type:bigint;not null;uniqueIndex"`
+	Score          int    `gorm:"type:int;not null;default:5;index"`
+	Feedback       string `gorm:"type:text"`
+	ChannelID      int64  `gorm:"type:bigint;not null;default:0;index"`
+	CustomerID     int64  `gorm:"type:bigint;not null;default:0;index"`
+	AssigneeID     int64  `gorm:"type:bigint;not null;default:0;index"`
+	AIAgentID      int64  `gorm:"type:bigint;not null;default:0;index"`
 	AuditFields
 }
 
