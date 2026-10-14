@@ -448,6 +448,7 @@ function SupportChatPanelContent() {
             {conversation && (conversation.status === 4 || conversation.satisfaction) ? (
               <div className="border-b border-border/60 p-3">
                 <CSATCard
+                  key={conversation.id}
                   conversationId={conversation.id}
                   customerToken={getCustomerSessionToken()}
                   initialSatisfaction={conversation.satisfaction}

@@ -57,11 +57,12 @@ export function CSATCard({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (initialSatisfaction) {
-      setSatisfaction(initialSatisfaction)
-      setSelectedScore(initialSatisfaction.score)
-    }
-  }, [initialSatisfaction])
+    setSatisfaction(initialSatisfaction ?? null)
+    setSelectedScore(initialSatisfaction?.score ?? null)
+    setHoveredScore(null)
+    setFeedback("")
+    setError(null)
+  }, [conversationId, initialSatisfaction])
 
   if (satisfaction) {
     return (
@@ -165,6 +166,8 @@ export function CSATCard({
                 aria-label={`${star} - ${starLabel}`}
                 disabled={isSubmitting}
                 onMouseEnter={() => setHoveredScore(star)}
+                onFocus={() => setHoveredScore(star)}
+                onBlur={() => setHoveredScore(null)}
                 onClick={() => setSelectedScore(star)}
                 className="group rounded-md p-1 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none"
               >
@@ -181,7 +184,11 @@ export function CSATCard({
           })}
         </div>
 
-        <div className="h-4 text-xs font-medium text-muted-foreground transition-all">
+        <div
+          role="status"
+          aria-live="polite"
+          className="h-4 text-xs font-medium text-muted-foreground transition-all"
+        >
           {activeScoreLabel}
         </div>
       </div>
@@ -196,7 +203,9 @@ export function CSATCard({
       />
 
       {error ? (
-        <p className="text-xs text-destructive">{error}</p>
+        <div role="alert" aria-live="polite" className="text-xs text-destructive">
+          {error}
+        </div>
       ) : null}
 
       <Button

@@ -46,13 +46,6 @@ export interface ConversationSatisfactionResponse {
   createdAt: string
 }
 
-export type JsonResult<T> = {
-  errorCode: number
-  message: string
-  data: T
-  success: boolean
-}
-
 export type ImConversation = {
   id: number
   channelId: number
@@ -513,8 +506,6 @@ export function uploadImAttachment(conversationId: number, file: File) {
     }),
   })
 }
-
-export const requestApi = request
 
 export async function submitConversationSatisfaction(
   params: SubmitSatisfactionParams,
