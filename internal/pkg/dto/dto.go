@@ -14,12 +14,13 @@ type AuthPrincipal struct {
 }
 
 type WebChannelConfig struct {
-	Title           string `json:"title"`
-	Subtitle        string `json:"subtitle"`
-	ThemeColor      string `json:"themeColor"`
-	Position        string `json:"position"`
-	Width           string `json:"width"`
-	UserTokenSecret string `json:"userTokenSecret,omitempty"`
+	Title           string   `json:"title"`
+	Subtitle        string   `json:"subtitle"`
+	ThemeColor      string   `json:"themeColor"`
+	Position        string   `json:"position"`
+	Width           string   `json:"width"`
+	UserTokenSecret string   `json:"userTokenSecret,omitempty"`
+	PromptStarters  []string `json:"promptStarters,omitempty"`
 }
 
 type TelegramChannelConfig struct {

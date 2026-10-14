@@ -169,6 +169,7 @@ export type SupportChatStore = {
   title: string
   subtitle: string
   themeColor: string
+  promptStarters: string[]
   /** Every request this visitor owns, newest activity first. */
   conversations: ImConversation[]
   /** The request on screen. Derived from conversations by activeConversationId. */
@@ -351,6 +352,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     title: t("supportChat.title"),
     subtitle: "",
     themeColor: "#2563eb",
+    promptStarters: [],
     conversations: [],
     conversation: null,
     activeConversationId: 0,
@@ -413,6 +415,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             title: widgetConfig.title || t("supportChat.title"),
             subtitle: widgetConfig.subtitle || "",
             themeColor: widgetConfig.themeColor || "#2563eb",
+            promptStarters: widgetConfig.promptStarters || [],
           })
 
           await ensureCustomerSession()

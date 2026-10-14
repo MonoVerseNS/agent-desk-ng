@@ -102,7 +102,7 @@ export type ImAsset = {
   updateUserName: string
 }
 
-export type ImWidgetConfig = {
+export type WidgetConfigResponse = {
   channelId?: string
   channelType?: string
   userToken?: string
@@ -111,7 +111,10 @@ export type ImWidgetConfig = {
   themeColor?: string
   position?: "left" | "right"
   width?: string
+  promptStarters?: string[]
 }
+
+export type ImWidgetConfig = WidgetConfigResponse
 
 export type ImCustomerSessionCustomer = {
   id: number

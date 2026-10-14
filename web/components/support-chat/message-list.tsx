@@ -22,6 +22,7 @@ import { useImageLightbox } from "@/components/image-lightbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { PromptStarters } from "@/components/support-chat/prompt-starters"
 import type { AgentActivityInfo } from "@/lib/agent-activity-state"
 import type { ImMessage } from "@/lib/api/im"
 import { renderIMMessageHTML } from "@/lib/im-message"
@@ -32,6 +33,8 @@ import { useI18n } from "@/i18n/provider"
 type SupportChatMessageListProps = {
   messages?: ImMessage[] | null
   agentActivity?: AgentActivityInfo | null
+  promptStarters?: string[]
+  onSelectPromptStarter?: (starter: string) => void
   onNearBottomVisible?: () => void
   hasMoreOlder?: boolean
   loadingOlder?: boolean
@@ -82,6 +85,8 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
     {
       messages,
       agentActivity,
+      promptStarters,
+      onSelectPromptStarter,
       onNearBottomVisible,
       hasMoreOlder = false,
       loadingOlder = false,
@@ -96,7 +101,12 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
     const safeMessages = Array.isArray(messages) ? messages : []
 
     const storeAgentActivity = useSupportChatStore((state) => state.activeAgentActivity)
+    const storePromptStarters = useSupportChatStore((state) => state.promptStarters)
+    const storeHandleSendMessage = useSupportChatStore((state) => state.handleSendMessage)
+
     const resolvedAgentActivity = agentActivity !== undefined ? agentActivity : storeAgentActivity
+    const resolvedPromptStarters = promptStarters !== undefined ? promptStarters : storePromptStarters
+    const handleSelectPromptStarter = onSelectPromptStarter ?? storeHandleSendMessage
     useEffect(() => {
       onNearBottomVisibleRef.current = onNearBottomVisible
     }, [onNearBottomVisible])
@@ -166,8 +176,16 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
         }
       >
         {safeMessages.length === 0 && !resolvedAgentActivity ? (
-          <div className="flex min-h-32 items-center justify-center px-3 py-6 text-center text-sm leading-6 text-muted-foreground">
-            {t("supportChat.emptyPrompt")}
+          <div className="flex min-h-32 flex-col items-center justify-center gap-4 px-3 py-6 text-center text-sm leading-6 text-muted-foreground">
+            <p className="max-w-xs">{t("supportChat.emptyPrompt")}</p>
+            {resolvedPromptStarters && resolvedPromptStarters.length > 0 ? (
+              <PromptStarters
+                items={resolvedPromptStarters}
+                onSelect={(starter) => {
+                  void handleSelectPromptStarter?.(starter)
+                }}
+              />
+            ) : null}
           </div>
         ) : null}
 
