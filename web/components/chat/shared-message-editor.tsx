@@ -77,6 +77,11 @@ export function SharedMessageEditor({
 }: SharedMessageEditorProps) {
   const t = useI18n()
   const [localUploading, setLocalUploading] = useState(false)
+  const [quickReplySearch, setQuickReplySearch] = useState("")
+  const quickReplySearchRef = useRef(quickReplySearch)
+  quickReplySearchRef.current = quickReplySearch
+  const isSlashTriggeredRef = useRef(false)
+  const quickRepliesRef = useRef(quickReplies)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const attachmentInputRef = useRef<HTMLInputElement | null>(null)
   const onSendRef = useRef(onSend)
@@ -90,6 +95,10 @@ export function SharedMessageEditor({
   const isUploading = uploadingAsset || (manageLocalUploading && localUploading)
 
   placeholderRef.current = t("conversation.editorPlaceholder")
+
+  useEffect(() => {
+    quickRepliesRef.current = quickReplies
+  }, [quickReplies])
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current
@@ -127,11 +136,61 @@ export function SharedMessageEditor({
       }),
     ],
     content: "",
+    onUpdate: ({ editor }) => {
+      if (!quickRepliesRef.current || quickRepliesRef.current.loading) {
+        return
+      }
+      const { $from } = editor.state.selection
+      const blockText = $from.parent.textContent
+      const trimmed = blockText.trimStart()
+      const match = trimmed.match(/^\/([^\s]*)$/)
+      if (match) {
+        isSlashTriggeredRef.current = true
+        const query = match[1]
+        setQuickReplySearch(query)
+        if (!quickRepliesRef.current.open) {
+          quickRepliesRef.current.onOpenChange(true)
+        }
+      } else if (isSlashTriggeredRef.current && quickRepliesRef.current.open) {
+        isSlashTriggeredRef.current = false
+        setQuickReplySearch("")
+        quickRepliesRef.current.onOpenChange(false)
+      }
+    },
     editorProps: {
       attributes: {
         class: getEditorClassName(variant),
       },
       handleKeyDown: (_view, event) => {
+        if (event.key === "Escape" && quickRepliesRef.current?.open) {
+          event.preventDefault()
+          quickRepliesRef.current.onOpenChange(false)
+          setQuickReplySearch("")
+          isSlashTriggeredRef.current = false
+          return true
+        }
+        if (
+          (event.key === "Enter" || event.key === "Tab") &&
+          !event.shiftKey &&
+          quickRepliesRef.current?.open
+        ) {
+          const query = quickReplySearchRef.current.toLowerCase().trim()
+          const items = quickRepliesRef.current.items
+          const matching = items.filter((item) => {
+            if (!query) return true
+            const target = `${item.groupName ?? ""} ${item.title} ${item.content}`.toLowerCase()
+            return target.includes(query)
+          })
+          if (matching.length > 0) {
+            event.preventDefault()
+            handleInsertQuickReply(matching[0])
+            return true
+          }
+          if (event.key === "Enter") {
+            event.preventDefault()
+            return true
+          }
+        }
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault()
           void handleSend()
@@ -186,6 +245,9 @@ export function SharedMessageEditor({
     editor.commands.clearContent(true)
     revokeEditorObjectUrls(objectUrlsRef.current)
     uploadedImagesRef.current.clear()
+    setQuickReplySearch("")
+    isSlashTriggeredRef.current = false
+    quickRepliesRef.current?.onOpenChange(false)
     if (!isCustomer) {
       requestAnimationFrame(() => {
         editor.commands.focus("end")
@@ -276,8 +338,38 @@ export function SharedMessageEditor({
     if (!item.content.trim()) {
       return
     }
-    editor.chain().focus().insertContent(item.content).run()
-    quickReplies?.onOpenChange(false)
+
+    const { $from } = editor.state.selection
+    const blockText = $from.parent.textContent
+    const trimmed = blockText.trimStart()
+    const match = trimmed.match(/^\/([^\s]*)$/)
+
+    if (match) {
+      const slashIndex = blockText.indexOf("/")
+      const blockStart = $from.start() + slashIndex
+      const matchLen = match[0].length
+      editor
+        .chain()
+        .focus()
+        .deleteRange({ from: blockStart, to: blockStart + matchLen })
+        .insertContent(item.content)
+        .run()
+    } else {
+      const fullText = editor.getText().trim()
+      const fullMatch = fullText.match(/^\/([^\s]*)$/)
+      if (fullMatch) {
+        editor.chain().focus().setContent(item.content).run()
+      } else {
+        editor.chain().focus().insertContent(item.content).run()
+      }
+    }
+
+    quickRepliesRef.current?.onOpenChange(false)
+    setQuickReplySearch("")
+    isSlashTriggeredRef.current = false
+    requestAnimationFrame(() => {
+      editor.commands.focus("end")
+    })
   }
 
   function restoreFocusIfNeeded() {
@@ -347,7 +439,16 @@ export function SharedMessageEditor({
             <PaperclipIcon className={isCustomer ? undefined : "size-4"} />
           </Button>
           {quickReplies ? (
-            <Popover open={quickReplies.open} onOpenChange={quickReplies.onOpenChange}>
+            <Popover
+              open={quickReplies.open}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) {
+                  setQuickReplySearch("")
+                  isSlashTriggeredRef.current = false
+                }
+                quickReplies.onOpenChange(nextOpen)
+              }}
+            >
               <PopoverTrigger
                 render={
                   <Button
@@ -357,14 +458,24 @@ export function SharedMessageEditor({
                     className="size-8"
                     disabled={disabled || isUploading || quickReplies.loading}
                     onMouseDown={(event) => event.preventDefault()}
+                    title={t("conversation.quickReplySlashHint")}
+                    aria-label={t("conversation.quickReplySlashHint")}
                   />
                 }
               >
                 <MessageSquareTextIcon className="size-4" />
               </PopoverTrigger>
-              <PopoverContent className="w-[30rem] p-0" align="start">
+              <PopoverContent
+                className="w-[30rem] p-0"
+                align="start"
+                initialFocus={!isSlashTriggeredRef.current}
+              >
                 <Command>
-                  <CommandInput placeholder={t("conversation.searchQuickReplies")} />
+                  <CommandInput
+                    value={quickReplySearch}
+                    onValueChange={setQuickReplySearch}
+                    placeholder={t("conversation.searchQuickReplies")}
+                  />
                   <CommandList>
                     <CommandEmpty>{t("conversation.emptyQuickReplies")}</CommandEmpty>
                     <CommandGroup>
@@ -391,6 +502,11 @@ export function SharedMessageEditor({
                 </Command>
               </PopoverContent>
             </Popover>
+          ) : null}
+          {!isCustomer && quickReplies ? (
+            <span className="hidden select-none text-[11px] text-muted-foreground/70 sm:inline-block pl-1">
+              {t("conversation.quickReplySlashHint")}
+            </span>
           ) : null}
         </div>
         <div className="flex items-center gap-2">

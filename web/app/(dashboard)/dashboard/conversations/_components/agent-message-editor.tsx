@@ -18,6 +18,10 @@ type AgentMessageEditorProps = {
   onSendAttachment: (file: File) => Promise<void>
 }
 
+/**
+ * Agent message editor for dashboard conversations.
+ * Supports quick replies picker and slash command (/) autocomplete.
+ */
 export function AgentMessageEditor({
   disabled = false,
   uploadingAsset = false,
