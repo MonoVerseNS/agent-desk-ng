@@ -3305,6 +3305,9 @@
     "summarizing": "Summarizing...",
     "summaryTitle": "Conversation Summary",
     "noSummary": "No summary available yet",
-    "errorGenerating": "Failed to generate AI suggestion"
+    "errorGenerating": "Failed to generate AI suggestion",
+    "copy": "Copy",
+    "copied": "Copied",
+    "summaryGenerated": "Summary generated successfully"
   }
 }

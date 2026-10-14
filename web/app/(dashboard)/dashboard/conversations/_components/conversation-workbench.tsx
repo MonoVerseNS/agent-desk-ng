@@ -10,12 +10,14 @@ import {
   FilePlus2Icon,
   Menu,
   MoreHorizontalIcon,
+  SparklesIcon,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 
+import { ConversationSummaryDialog } from "./conversation-summary-dialog";
 import { ConversationCloseDialog } from "@/components/conversation-actions/close-dialog";
 import { ConversationTransferDialog } from "@/components/conversation-actions/transfer-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -84,6 +86,7 @@ export function ConversationWorkbench() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [createTicketOpen, setCreateTicketOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const sidebarPanelRef = useRef<PanelImperativeHandle | null>(null);
   const infoPanelRef = useRef<PanelImperativeHandle | null>(null);
   const filterContainerRef = useRef<HTMLDivElement | null>(null);
@@ -348,6 +351,17 @@ export function ConversationWorkbench() {
           >
             <CircleUserRoundIcon className="size-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={workbenchIconButtonClassName}
+            disabled={!conversation}
+            title={t("aiCopilot.summarize")}
+            aria-label={t("aiCopilot.summarize")}
+            onClick={() => setSummaryOpen(true)}
+          >
+            <SparklesIcon className="size-4" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -362,6 +376,13 @@ export function ConversationWorkbench() {
               <MoreHorizontalIcon className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44 min-w-44">
+              <DropdownMenuItem
+                onClick={() => setSummaryOpen(true)}
+                disabled={!conversation}
+              >
+                <SparklesIcon className="size-4" />
+                {t("aiCopilot.summarize")}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setCreateTicketOpen(true)}
                 disabled={!conversation}
@@ -515,6 +536,11 @@ export function ConversationWorkbench() {
         onSuccess={() => {
           setCreateTicketOpen(false);
         }}
+      />
+      <ConversationSummaryDialog
+        open={summaryOpen}
+        conversationId={conversation?.id ?? null}
+        onOpenChange={setSummaryOpen}
       />
 
       <Sheet open={mobileCustomerSheetOpen} onOpenChange={setMobileCustomerSheetOpen}>

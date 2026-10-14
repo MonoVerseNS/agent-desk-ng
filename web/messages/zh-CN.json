@@ -3305,6 +3305,9 @@
     "summarizing": "正在生成总结...",
     "summaryTitle": "会话小结",
     "noSummary": "暂无会话总结",
-    "errorGenerating": "生成 AI 建议失败"
+    "errorGenerating": "生成 AI 建议失败",
+    "copy": "复制",
+    "copied": "已复制",
+    "summaryGenerated": "总结生成成功"
   }
 }

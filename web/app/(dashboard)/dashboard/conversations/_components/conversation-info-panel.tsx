@@ -6,6 +6,7 @@ import {
   MailIcon,
   PencilIcon,
   PhoneIcon,
+  SparklesIcon,
   TimerIcon,
   UserRoundIcon,
   WorkflowIcon,
@@ -65,6 +66,7 @@ import {
   ConversationTagBadges,
   ConversationTagPicker,
 } from "./conversation-tag-picker";
+import { ConversationSummaryDialog } from "./conversation-summary-dialog";
 import { TicketStatusBadge } from "../../tickets/_components/ticket-status-badge";
 
 function contactTypeLabel(
@@ -223,6 +225,7 @@ export function ConversationInfoPanel({
   variant = "default",
 }: ConversationInfoPanelProps) {
   const t = useI18n();
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const embedded = variant === "embedded";
 
   return (
@@ -235,10 +238,22 @@ export function ConversationInfoPanel({
         className,
       )}
     >
-      <div className="flex h-12.5 shrink-0 items-center border-b border-border/80 bg-card px-3">
+      <div className="flex h-12.5 shrink-0 items-center justify-between border-b border-border/80 bg-card px-3">
         <h2 className="text-sm font-medium text-foreground">
           {t("conversation.conversationInfo")}
         </h2>
+        {conversation ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setSummaryOpen(true)}
+          >
+            <SparklesIcon className="size-3.5 text-primary" />
+            {t("aiCopilot.summarize")}
+          </Button>
+        ) : null}
       </div>
 
       <div
@@ -267,6 +282,11 @@ export function ConversationInfoPanel({
           </div>
         )}
       </div>
+      <ConversationSummaryDialog
+        open={summaryOpen}
+        conversationId={conversation?.id ?? null}
+        onOpenChange={setSummaryOpen}
+      />
     </div>
   );
 }

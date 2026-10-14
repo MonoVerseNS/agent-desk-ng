@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Resolver, useForm } from "react-hook-form"
 import { z } from "zod/v4"
-import { CircleXIcon } from "lucide-react"
+import { CircleXIcon, Loader2Icon, SparklesIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { closeConversation } from "@/lib/api/admin"
+import { summarizeAgentConversation } from "@/lib/api/agent"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -73,6 +74,7 @@ function ConversationCloseDialogBody({
 }: ConversationCloseDialogBodyProps) {
   const t = useI18n()
   const [saving, setSaving] = useState(false)
+  const [summarizing, setSummarizing] = useState(false)
 
   const closeSchema = useMemo(
     () =>
@@ -94,12 +96,34 @@ function ConversationCloseDialogBody({
     handleSubmit,
     reset,
     register,
+    setValue,
     formState: { errors },
   } = form
 
   useEffect(() => {
     reset(emptyForm)
   }, [conversationId, reset])
+
+  async function handleAiSummary() {
+    if (!conversationId) {
+      return
+    }
+
+    setSummarizing(true)
+    try {
+      const summary = await summarizeAgentConversation(conversationId)
+      if (summary) {
+        setValue("closeReason", summary, { shouldValidate: true })
+        toast.success(t("aiCopilot.summaryGenerated"))
+      } else {
+        toast.info(t("aiCopilot.noSummary"))
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("aiCopilot.errorGenerating"))
+    } finally {
+      setSummarizing(false)
+    }
+  }
 
   async function onFormSubmit(values: CloseForm) {
     if (!conversationId) {
@@ -129,9 +153,26 @@ function ConversationCloseDialogBody({
       <form onSubmit={handleSubmit(onFormSubmit)}>
         <div className="space-y-4 p-6">
           <Field data-invalid={!!errors.closeReason}>
-            <FieldLabel htmlFor="conversation-close-reason">
-              {t("conversationAction.closeReason")}
-            </FieldLabel>
+            <div className="flex items-center justify-between">
+              <FieldLabel htmlFor="conversation-close-reason">
+                {t("conversationAction.closeReason")}
+              </FieldLabel>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs text-primary gap-1"
+                disabled={summarizing || !conversationId}
+                onClick={() => void handleAiSummary()}
+              >
+                {summarizing ? (
+                  <Loader2Icon className="size-3.5 animate-spin" />
+                ) : (
+                  <SparklesIcon className="size-3.5" />
+                )}
+                {summarizing ? t("aiCopilot.summarizing") : t("aiCopilot.summarize")}
+              </Button>
+            </div>
             <FieldContent>
               <Textarea
                 id="conversation-close-reason"
