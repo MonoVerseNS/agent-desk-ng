@@ -17,12 +17,15 @@ import { getNotificationBody, showNotification } from "@/lib/services/notificati
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations"
 import { useI18n } from "@/i18n/provider"
 
+import { type RealtimeAgentActivityPayload } from "@/lib/im-realtime"
+
 type AgentRealtimeConnection = ReturnType<typeof createRealtimeConnectionManager>
 type AgentRealtimeEnvelope = {
   eventId?: string
   type?: string
   data?: RealtimeMessageCreatedPayload<AgentMessage> &
-    RealtimeConversationPatch & {
+    RealtimeConversationPatch &
+    RealtimeAgentActivityPayload & {
       messageId?: number
       recalledAt?: string
       sendStatus?: number
@@ -95,6 +98,11 @@ export function useAgentConversationRealtime() {
             void store.resyncRealtimeData(conversationId).catch((error) => {
               toast.error(error instanceof Error ? error.message : t("conversation.syncConversationDataFailed"))
             })
+            return
+          }
+
+          if (eventType === "agent.activity" && payload) {
+            store.applyRealtimeAgentActivity(payload)
             return
           }
 

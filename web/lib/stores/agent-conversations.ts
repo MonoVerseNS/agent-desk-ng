@@ -29,6 +29,11 @@ import {
 } from "@/lib/im-realtime-state"
 import { summarizeIMMessage } from "@/lib/im-message"
 import { generateUUID } from "@/lib/utils"
+import {
+  resolveAgentActivityState,
+  type AgentActivityInfo,
+  type AgentActivityEventPayload,
+} from "@/lib/agent-activity-state"
 
 export const agentConversationFilterOptions = [
   { value: "active", labelKey: "conversation.filterActive" },
@@ -66,6 +71,7 @@ type AgentConversationsStore = {
   conversationsLoading: boolean
   conversationsLoaded: boolean
   selectedConversationId: number | null
+  activeAgentActivity: AgentActivityInfo | null
   messages: AgentMessage[]
   messagesLoading: boolean
   messagesLoadingMore: boolean
@@ -95,6 +101,7 @@ type AgentConversationsStore = {
   sendAttachment: (file: File) => Promise<AgentMessage | null>
   recallMessage: (messageId: number) => Promise<AgentMessage | null>
   applyRealtimeMessageCreated: (message: AgentMessage) => void
+  applyRealtimeAgentActivity: (payload: AgentActivityEventPayload) => void
   applyRealtimeConversationChanged: (patch: RealtimeConversationPatch) => void
   applyRealtimeMessageRecalled: (messageId: number, patch: Partial<AgentMessage>) => void
   resyncRealtimeData: (conversationId?: number) => Promise<void>
@@ -110,6 +117,7 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
   conversationsLoading: false,
   conversationsLoaded: false,
   selectedConversationId: null,
+  activeAgentActivity: null,
   messages: [],
   messagesLoading: false,
   messagesLoadingMore: false,
@@ -217,6 +225,7 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
       messagesCursor: "",
       messagesHasMore: false,
       messagesLoadedConversationId: null,
+      activeAgentActivity: null,
     })
 
     await get().loadMessages(conversationId, {
@@ -407,6 +416,7 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
         : state.messages
       return {
         messages: nextMessages,
+        activeAgentActivity: isSelected ? null : state.activeAgentActivity,
         conversations: patchConversationListWithMessage(
           state.conversations,
           message
@@ -415,14 +425,23 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
     })
   },
 
+  applyRealtimeAgentActivity: (payload) => {
+    set((state) => ({
+      activeAgentActivity: resolveAgentActivityState(
+        state.activeAgentActivity,
+        state.selectedConversationId ?? undefined,
+        payload
+      ),
+    }))
+  },
+
   applyRealtimeConversationChanged: (patch) => {
     set((state) => {
       const conversationId = patch.id ?? patch.conversationId ?? 0
+      const isSelected =
+        conversationId > 0 && state.selectedConversationId === conversationId
       let nextMessages = state.messages
-      if (
-        conversationId > 0 &&
-        state.selectedConversationId === conversationId
-      ) {
+      if (isSelected) {
         if ((patch.agentLastReadMessageId ?? 0) > 0) {
           nextMessages = markMessagesReadToMessageId(
             nextMessages,
@@ -443,6 +462,9 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
       return {
         messages: nextMessages,
         conversations: patchConversationList(state.conversations, patch),
+        ...(isSelected && (patch.status === 4 || patch.closedAt)
+          ? { activeAgentActivity: null }
+          : {}),
       }
     })
   },

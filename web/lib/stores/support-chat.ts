@@ -25,6 +25,10 @@ import {
   type ImRealtimeEnvelope,
 } from "@/lib/im-realtime"
 import {
+  resolveAgentActivityState,
+  type AgentActivityInfo,
+} from "@/lib/agent-activity-state"
+import {
   cursorFromLoadedImMessages,
   hasMoreAfterLatestImMessageMerge,
   mergeImMessagesByIdAsc,
@@ -37,6 +41,7 @@ import {
   patchConversationListWithMessage,
 } from "@/lib/im-realtime-state"
 import {
+  buildSelectConversationPatch,
   CLOSED_IM_CONVERSATION_STATUS,
   findConversationById,
   pickConversationToResume,
@@ -169,6 +174,7 @@ export type SupportChatStore = {
   /** The request on screen. Derived from conversations by activeConversationId. */
   conversation: ImConversation | null
   activeConversationId: number
+  activeAgentActivity: AgentActivityInfo | null
   conversationsLoading: boolean
   creatingConversation: boolean
   messages: ImMessage[]
@@ -253,11 +259,23 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         return
       }
 
+      if (event.type === "agent.activity") {
+        set({
+          activeAgentActivity: resolveAgentActivityState(
+            get().activeAgentActivity,
+            activeConversationId,
+            payload
+          ),
+        })
+        return
+      }
+
       if (event.type === "message.created") {
         const isActive = eventConversationId === activeConversationId
         const message = normalizeRealtimeMessage<ImMessage>(payload)
         if (!message) {
           if (isActive) {
+            set({ activeAgentActivity: null })
             void get().syncLatestMessages()
           }
           return
@@ -276,6 +294,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
           return {
             ...withConversations(state, conversations),
             messages: mergeImMessagesByIdAsc(state.messages, [message]),
+            activeAgentActivity: null,
           }
         })
         if (
@@ -305,6 +324,10 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         }
         set((state) => ({
           messages: markConversationReadMessages(state.messages, payload),
+          ...(event.type === "conversation.closed" ||
+          payload?.status === CLOSED_IM_CONVERSATION_STATUS
+            ? { activeAgentActivity: null }
+            : {}),
         }))
       }
     },
@@ -331,6 +354,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     conversations: [],
     conversation: null,
     activeConversationId: 0,
+    activeAgentActivity: null,
     conversationsLoading: false,
     creatingConversation: false,
     messages: [],
@@ -483,23 +507,17 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     },
 
     selectConversation: async (conversationId: number) => {
-      const target = findConversationById(get().conversations, conversationId)
-      if (!target) {
-        return
-      }
-      if (target.id === get().activeConversationId) {
+      const patch = buildSelectConversationPatch(get(), conversationId)
+      if (!patch) {
         return
       }
 
+      // The patch clears messages and re-derives `conversation` together with
+      // the active id; otherwise refreshMessages would still read the previous
+      // request and show its history under the new header.
       set({
-        activeConversationId: target.id,
-        // Messages belong to the request they were loaded for, so they have to
-        // be cleared before the switch; leaving the previous thread on screen
-        // would show one request's history under another's header.
-        messages: [],
-        messagesCursor: "",
-        messagesHasMore: false,
-        error: "",
+        ...patch,
+        activeAgentActivity: null,
       })
 
       try {
@@ -514,7 +532,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         return
       }
 
-      set({ creatingConversation: true, error: "" })
+      set({ creatingConversation: true, error: "", activeAgentActivity: null })
       try {
         const created = await createImConversation(subject)
         set((state) => ({
@@ -522,6 +540,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
           messages: [],
           messagesCursor: "",
           messagesHasMore: false,
+          activeAgentActivity: null,
           ...withConversations(
             state,
             [created, ...state.conversations.filter((item) => item.id !== created.id)],
@@ -552,6 +571,9 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
           conversationId,
           limit: DEFAULT_PAGE_LIMIT,
         })
+        if (get().conversation?.id !== conversationId) {
+          return
+        }
         const results = ensureMessageList(page.results)
         set({
           messages: results,
@@ -559,6 +581,9 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
           messagesHasMore: Boolean(page.hasMore) || results.length >= DEFAULT_PAGE_LIMIT,
         })
       } catch (error) {
+        if (get().conversation?.id !== conversationId) {
+          return
+        }
         set({
           error: error instanceof Error ? error.message : t("supportChat.loadMessagesFailed"),
         })
@@ -797,6 +822,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         set((state) => ({
           closingConversation: false,
           status: "disconnected",
+          activeAgentActivity: null,
           ...withActiveConversationPatch(state, {
             status: CLOSED_IM_CONVERSATION_STATUS,
             customerUnreadCount: 0,

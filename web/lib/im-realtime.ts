@@ -5,17 +5,22 @@ import type {
   RealtimeConversationPatch,
   RealtimeMessageCreatedPayload,
 } from "@/lib/im-realtime-state"
+import type { AgentActivityEventPayload } from "@/lib/agent-activity-state"
+
+export type RealtimeAgentActivityPayload = AgentActivityEventPayload
 
 export type ImRealtimeEnvelope = {
   type: string
   topic?: string
   data?: RealtimeMessageCreatedPayload<ImMessage> &
-    RealtimeConversationPatch & {
+    RealtimeConversationPatch &
+    RealtimeAgentActivityPayload & {
       customerSessionToken?: string
       expiresAt?: string
     }
   payload?: RealtimeMessageCreatedPayload<ImMessage> &
-    RealtimeConversationPatch & {
+    RealtimeConversationPatch &
+    RealtimeAgentActivityPayload & {
       customerSessionToken?: string
       expiresAt?: string
     }
