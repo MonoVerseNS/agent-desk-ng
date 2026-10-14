@@ -1,12 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import {
   SharedMessageEditor,
   type UploadedMessageEditorImage,
 } from "@/components/chat/shared-message-editor"
+import {
+  sendOperatorPresence,
+  useAgentConversationsStore,
+} from "@/hooks/use-agent-conversation-realtime"
 import { useI18n } from "@/i18n/provider"
 import { fetchQuickReplyListAll, type AdminQuickReply } from "@/lib/api/admin"
 
@@ -30,9 +34,22 @@ export function AgentMessageEditor({
   onSendAttachment,
 }: AgentMessageEditorProps) {
   const t = useI18n()
+  const selectedConversationId = useAgentConversationsStore(
+    (state) => state.selectedConversationId
+  )
+  const lastTypingSentAtRef = useRef<number>(0)
   const [quickReplies, setQuickReplies] = useState<AdminQuickReply[]>([])
   const [loadingQuickReplies, setLoadingQuickReplies] = useState(true)
   const [quickReplyPickerOpen, setQuickReplyPickerOpen] = useState(false)
+
+  const handleTyping = () => {
+    if (!selectedConversationId) return
+    const now = Date.now()
+    if (now - lastTypingSentAtRef.current >= 3000) {
+      lastTypingSentAtRef.current = now
+      sendOperatorPresence(selectedConversationId, "typing")
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -71,6 +88,7 @@ export function AgentMessageEditor({
       onSend={onSend}
       onUploadImage={onUploadImage}
       onSendAttachment={onSendAttachment}
+      onTyping={handleTyping}
     />
   )
 }

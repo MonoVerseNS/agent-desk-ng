@@ -447,7 +447,7 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
   },
 
   applyRealtimeOperatorPresence: (payload, currentUserId) => {
-    const userId = currentUserId ?? readSession()?.user?.id ?? 0
+    const userId = currentUserId || readSession()?.user?.id || 0
     set((state) => ({
       operatorPresences: updateOperatorPresenceList(
         state.operatorPresences,

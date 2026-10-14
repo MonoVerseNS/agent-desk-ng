@@ -16,6 +16,7 @@ import { createRealtimeConnectionManager } from "@/lib/realtime-connection"
 import { getNotificationBody, showNotification } from "@/lib/services/notification"
 import { playIncomingMessageSound } from "@/lib/sound-alert"
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations"
+export { useAgentConversationsStore }
 import { useI18n } from "@/i18n/provider"
 
 import { type RealtimeAgentActivityPayload } from "@/lib/im-realtime"

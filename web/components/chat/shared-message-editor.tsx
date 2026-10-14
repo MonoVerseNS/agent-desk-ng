@@ -63,6 +63,7 @@ type SharedMessageEditorProps = {
   onSend: (html: string) => Promise<void>
   onUploadImage: (file: File) => Promise<UploadedMessageEditorImage | null>
   onSendAttachment: (file: File) => Promise<void>
+  onTyping?: () => void
 }
 
 export function SharedMessageEditor({
@@ -74,6 +75,7 @@ export function SharedMessageEditor({
   onSend,
   onUploadImage,
   onSendAttachment,
+  onTyping,
 }: SharedMessageEditorProps) {
   const t = useI18n()
   const [localUploading, setLocalUploading] = useState(false)
@@ -87,6 +89,7 @@ export function SharedMessageEditor({
   const onSendRef = useRef(onSend)
   const onUploadImageRef = useRef(onUploadImage)
   const onSendAttachmentRef = useRef(onSendAttachment)
+  const onTypingRef = useRef(onTyping)
   const shouldRestoreFocusRef = useRef(false)
   const objectUrlsRef = useRef<Set<string>>(new Set())
   const uploadedImagesRef = useRef(new Map<string, UploadedMessageEditorImage>())
@@ -119,6 +122,10 @@ export function SharedMessageEditor({
     onSendAttachmentRef.current = onSendAttachment
   }, [onSendAttachment])
 
+  useEffect(() => {
+    onTypingRef.current = onTyping
+  }, [onTyping])
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -137,6 +144,9 @@ export function SharedMessageEditor({
     ],
     content: "",
     onUpdate: ({ editor }) => {
+      if (!editor.isEmpty && isMeaningfulHTML(editor.getHTML())) {
+        onTypingRef.current?.()
+      }
       if (!quickRepliesRef.current || quickRepliesRef.current.loading) {
         return
       }
