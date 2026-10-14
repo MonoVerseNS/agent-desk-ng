@@ -257,6 +257,28 @@ func (e RealtimeCustomerSessionRefreshEvent) EventPayload() RealtimeEventPayload
 	return e.Payload
 }
 
+type RealtimeAgentActivityPayload struct {
+	ConversationID int64  `json:"conversationId"`
+	StepCode       string `json:"stepCode"`
+	ToolName       string `json:"toolName,omitempty"`
+	Status         string `json:"status"`
+	At             string `json:"at"`
+}
+
+func (RealtimeAgentActivityPayload) realtimeEventPayload() {}
+
+type RealtimeAgentActivityEvent struct {
+	Payload RealtimeAgentActivityPayload
+}
+
+func (e RealtimeAgentActivityEvent) EventType() string {
+	return enums.IMRealtimeEventAgentActivity
+}
+
+func (e RealtimeAgentActivityEvent) EventPayload() RealtimeEventPayload {
+	return e.Payload
+}
+
 type realtimeClientMessage struct {
 	Type    string   `json:"type"`
 	Topics  []string `json:"topics,omitempty"`

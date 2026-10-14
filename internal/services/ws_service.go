@@ -461,6 +461,23 @@ func (s *wsService) PublishNotificationCreated(userID int64, notification respon
 	s.PublishToTopic(topic, event)
 }
 
+func (s *wsService) PublishAgentActivity(conversation *models.Conversation, stepCode, toolName, status string) {
+	if conversation == nil || conversation.ID <= 0 {
+		return
+	}
+	now := time.Now()
+	event := s.newEvent(s.conversationTopic(conversation.ID), RealtimeAgentActivityEvent{
+		Payload: RealtimeAgentActivityPayload{
+			ConversationID: conversation.ID,
+			StepCode:       stepCode,
+			ToolName:       toolName,
+			Status:         status,
+			At:             formatWsTime(&now),
+		},
+	})
+	s.PublishToTopics(s.routeConversationTopics(conversation), event)
+}
+
 func (s *wsService) PublishResyncRequired(topics []string, reason string) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
