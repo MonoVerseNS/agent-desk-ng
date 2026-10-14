@@ -123,6 +123,8 @@ type AIAgentResponse struct {
 	WorkflowBindings       []AIAgentWorkflowBindingResponse `json:"workflowBindings"`
 	PublishedRevisionID    int64                            `json:"publishedRevisionId"`
 	SortNo                 int                              `json:"sortNo"`
+	AutoHandoffOnFailure   bool                             `json:"autoHandoffOnFailure"`
+	HandoffMessage         string                           `json:"handoffMessage"`
 	CreatedAt              string                           `json:"createdAt"`
 	UpdatedAt              string                           `json:"updatedAt"`
 	CreateUserName         string                           `json:"createUserName"`

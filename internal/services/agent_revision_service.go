@@ -66,24 +66,26 @@ type agentRevisionModel struct {
 }
 
 type agentRevisionAgent struct {
-	Name                string `json:"name"`
-	Description         string `json:"description"`
-	AIConfigID          int64  `json:"aiConfigId"`
-	MaxSteps            int    `json:"maxSteps"`
-	ContextWindow       int    `json:"contextWindow"`
-	ToolPolicy          string `json:"toolPolicy"`
-	KnowledgePolicy     string `json:"knowledgePolicy"`
-	ServiceMode         int    `json:"serviceMode"`
-	SystemPrompt        string `json:"systemPrompt"`
-	WelcomeMessage      string `json:"welcomeMessage"`
-	ReplyTimeoutSeconds int    `json:"replyTimeoutSeconds"`
-	TeamIDs             string `json:"teamIds"`
-	HandoffMode         int    `json:"handoffMode"`
-	FallbackMode        int    `json:"fallbackMode"`
-	FallbackMessage     string `json:"fallbackMessage"`
-	KnowledgeIDs        string `json:"knowledgeIds"`
-	SkillIDs            string `json:"skillIds"`
-	AllowedMCPTools     string `json:"allowedMcpTools"`
+	Name                 string `json:"name"`
+	Description          string `json:"description"`
+	AIConfigID           int64  `json:"aiConfigId"`
+	MaxSteps             int    `json:"maxSteps"`
+	ContextWindow        int    `json:"contextWindow"`
+	ToolPolicy           string `json:"toolPolicy"`
+	KnowledgePolicy      string `json:"knowledgePolicy"`
+	ServiceMode          int    `json:"serviceMode"`
+	SystemPrompt         string `json:"systemPrompt"`
+	WelcomeMessage       string `json:"welcomeMessage"`
+	ReplyTimeoutSeconds  int    `json:"replyTimeoutSeconds"`
+	TeamIDs              string `json:"teamIds"`
+	HandoffMode          int    `json:"handoffMode"`
+	FallbackMode         int    `json:"fallbackMode"`
+	FallbackMessage      string `json:"fallbackMessage"`
+	KnowledgeIDs         string `json:"knowledgeIds"`
+	SkillIDs             string `json:"skillIds"`
+	AllowedMCPTools      string `json:"allowedMcpTools"`
+	AutoHandoffOnFailure *bool  `json:"autoHandoffOnFailure,omitempty"`
+	HandoffMessage       string `json:"handoffMessage,omitempty"`
 }
 
 // AgentRevisionSnapshot is the immutable runtime configuration restored from
@@ -152,6 +154,12 @@ func applyRevisionAgentSnapshot(agent *models.AIAgent, definition agentRevisionA
 	agent.KnowledgeIDs = definition.KnowledgeIDs
 	agent.SkillIDs = definition.SkillIDs
 	agent.AllowedMCPTools = definition.AllowedMCPTools
+	if definition.AutoHandoffOnFailure != nil {
+		agent.AutoHandoffOnFailure = *definition.AutoHandoffOnFailure
+	} else {
+		agent.AutoHandoffOnFailure = true
+	}
+	agent.HandoffMessage = definition.HandoffMessage
 }
 
 func applyRevisionModelSnapshot(config *models.AIConfig, definition agentRevisionModel) {
@@ -189,6 +197,7 @@ func (s *agentRevisionService) publishSnapshot(db *gorm.DB, agent *models.AIAgen
 			WelcomeMessage: agent.WelcomeMessage, ReplyTimeoutSeconds: agent.ReplyTimeoutSeconds, TeamIDs: agent.TeamIDs, HandoffMode: int(agent.HandoffMode),
 			FallbackMode: int(agent.FallbackMode), FallbackMessage: agent.FallbackMessage, KnowledgeIDs: agent.KnowledgeIDs,
 			SkillIDs: agent.SkillIDs, AllowedMCPTools: agent.AllowedMCPTools,
+			AutoHandoffOnFailure: &agent.AutoHandoffOnFailure, HandoffMessage: agent.HandoffMessage,
 		},
 		Model: model,
 	}

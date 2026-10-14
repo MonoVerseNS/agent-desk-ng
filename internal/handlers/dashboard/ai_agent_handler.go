@@ -268,6 +268,8 @@ func buildAIAgentResponseWithLocale(item *models.AIAgent, locale string) respons
 		WorkflowBindings:       make([]response.AIAgentWorkflowBindingResponse, 0),
 		PublishedRevisionID:    item.PublishedRevisionID,
 		SortNo:                 item.SortNo,
+		AutoHandoffOnFailure:   item.AutoHandoffOnFailure,
+		HandoffMessage:         item.HandoffMessage,
 		CreatedAt:              item.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt:              item.UpdatedAt.Format("2006-01-02 15:04:05"),
 		CreateUserName:         item.CreateUserName,

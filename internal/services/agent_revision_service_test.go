@@ -22,10 +22,13 @@ func TestAgentRevisionServiceRestoresPublishedSnapshotAndKeepsAPIKey(t *testing.
 		t.Fatalf("auto migrate: %v", err)
 	}
 	sqls.SetDB(db)
+	autoHandoffFalse := false
 	definition := agentRevisionDefinition{
 		Agent: agentRevisionAgent{
 			Name: "published agent", AIConfigID: 8,
 			MaxSteps: 5, ContextWindow: 9, SystemPrompt: "published instruction", KnowledgeIDs: "4", ReplyTimeoutSeconds: 90,
+			AutoHandoffOnFailure: &autoHandoffFalse,
+			HandoffMessage:       "Custom notice",
 		},
 		Model: agentRevisionModel{ConfigID: 8, Provider: string(enums.AIProviderOpenAI), BaseURL: "https://published.example/v1", ModelType: string(enums.AIModelTypeLLM), ModelName: "published-model", TimeoutMS: 12000},
 	}
@@ -43,6 +46,9 @@ func TestAgentRevisionServiceRestoresPublishedSnapshotAndKeepsAPIKey(t *testing.
 	}
 	if snapshot.Agent.SystemPrompt != "published instruction" || snapshot.Agent.MaxSteps != 5 || snapshot.Agent.ReplyTimeoutSeconds != 90 {
 		t.Fatalf("agent snapshot not restored: %#v", snapshot.Agent)
+	}
+	if snapshot.Agent.AutoHandoffOnFailure != false || snapshot.Agent.HandoffMessage != "Custom notice" {
+		t.Fatalf("auto handoff or notice not restored: %#v", snapshot.Agent)
 	}
 	if snapshot.AIConfig.ModelName != "published-model" || snapshot.AIConfig.BaseURL != "https://published.example/v1" || snapshot.AIConfig.APIKey != "rotated-secret" {
 		t.Fatalf("model snapshot not restored safely: %#v", snapshot.AIConfig)

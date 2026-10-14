@@ -301,3 +301,30 @@ func createHumanDispatchConversation(t *testing.T, db *gorm.DB, aiAgentID int64,
 func testHumanDispatchOperator() *dto.AuthPrincipal {
 	return &dto.AuthPrincipal{UserID: 9, Username: "dispatcher", Nickname: "调度员"}
 }
+
+func TestConversationHumanDispatchCustomHandoffMessage(t *testing.T) {
+	db := setupConversationHumanDispatchTestDB(t)
+	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "1")
+	aiAgent.HandoffMessage = "客服专员马上为您服务，请稍候..."
+	db.Save(&aiAgent)
+	createHumanDispatchTeam(t, db, 1, "售后支持组")
+	createHumanDispatchActiveSchedule(t, db, 1)
+	createHumanDispatchAgentProfile(t, db, 101, 1, enums.ServiceStatusIdle, 3, true, enums.StatusOk)
+	conversation := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
+
+	result, err := services.ConversationHumanDispatchService.HandoffByAI(conversation.ID, aiAgent, "测试自定义转接语")
+	if err != nil {
+		t.Fatalf("HandoffByAI() error = %v", err)
+	}
+	if result == nil || result.Message != "客服专员马上为您服务，请稍候..." {
+		t.Fatalf("expected custom handoff message in result, got %+v", result)
+	}
+
+	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Desc("id"))
+	if message == nil {
+		t.Fatalf("expected message to be sent")
+	}
+	if message.Content != "客服专员马上为您服务，请稍候..." {
+		t.Fatalf("expected custom message content, got %q", message.Content)
+	}
+}

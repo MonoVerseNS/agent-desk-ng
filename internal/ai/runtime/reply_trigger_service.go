@@ -80,6 +80,20 @@ func (s *aiReplyService) executeReply(ctx context.Context, replyCtx aiReplyConte
 	})
 	replyCtx.setSummary(summary)
 	if err != nil {
+		if replyCtx.AIAgent.AutoHandoffOnFailure {
+			if _, handoffErr := svc.ConversationHumanDispatchService.HandoffByAIWithRequestID(
+				replyCtx.Conversation.ID,
+				replyCtx.AIAgent,
+				"AI execution failure: "+err.Error(),
+				replyCtx.Message.RequestID,
+			); handoffErr != nil {
+				slog.Error("failed to auto-handoff on AI execution failure",
+					"conversation_id", replyCtx.Conversation.ID,
+					"ai_agent_id", replyCtx.AIAgent.ID,
+					"error", handoffErr,
+				)
+			}
+		}
 		return err
 	}
 	if summary != nil && summary.Interrupted {
@@ -108,6 +122,23 @@ func (s *aiReplyService) executeReply(ctx context.Context, replyCtx aiReplyConte
 		if err != nil {
 			return err
 		}
+		return nil
+	}
+	if replyCtx.AIAgent.AutoHandoffOnFailure {
+		if _, handoffErr := svc.ConversationHumanDispatchService.HandoffByAIWithRequestID(
+			replyCtx.Conversation.ID,
+			replyCtx.AIAgent,
+			"AI generated empty reply or fallback unavailable",
+			replyCtx.Message.RequestID,
+		); handoffErr != nil {
+			slog.Error("failed to auto-handoff on empty AI reply",
+				"conversation_id", replyCtx.Conversation.ID,
+				"ai_agent_id", replyCtx.AIAgent.ID,
+				"error", handoffErr,
+			)
+			return handoffErr
+		}
+		return nil
 	}
 	return nil
 }
