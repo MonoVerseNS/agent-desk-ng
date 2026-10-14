@@ -3295,5 +3295,16 @@
         "description": "Leave empty to keep the bundled logo."
       }
     }
+  },
+  "aiCopilot": {
+    "suggestReply": "AI Suggest",
+    "generating": "Generating reply...",
+    "insertReply": "Use this reply",
+    "discardReply": "Dismiss",
+    "summarize": "AI Summary",
+    "summarizing": "Summarizing...",
+    "summaryTitle": "Conversation Summary",
+    "noSummary": "No summary available yet",
+    "errorGenerating": "Failed to generate AI suggestion"
   }
 }

@@ -3295,5 +3295,16 @@
         "description": "留空则使用内置 Logo。"
       }
     }
+  },
+  "aiCopilot": {
+    "suggestReply": "AI 生成回复",
+    "generating": "正在生成回复...",
+    "insertReply": "填入输入框",
+    "discardReply": "放弃",
+    "summarize": "AI 总结",
+    "summarizing": "正在生成总结...",
+    "summaryTitle": "会话小结",
+    "noSummary": "暂无会话总结",
+    "errorGenerating": "生成 AI 建议失败"
   }
 }
