@@ -103,6 +103,7 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
     const storeAgentActivity = useSupportChatStore((state) => state.activeAgentActivity)
     const storePromptStarters = useSupportChatStore((state) => state.promptStarters)
     const storeHandleSendMessage = useSupportChatStore((state) => state.handleSendMessage)
+    const storeSending = useSupportChatStore((state) => state.sending)
 
     const resolvedAgentActivity = agentActivity !== undefined ? agentActivity : storeAgentActivity
     const resolvedPromptStarters = promptStarters !== undefined ? promptStarters : storePromptStarters
@@ -181,6 +182,7 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
             {resolvedPromptStarters && resolvedPromptStarters.length > 0 ? (
               <PromptStarters
                 items={resolvedPromptStarters}
+                disabled={storeSending}
                 onSelect={(starter) => {
                   void handleSelectPromptStarter?.(starter)
                 }}

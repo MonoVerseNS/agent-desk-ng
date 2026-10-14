@@ -489,6 +489,9 @@
     "claiming": "认领中...",
     "confirmClaim": "确认认领"
   },
+  "promptStarters": {
+    "title": "常用问题"
+  },
   "supportChat": {
     "title": "在线客服",
     "agentLabel": "客服",

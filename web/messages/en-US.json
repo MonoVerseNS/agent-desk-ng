@@ -489,6 +489,9 @@
     "claiming": "Claiming...",
     "confirmClaim": "Claim"
   },
+  "promptStarters": {
+    "title": "Frequently Asked Questions"
+  },
   "supportChat": {
     "title": "Support",
     "agentLabel": "Support",

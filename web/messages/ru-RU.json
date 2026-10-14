@@ -489,6 +489,9 @@
     "claiming": "Взятие в работу...",
     "confirmClaim": "Взять в работу"
   },
+  "promptStarters": {
+    "title": "Частые вопросы"
+  },
   "supportChat": {
     "title": "Поддержка",
     "agentLabel": "Поддержка",
