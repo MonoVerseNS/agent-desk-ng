@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -114,61 +115,63 @@ export function SupportChatConversationSwitcher({
       >
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[300px] p-0">
-        <DropdownMenuLabel className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-medium text-muted-foreground">
-          <span>{t("supportChat.myRequests")}</span>
-          <span className="shrink-0 font-normal">
-            {t("supportChat.openRequestCount", {
-              open: openCount,
-              total: conversations.length,
-            })}
-          </span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator className="my-0" />
-        <div className="max-h-64 overflow-y-auto py-1">
-          {conversations.map((conversation: ImConversation) => (
-            <DropdownMenuItem
-              key={conversation.id}
-              onClick={() => void selectConversation(conversation.id)}
-              className="flex-col items-start gap-1 px-3 py-2"
-            >
-              <span className="flex w-full min-w-0 items-center gap-1.5">
-                <CheckIcon
-                  className={cn(
-                    "size-3.5 shrink-0 text-primary",
-                    conversation.id === activeConversationId
-                      ? "opacity-100"
-                      : "opacity-0"
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                  {resolveConversationTitle(
-                    conversation,
-                    t("supportChat.requestFallbackTitle")
-                  )}
-                </span>
-                {Number(conversation.customerUnreadCount) > 0 ? (
-                  <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
-                    {conversation.customerUnreadCount}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <span>{t("supportChat.myRequests")}</span>
+            <span className="shrink-0 font-normal">
+              {t("supportChat.openRequestCount", {
+                open: openCount,
+                total: conversations.length,
+              })}
+            </span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="my-0" />
+          <div className="max-h-64 overflow-y-auto py-1">
+            {conversations.map((conversation: ImConversation) => (
+              <DropdownMenuItem
+                key={conversation.id}
+                onClick={() => void selectConversation(conversation.id)}
+                className="flex-col items-start gap-1 px-3 py-2"
+              >
+                <span className="flex w-full min-w-0 items-center gap-1.5">
+                  <CheckIcon
+                    className={cn(
+                      "size-3.5 shrink-0 text-primary",
+                      conversation.id === activeConversationId
+                        ? "opacity-100"
+                        : "opacity-0"
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                    {resolveConversationTitle(
+                      conversation,
+                      t("supportChat.requestFallbackTitle")
+                    )}
                   </span>
-                ) : null}
-              </span>
-              <span className="flex w-full items-center gap-1.5 pl-5 text-[11px] text-muted-foreground">
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                    getStatusBadgeClass(conversation.status)
-                  )}
-                >
-                  {t(getConversationStatusMessageKey(conversation.status))}
+                  {Number(conversation.customerUnreadCount) > 0 ? (
+                    <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+                      {conversation.customerUnreadCount}
+                    </span>
+                  ) : null}
                 </span>
-                <span className="truncate">
-                  {formatDateTime(conversation.lastActiveAt)}
+                <span className="flex w-full items-center gap-1.5 pl-5 text-[11px] text-muted-foreground">
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      getStatusBadgeClass(conversation.status)
+                    )}
+                  >
+                    {t(getConversationStatusMessageKey(conversation.status))}
+                  </span>
+                  <span className="truncate">
+                    {formatDateTime(conversation.lastActiveAt)}
+                  </span>
                 </span>
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </div>
+              </DropdownMenuItem>
+            ))}
+          </div>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator className="my-0" />
         <div className="p-1.5">
           <Button
