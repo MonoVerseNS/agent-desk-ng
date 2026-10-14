@@ -14,6 +14,7 @@ import {
 } from "@/lib/im-realtime-state"
 import { createRealtimeConnectionManager } from "@/lib/realtime-connection"
 import { getNotificationBody, showNotification } from "@/lib/services/notification"
+import { playIncomingMessageSound } from "@/lib/sound-alert"
 import { useAgentConversationsStore } from "@/lib/stores/agent-conversations"
 import { useI18n } from "@/i18n/provider"
 
@@ -142,18 +143,18 @@ export function useAgentConversationRealtime() {
             }
             store.applyRealtimeMessageCreated(message)
 
-            const shouldNotify =
-              message.senderType === "customer" &&
-              payload?.status === 2 &&
-              (payload.currentAssigneeId ?? 0) > 0 &&
-              payload.currentAssigneeId === currentUserIdRef.current &&
-              typeof document !== "undefined" &&
-              document.visibilityState !== "visible"
+            const isCustomerMsg = message.senderType === "customer"
+            const isAssignedToMe = (payload?.currentAssigneeId ?? 0) === currentUserIdRef.current
+            const isUnassigned = (payload?.currentAssigneeId ?? 0) === 0
+            const isCurrentActive = message.conversationId === selectedConversationIdRef.current
 
-            if (shouldNotify) {
-              showNotification(t("conversation.newMessage"), getNotificationBody(message), () => {
-                void store.selectConversation(message.conversationId)
-              })
+            if (isCustomerMsg && (isAssignedToMe || isUnassigned || isCurrentActive)) {
+              playIncomingMessageSound()
+              if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+                showNotification(t("conversation.newMessage"), getNotificationBody(message), () => {
+                  void store.selectConversation(message.conversationId)
+                })
+              }
             }
             return
           }
