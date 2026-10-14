@@ -15,6 +15,7 @@ import {
   StarIcon,
   TimerIcon,
   UserCheckIcon,
+  UsersIcon,
   WorkflowIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -169,6 +170,9 @@ export function ChatPanel() {
   const activeAgentActivity = useAgentConversationsStore(
     (state) => state.activeAgentActivity,
   );
+  const operatorPresences = useAgentConversationsStore(
+    (state) => state.operatorPresences,
+  );
   const messagesScrollerRef = useRef<ConversationMessageScrollerHandle | null>(
     null,
   );
@@ -185,6 +189,34 @@ export function ChatPanel() {
   const isPendingConversation = conversation?.status === 2;
   const showMessageEditor = !isClosedConversation && !isPendingConversation;
   const currentUserId = readSession()?.user?.id ?? 0;
+
+  const now = Date.now();
+  const activePeerOperators = (operatorPresences ?? []).filter(
+    (p) =>
+      conversation &&
+      p.conversationId === conversation.id &&
+      p.userId !== currentUserId &&
+      now - p.at <= 15_000,
+  );
+
+  const peerPresenceDescription =
+    activePeerOperators.length === 1
+      ? activePeerOperators[0].action === "typing"
+        ? t("operatorPresence.typing", {
+            name:
+              activePeerOperators[0].nickname ||
+              activePeerOperators[0].username,
+          })
+        : t("operatorPresence.viewing", {
+            name:
+              activePeerOperators[0].nickname ||
+              activePeerOperators[0].username,
+          })
+      : activePeerOperators.length > 1
+        ? t("operatorPresence.multipleViewing", {
+            count: String(activePeerOperators.length),
+          })
+        : "";
 
   const switchToMyActiveIfNeeded = () => {
     if (conversationFilter !== "pending") {
@@ -519,6 +551,20 @@ export function ChatPanel() {
                 <span>{conversation.satisfaction.score}/5</span>
               </Badge>
             )}
+          </div>
+        </div>
+      ) : null}
+      {activePeerOperators.length > 0 ? (
+        <div
+          data-testid="operator-collision-banner"
+          className="flex shrink-0 items-center gap-2.5 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-300"
+        >
+          <UsersIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="font-semibold">{peerPresenceDescription}</span>
+            <span className="text-amber-700/80 dark:text-amber-300/80">
+              {t("operatorPresence.collisionWarning")}
+            </span>
           </div>
         </div>
       ) : null}

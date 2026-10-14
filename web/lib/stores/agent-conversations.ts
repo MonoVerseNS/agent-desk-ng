@@ -29,11 +29,18 @@ import {
 } from "@/lib/im-realtime-state"
 import { summarizeIMMessage } from "@/lib/im-message"
 import { generateUUID } from "@/lib/utils"
+import { readSession } from "@/lib/auth"
 import {
   resolveAgentActivityState,
   type AgentActivityInfo,
   type AgentActivityEventPayload,
 } from "@/lib/agent-activity-state"
+import {
+  purgeExpiredOperatorPresences as purgePresences,
+  updateOperatorPresenceList,
+  type OperatorPresencePayload,
+  type OperatorPresenceRecord,
+} from "@/lib/operator-presence-state"
 
 export const agentConversationFilterOptions = [
   { value: "active", labelKey: "conversation.filterActive" },
@@ -83,6 +90,7 @@ type AgentConversationsStore = {
   recallingMessageId: number
   readingMessageId: number
   realtimeStatus: RealtimeConnectionStatusValue
+  operatorPresences: OperatorPresenceRecord[]
   setSearchKeyword: (keyword: string) => void
   setConversationFilter: (filter: AgentConversationFilterKey) => void
   setRealtimeStatus: (status: RealtimeConnectionStatusValue) => void
@@ -102,6 +110,8 @@ type AgentConversationsStore = {
   recallMessage: (messageId: number) => Promise<AgentMessage | null>
   applyRealtimeMessageCreated: (message: AgentMessage) => void
   applyRealtimeAgentActivity: (payload: AgentActivityEventPayload) => void
+  applyRealtimeOperatorPresence: (payload: OperatorPresencePayload, currentUserId?: number) => void
+  purgeExpiredOperatorPresences: () => void
   applyRealtimeConversationChanged: (patch: RealtimeConversationPatch) => void
   applyRealtimeMessageRecalled: (messageId: number, patch: Partial<AgentMessage>) => void
   resyncRealtimeData: (conversationId?: number) => Promise<void>
@@ -129,6 +139,7 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
   recallingMessageId: 0,
   readingMessageId: 0,
   realtimeStatus: "connecting",
+  operatorPresences: [],
 
   setSearchKeyword: (keyword) => {
     set({ searchKeyword: keyword })
@@ -433,6 +444,27 @@ export const useAgentConversationsStore = create<AgentConversationsStore>((set, 
         payload
       ),
     }))
+  },
+
+  applyRealtimeOperatorPresence: (payload, currentUserId) => {
+    const userId = currentUserId ?? readSession()?.user?.id ?? 0
+    set((state) => ({
+      operatorPresences: updateOperatorPresenceList(
+        state.operatorPresences,
+        payload,
+        userId
+      ),
+    }))
+  },
+
+  purgeExpiredOperatorPresences: () => {
+    set((state) => {
+      const purged = purgePresences(state.operatorPresences)
+      if (purged.length === state.operatorPresences.length) {
+        return state
+      }
+      return { operatorPresences: purged }
+    })
   },
 
   applyRealtimeConversationChanged: (patch) => {

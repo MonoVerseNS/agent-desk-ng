@@ -18,6 +18,7 @@ import { useAgentConversationsStore } from "@/lib/stores/agent-conversations"
 import { useI18n } from "@/i18n/provider"
 
 import { type RealtimeAgentActivityPayload } from "@/lib/im-realtime"
+import { type OperatorPresencePayload } from "@/lib/operator-presence-state"
 
 type AgentRealtimeConnection = ReturnType<typeof createRealtimeConnectionManager>
 type AgentRealtimeEnvelope = {
@@ -25,11 +26,24 @@ type AgentRealtimeEnvelope = {
   type?: string
   data?: RealtimeMessageCreatedPayload<AgentMessage> &
     RealtimeConversationPatch &
-    RealtimeAgentActivityPayload & {
+    RealtimeAgentActivityPayload &
+    OperatorPresencePayload & {
       messageId?: number
       recalledAt?: string
       sendStatus?: number
     }
+}
+
+let activeRealtimeSocket: (() => WebSocket | null) | null = null
+
+export function sendOperatorPresence(
+  conversationId: number,
+  action: "viewing" | "typing" | "left"
+) {
+  const socket = activeRealtimeSocket?.()
+  if (socket && socket.readyState === WebSocket.OPEN && conversationId > 0) {
+    socket.send(JSON.stringify({ type: "presence", conversationId, action }))
+  }
 }
 
 export function useAgentConversationRealtime() {
@@ -64,6 +78,13 @@ export function useAgentConversationRealtime() {
             JSON.stringify({
               type: "subscribe",
               topics: [`conversation:${conversationId}`],
+            })
+          )
+          socket.send(
+            JSON.stringify({
+              type: "presence",
+              conversationId,
+              action: "viewing",
             })
           )
           subscribedConversationIdRef.current = conversationId
@@ -103,6 +124,11 @@ export function useAgentConversationRealtime() {
 
           if (eventType === "agent.activity" && payload) {
             store.applyRealtimeAgentActivity(payload)
+            return
+          }
+
+          if (eventType === "operator.presence" && payload) {
+            store.applyRealtimeOperatorPresence(payload, currentUserIdRef.current)
             return
           }
 
@@ -174,9 +200,25 @@ export function useAgentConversationRealtime() {
     })
 
     realtimeRef.current = realtime
+    activeRealtimeSocket = () => realtimeRef.current?.getSocket() ?? null
     realtime.connect()
 
     return () => {
+      activeRealtimeSocket = null
+      const socket = realtimeRef.current?.getSocket()
+      if (
+        socket &&
+        socket.readyState === WebSocket.OPEN &&
+        subscribedConversationIdRef.current
+      ) {
+        socket.send(
+          JSON.stringify({
+            type: "presence",
+            conversationId: subscribedConversationIdRef.current,
+            action: "left",
+          })
+        )
+      }
       realtimeRef.current = null
       realtime.disconnect()
       subscribedConversationIdRef.current = null
@@ -195,6 +237,13 @@ export function useAgentConversationRealtime() {
     if (previousConversationId && previousConversationId !== nextConversationId) {
       socket.send(
         JSON.stringify({
+          type: "presence",
+          conversationId: previousConversationId,
+          action: "left",
+        })
+      )
+      socket.send(
+        JSON.stringify({
           type: "unsubscribe",
           topics: [`conversation:${previousConversationId}`],
         })
@@ -208,6 +257,13 @@ export function useAgentConversationRealtime() {
           topics: [`conversation:${nextConversationId}`],
         })
       )
+      socket.send(
+        JSON.stringify({
+          type: "presence",
+          conversationId: nextConversationId,
+          action: "viewing",
+        })
+      )
       subscribedConversationIdRef.current = nextConversationId
       return
     }
@@ -216,4 +272,13 @@ export function useAgentConversationRealtime() {
       subscribedConversationIdRef.current = null
     }
   }, [selectedConversationId])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      useAgentConversationsStore.getState().purgeExpiredOperatorPresences()
+    }, 5000)
+    return () => {
+      clearInterval(interval)
+    }
+  }, [])
 }
