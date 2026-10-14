@@ -253,3 +253,25 @@ export function removeConversationTag(payload: {
     body: JSON.stringify(payload),
   })
 }
+
+export async function suggestAgentReply(conversationId: number): Promise<string> {
+  const res = await request<{ suggestion: string }>(
+    "/api/dashboard/conversation/suggest_reply",
+    {
+      method: "POST",
+      body: JSON.stringify({ conversationId }),
+    }
+  )
+  return res?.suggestion ?? ""
+}
+
+export async function summarizeAgentConversation(conversationId: number): Promise<string> {
+  const res = await request<{ summary: string }>(
+    "/api/dashboard/conversation/summarize",
+    {
+      method: "POST",
+      body: JSON.stringify({ conversationId }),
+    }
+  )
+  return res?.summary ?? ""
+}

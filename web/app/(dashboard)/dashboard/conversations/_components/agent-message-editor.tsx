@@ -13,6 +13,7 @@ import {
 } from "@/hooks/use-agent-conversation-realtime"
 import { useI18n } from "@/i18n/provider"
 import { fetchQuickReplyListAll, type AdminQuickReply } from "@/lib/api/admin"
+import { suggestAgentReply } from "@/lib/api/agent"
 
 type AgentMessageEditorProps = {
   disabled?: boolean
@@ -77,6 +78,7 @@ export function AgentMessageEditor({
   return (
     <SharedMessageEditor
       variant="agent"
+      conversationId={selectedConversationId}
       disabled={disabled}
       uploadingAsset={uploadingAsset}
       quickReplies={{
@@ -85,6 +87,27 @@ export function AgentMessageEditor({
         items: quickReplies,
         onOpenChange: setQuickReplyPickerOpen,
       }}
+      aiCopilot={
+        selectedConversationId
+          ? {
+              onSuggest: async () => {
+                try {
+                  const text = await suggestAgentReply(selectedConversationId)
+                  if (!text) {
+                    toast.info(t("aiCopilot.errorGenerating"))
+                    return null
+                  }
+                  return text
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : t("aiCopilot.errorGenerating")
+                  )
+                  return null
+                }
+              },
+            }
+          : undefined
+      }
       onSend={onSend}
       onUploadImage={onUploadImage}
       onSendAttachment={onSendAttachment}

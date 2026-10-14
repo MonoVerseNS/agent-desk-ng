@@ -6,10 +6,13 @@ import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import {
   ImageIcon,
+  Loader2Icon,
   MessageSquareTextIcon,
   PaperclipIcon,
   SendHorizonalIcon,
   SendIcon,
+  SparklesIcon,
+  XIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -49,8 +52,14 @@ export type MessageEditorQuickReply = {
 
 type SharedMessageEditorVariant = "customer" | "agent"
 
-type SharedMessageEditorProps = {
+export type SharedMessageEditorAICopilot = {
+  onSuggest: () => Promise<string | null>
+  loading?: boolean
+}
+
+export type SharedMessageEditorProps = {
   variant: SharedMessageEditorVariant
+  conversationId?: number | null
   disabled?: boolean
   uploadingAsset?: boolean
   manageLocalUploading?: boolean
@@ -60,6 +69,7 @@ type SharedMessageEditorProps = {
     items: MessageEditorQuickReply[]
     onOpenChange: (open: boolean) => void
   }
+  aiCopilot?: SharedMessageEditorAICopilot
   onSend: (html: string) => Promise<void>
   onUploadImage: (file: File) => Promise<UploadedMessageEditorImage | null>
   onSendAttachment: (file: File) => Promise<void>
@@ -68,10 +78,12 @@ type SharedMessageEditorProps = {
 
 export function SharedMessageEditor({
   variant,
+  conversationId,
   disabled = false,
   uploadingAsset = false,
   manageLocalUploading = false,
   quickReplies,
+  aiCopilot,
   onSend,
   onUploadImage,
   onSendAttachment,
@@ -80,6 +92,8 @@ export function SharedMessageEditor({
   const t = useI18n()
   const [localUploading, setLocalUploading] = useState(false)
   const [quickReplySearch, setQuickReplySearch] = useState("")
+  const [suggestedReply, setSuggestedReply] = useState<string | null>(null)
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false)
   const quickReplySearchRef = useRef(quickReplySearch)
   quickReplySearchRef.current = quickReplySearch
   const isSlashTriggeredRef = useRef(false)
@@ -125,6 +139,10 @@ export function SharedMessageEditor({
   useEffect(() => {
     onTypingRef.current = onTyping
   }, [onTyping])
+
+  useEffect(() => {
+    setSuggestedReply(null)
+  }, [conversationId])
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -258,6 +276,7 @@ export function SharedMessageEditor({
     setQuickReplySearch("")
     isSlashTriggeredRef.current = false
     quickRepliesRef.current?.onOpenChange(false)
+    setSuggestedReply(null)
     if (!isCustomer) {
       requestAnimationFrame(() => {
         editor.commands.focus("end")
@@ -390,6 +409,38 @@ export function SharedMessageEditor({
     }
   }
 
+  const isGenerating = isGeneratingSuggestion || Boolean(aiCopilot?.loading)
+
+  async function handleTriggerSuggest() {
+    if (!aiCopilot || disabled || isUploading || isGenerating) {
+      return
+    }
+    setIsGeneratingSuggestion(true)
+    try {
+      const text = await aiCopilot.onSuggest()
+      if (text && text.trim()) {
+        setSuggestedReply(text.trim())
+      }
+    } finally {
+      setIsGeneratingSuggestion(false)
+    }
+  }
+
+  function handleInsertSuggestedReply() {
+    if (!editor || !suggestedReply) {
+      return
+    }
+    editor.chain().focus().insertContent(suggestedReply).run()
+    setSuggestedReply(null)
+    requestAnimationFrame(() => {
+      editor.commands.focus("end")
+    })
+  }
+
+  function handleDismissSuggestedReply() {
+    setSuggestedReply(null)
+  }
+
   const editorContent = (
     <>
       <input
@@ -405,6 +456,49 @@ export function SharedMessageEditor({
         className="hidden"
         onChange={handleSelectAttachment}
       />
+      {!isCustomer && suggestedReply ? (
+        <div className="m-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+          <div className="flex items-center justify-between gap-2 pb-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+              <SparklesIcon className="size-3.5" />
+              <span>{t("aiCopilot.suggestReply")}</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-5 text-muted-foreground hover:text-foreground"
+              onClick={handleDismissSuggestedReply}
+              aria-label={t("aiCopilot.discardReply")}
+              title={t("aiCopilot.discardReply")}
+            >
+              <XIcon className="size-3.5" />
+            </Button>
+          </div>
+          <div className="line-clamp-3 select-text text-xs leading-5 text-foreground/90 whitespace-pre-wrap">
+            {suggestedReply}
+          </div>
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleDismissSuggestedReply}
+            >
+              {t("aiCopilot.discardReply")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={handleInsertSuggestedReply}
+            >
+              {t("aiCopilot.insertReply")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {isCustomer ? (
         <div className="min-h-10">
           <EditorContent editor={editor} />
@@ -512,6 +606,24 @@ export function SharedMessageEditor({
                 </Command>
               </PopoverContent>
             </Popover>
+          ) : null}
+          {!isCustomer && aiCopilot ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 text-primary hover:bg-primary/10"
+              disabled={disabled || isUploading || isGenerating || aiCopilot.loading}
+              onClick={handleTriggerSuggest}
+              title={isGenerating ? t("aiCopilot.generating") : t("aiCopilot.suggestReply")}
+              aria-label={t("aiCopilot.suggestReply")}
+            >
+              {isGenerating ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <SparklesIcon className="size-4" />
+              )}
+            </Button>
           ) : null}
           {!isCustomer && quickReplies ? (
             <span className="hidden select-none text-[11px] text-muted-foreground/70 sm:inline-block pl-1">
