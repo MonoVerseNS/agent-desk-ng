@@ -2847,7 +2847,15 @@
     "searchingKnowledge": "检索知识库中...",
     "callingTool": "执行工具：{name}...",
     "runningWorkflow": "执行流程：{name}...",
-    "default": "AI 正在处理您的请求..."
+    "default": "AI 正在处理您的请求...",
+    "customerThinking": "AI 正在思考...",
+    "customerSearching": "正在检索信息...",
+    "customerProcessing": "AI 正在准备回复...",
+    "customerDefault": "AI 正在准备回复...",
+    "toolAnalyzeConversation": "会话分析",
+    "toolTriageServiceRequest": "服务请求分流",
+    "toolCreateTicket": "创建工单",
+    "toolHandoff": "转接人工"
   },
   "wxworkOutbox": {
     "statusFailed": "失败",

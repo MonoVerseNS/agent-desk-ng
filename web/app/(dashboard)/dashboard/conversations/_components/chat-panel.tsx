@@ -457,6 +457,7 @@ export function ChatPanel() {
         <AgentActivityBubble
           stepCode={activeAgentActivity.stepCode}
           toolName={activeAgentActivity.toolName}
+          isCustomer={false}
         />
       ) : null}
     </ConversationMessageScroller>

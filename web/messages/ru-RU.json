@@ -2847,7 +2847,15 @@
     "searchingKnowledge": "Поиск в базе знаний...",
     "callingTool": "Выполнение действия: {name}...",
     "runningWorkflow": "Выполнение сценария: {name}...",
-    "default": "AI-ассистент обрабатывает запрос..."
+    "default": "AI-ассистент обрабатывает запрос...",
+    "customerThinking": "AI-ассистент думает...",
+    "customerSearching": "Поиск информации...",
+    "customerProcessing": "AI-ассистент готовит ответ...",
+    "customerDefault": "AI-ассистент готовит ответ...",
+    "toolAnalyzeConversation": "Анализ диалога",
+    "toolTriageServiceRequest": "Маршрутизация обращения",
+    "toolCreateTicket": "Создание обращения",
+    "toolHandoff": "Перевод на оператора"
   },
   "wxworkOutbox": {
     "statusFailed": "Ошибка",

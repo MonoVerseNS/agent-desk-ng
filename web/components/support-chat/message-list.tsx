@@ -216,6 +216,7 @@ export const SupportChatMessageList = forwardRef<SupportChatMessageListHandle, S
           <AgentActivityBubble
             stepCode={resolvedAgentActivity.stepCode}
             toolName={resolvedAgentActivity.toolName}
+            isCustomer
           />
         ) : null}
       </ConversationMessageScroller>

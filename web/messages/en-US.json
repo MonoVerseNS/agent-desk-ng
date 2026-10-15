@@ -2847,7 +2847,15 @@
     "searchingKnowledge": "Searching knowledge base...",
     "callingTool": "Executing action: {name}...",
     "runningWorkflow": "Running workflow: {name}...",
-    "default": "AI Agent is working on your request..."
+    "default": "AI Agent is working on your request...",
+    "customerThinking": "AI agent is thinking...",
+    "customerSearching": "Searching for information...",
+    "customerProcessing": "AI agent is preparing a response...",
+    "customerDefault": "AI agent is preparing a response...",
+    "toolAnalyzeConversation": "Analyze conversation",
+    "toolTriageServiceRequest": "Triage service request",
+    "toolCreateTicket": "Create ticket",
+    "toolHandoff": "Human handoff"
   },
   "wxworkOutbox": {
     "statusFailed": "Failed",

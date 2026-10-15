@@ -7,31 +7,25 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ConversationMessageRow } from "@/components/chat/conversation-message-row"
 import { ConversationMessageBubble } from "@/components/chat/conversation-message-bubble"
 import { useI18n } from "@/i18n/provider"
+import { getAgentActivityLabel } from "@/lib/agent-activity-label"
 import { cn } from "@/lib/utils"
 
 export type AgentActivityBubbleProps = {
   stepCode: string
   toolName?: string
   className?: string
+  isCustomer?: boolean
 }
 
 export const AgentActivityBubble = memo(function AgentActivityBubble({
   stepCode,
   toolName,
   className,
+  isCustomer = true,
 }: AgentActivityBubbleProps) {
   const t = useI18n()
 
-  let label = t("agentActivity.default")
-  if (stepCode === "thinking") {
-    label = t("agentActivity.thinking")
-  } else if (stepCode === "searching_knowledge") {
-    label = t("agentActivity.searchingKnowledge")
-  } else if (stepCode === "calling_tool") {
-    label = t("agentActivity.callingTool", { name: toolName || "..." })
-  } else if (stepCode === "running_workflow") {
-    label = t("agentActivity.runningWorkflow", { name: toolName || "..." })
-  }
+  const label = getAgentActivityLabel({ stepCode, toolName, isCustomer }, t)
 
   return (
     <ConversationMessageRow
