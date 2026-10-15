@@ -8,8 +8,8 @@ func TestLanguageOrDefault(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "blank falls back", in: "", want: "zh-CN"},
-		{name: "unsupported falls back", in: "fr-FR", want: "zh-CN"},
+		{name: "blank falls back", in: "", want: "en-US"},
+		{name: "unsupported falls back", in: "fr-FR", want: "en-US"},
 		{name: "chinese", in: "zh-CN", want: "zh-CN"},
 		{name: "english", in: "en", want: "en-US"},
 		{name: "english underscore", in: "EN_us", want: "en-US"},

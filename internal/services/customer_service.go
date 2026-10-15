@@ -175,7 +175,7 @@ func buildExternalCustomerName(externalUser openidentity.ExternalUser) string {
 	if strs.IsNotBlank(externalUser.ExternalName) {
 		return externalUser.ExternalName
 	}
-	return "访客" + hashUUID(externalUser.ExternalID)
+	return "Visitor " + hashUUID(externalUser.ExternalID)
 }
 
 func hashUUID(uuid string) string {

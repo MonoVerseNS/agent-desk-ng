@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -71,6 +72,30 @@ func TestEnsureExternalCustomerUpdatesNameFromExternalIdentity(t *testing.T) {
 	}
 	if updatedConversation.CustomerName != "李四" {
 		t.Fatalf("expected conversation customer name updated, got %q", updatedConversation.CustomerName)
+	}
+}
+
+func TestEnsureExternalCustomerGeneratesVisitorName(t *testing.T) {
+	_ = setupCustomerServiceTestDB(t)
+
+	var custID int64
+	if err := sqls.WithTransaction(func(ctx *sqls.TxContext) error {
+		id, err := services.CustomerService.EnsureExternalCustomer(ctx, openidentity.ExternalUser{
+			ExternalSource: enums.ExternalSourceGuest,
+			ExternalID:     "guest-uuid-12345",
+		})
+		custID = id
+		return err
+	}); err != nil {
+		t.Fatalf("EnsureExternalCustomer() error = %v", err)
+	}
+
+	customer := services.CustomerService.Get(custID)
+	if customer == nil {
+		t.Fatalf("expected customer to exist")
+	}
+	if !strings.HasPrefix(customer.Name, "Visitor ") {
+		t.Fatalf("expected customer name to start with 'Visitor ', got %q", customer.Name)
 	}
 }
 

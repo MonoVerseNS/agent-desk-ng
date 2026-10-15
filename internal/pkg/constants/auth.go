@@ -391,6 +391,10 @@ var builtinPermissionResourceLabels = map[string]string{
 	"knowledgeFAQ":      "knowledge FAQs",
 	"skillDefinition":   "Skill definitions",
 	"mcp":               "MCP tools",
+	"docPage":           "support docs",
+	"supportCommunity":  "support community",
+	"supportConfig":     "support center configuration",
+	"branding":          "branding settings",
 }
 
 var builtinPermissionNameOverrides = map[string]string{
@@ -405,6 +409,16 @@ var builtinPermissionNameOverrides = map[string]string{
 	"agentTeamSchedule.batchGenerate": "Batch generate agent team schedules",
 	"mcp.view":                        "View MCP debug information",
 	"mcp.call":                        "Call MCP tools",
+	"docPage.view":                    "View support docs",
+	"docPage.create":                  "Create support docs",
+	"docPage.update":                  "Update support docs",
+	"docPage.delete":                  "Delete support docs",
+	"supportCommunity.view":           "View support community",
+	"supportCommunity.update":         "Moderate support community",
+	"supportConfig.view":              "View support center configuration",
+	"supportConfig.update":            "Update support center configuration",
+	"branding.view":                   "View branding settings",
+	"branding.update":                 "Update branding settings",
 }
 
 type RoleSpec struct {

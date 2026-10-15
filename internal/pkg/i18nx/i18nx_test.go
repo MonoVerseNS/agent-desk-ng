@@ -14,14 +14,14 @@ func TestNormalizeLocale(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "default for blank", in: "", want: LocaleZhCN},
+		{name: "default for blank", in: "", want: LocaleEnUS},
 		{name: "exact chinese", in: "zh-CN", want: LocaleZhCN},
 		{name: "underscore chinese", in: "zh_CN", want: LocaleZhCN},
 		{name: "short chinese", in: "zh", want: LocaleZhCN},
 		{name: "exact english", in: "en-US", want: LocaleEnUS},
 		{name: "underscore english", in: "en_US", want: LocaleEnUS},
 		{name: "short english", in: "en", want: LocaleEnUS},
-		{name: "unsupported falls back", in: "fr-FR", want: LocaleZhCN},
+		{name: "unsupported falls back", in: "fr-FR", want: LocaleEnUS},
 	}
 
 	for _, tt := range tests {
@@ -36,6 +36,7 @@ func TestNormalizeLocale(t *testing.T) {
 
 func TestResolveLocaleUsesDefaultLocale(t *testing.T) {
 	SetDefaultLocale(LocaleZhCN)
+	t.Cleanup(func() { SetDefaultLocale(LocaleEnUS) })
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/user/list", nil)
 	req.Header.Set("Accept-Language", "fr-FR, en-US;q=0.9, zh-CN;q=0.8")
 
@@ -46,6 +47,7 @@ func TestResolveLocaleUsesDefaultLocale(t *testing.T) {
 
 func TestResolveLocaleIgnoresRequestLocaleHeaders(t *testing.T) {
 	SetDefaultLocale(LocaleZhCN)
+	t.Cleanup(func() { SetDefaultLocale(LocaleEnUS) })
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/user/list", nil)
 	req.Header.Set("X-Locale", "en-US")
 	req.Header.Set("Accept-Language", "zh-CN")
@@ -57,6 +59,7 @@ func TestResolveLocaleIgnoresRequestLocaleHeaders(t *testing.T) {
 
 func TestTranslateUsesConfiguredDefaultForUnsupportedLocale(t *testing.T) {
 	SetDefaultLocale(LocaleZhCN)
+	t.Cleanup(func() { SetDefaultLocale(LocaleEnUS) })
 	if got := TLocale(LocaleEnUS, "error.auth.expired"); got != "Your session has expired. Please sign in again." {
 		t.Fatalf("english translation = %q", got)
 	}
@@ -138,6 +141,7 @@ func TestGetfFallsBackToKey(t *testing.T) {
 
 func TestMiddlewareStoresLocale(t *testing.T) {
 	SetDefaultLocale(LocaleZhCN)
+	t.Cleanup(func() { SetDefaultLocale(LocaleEnUS) })
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(Middleware())

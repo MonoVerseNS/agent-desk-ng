@@ -41,7 +41,7 @@ func (c Config) LanguageOrDefault() string {
 	case "ru", "ru-ru", "ru_ru":
 		return "ru-RU"
 	default:
-		return "zh-CN"
+		return "en-US"
 	}
 }
 

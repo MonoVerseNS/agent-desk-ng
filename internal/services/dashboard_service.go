@@ -402,33 +402,78 @@ func labelOrDefault(value, fallback string) string {
 }
 
 func conversationStatusLabel(status enums.IMConversationStatus, locale string) string {
-	if i18nx.NormalizeLocale(locale) == i18nx.LocaleEnUS {
+	normalized := i18nx.NormalizeLocale(locale)
+	if normalized == i18nx.LocaleRuRU {
 		switch status {
 		case enums.IMConversationStatusAIServing:
-			return "AI active"
+			return "Обрабатывает ИИ"
 		case enums.IMConversationStatusPending:
-			return "Queued"
+			return "В очереди"
 		case enums.IMConversationStatusActive:
-			return "In progress"
+			return "В работе"
 		case enums.IMConversationStatusClosed:
-			return "Closed"
+			return "Закрыт"
 		default:
-			return fmt.Sprintf("Status %d", status)
+			return fmt.Sprintf("Статус %d", status)
 		}
 	}
-	return labelOrDefault(enums.GetIMConversationStatusLabel(status), fmt.Sprintf("状态 %d", status))
+	if normalized == i18nx.LocaleZhCN {
+		return labelOrDefault(enums.GetIMConversationStatusLabel(status), fmt.Sprintf("状态 %d", status))
+	}
+	switch status {
+	case enums.IMConversationStatusAIServing:
+		return "AI active"
+	case enums.IMConversationStatusPending:
+		return "Queued"
+	case enums.IMConversationStatusActive:
+		return "In progress"
+	case enums.IMConversationStatusClosed:
+		return "Closed"
+	default:
+		return fmt.Sprintf("Status %d", status)
+	}
 }
 
 func dashboardText(locale string, key string) string {
-	if i18nx.NormalizeLocale(locale) == i18nx.LocaleEnUS {
-		if value, ok := dashboardEnUS[key]; ok {
+	normalized := i18nx.NormalizeLocale(locale)
+	if normalized == i18nx.LocaleRuRU {
+		if value, ok := dashboardRuRU[key]; ok {
 			return value
 		}
+	}
+	if normalized == i18nx.LocaleZhCN {
+		if value, ok := dashboardZhCN[key]; ok {
+			return value
+		}
+	}
+	if value, ok := dashboardEnUS[key]; ok {
+		return value
 	}
 	if value, ok := dashboardZhCN[key]; ok {
 		return value
 	}
 	return key
+}
+
+var dashboardRuRU = map[string]string{
+	"alert.pendingLongWait.title":       "Очередь диалогов переполнена",
+	"alert.pendingLongWait.description": "Некоторые диалоги ожидают назначения более 10 минут. Рекомендуется распределить обращения.",
+	"alert.staleProcessing.title":       "Диалоги в работе требуют внимания",
+	"alert.staleProcessing.description": "В некоторых активных диалогах нет новых сообщений более 30 минут. Проверьте их статус.",
+	"alert.teamNoSchedule.title":        "У команд операторов нет активного расписания",
+	"alert.teamNoSchedule.description":  "У части активных команд операторов сейчас нет действующего расписания, что может повлиять на автоназначение.",
+	"alert.aiNoKnowledge.title":         "ИИ-агенты не привязаны к базе знаний",
+	"alert.aiNoKnowledge.description":   "Некоторые активные ИИ-агенты не привязаны к базе знаний, что может снизить качество ответов.",
+	"quick.conversations.title":         "Диалоги",
+	"quick.conversations.description":   "Просмотр очереди и активных диалогов",
+	"quick.agents.title":                "Операторы",
+	"quick.agents.description":          "Статус операторов и настройка команд",
+	"quick.knowledge.title":             "База знаний",
+	"quick.knowledge.description":       "Управление документами и журнал поиска",
+	"quick.aiAgents.title":              "ИИ-агенты",
+	"quick.aiAgents.description":        "Настройка стратегий приёма и базы знаний",
+	"quick.channels.title":              "Каналы связи",
+	"quick.channels.description":        "Управление каналами и агентами по умолчанию",
 }
 
 var dashboardZhCN = map[string]string{

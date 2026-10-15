@@ -35,8 +35,10 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   fetchAgentProfile,
+  fetchAgentTeamsAll,
   fetchUsersAll,
   type AdminAgentProfile,
+  type AdminAgentTeam,
   type AdminUser,
   type CreateAdminAgentProfilePayload,
 } from "@/lib/api/admin";
@@ -206,23 +208,19 @@ function AgentEditDialogBody({
 }: AgentEditDialogBodyProps) {
   const t = useI18n();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [teams, setTeams] = useState<AdminAgentTeam[]>([]);
   const [userSelectOpen, setUserSelectOpen] = useState(false);
+  const [teamSelectOpen, setTeamSelectOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const userOptions = users.map((user) => ({
     value: String(user.id),
     label: `${user.nickname || user.username} (${user.username})`,
   }));
+  const teamOptions = teams.map((team) => ({
+    value: String(team.id),
+    label: team.name,
+  }));
   const serviceStatusOptions = useMemo(() => getServiceStatusOptions(t), [t]);
-  const loadOptions = useCallback(async () => {
-    try {
-      const [usersData] = await Promise.all([
-        fetchUsersAll(),
-      ]);
-      setUsers(usersData);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("agentProfile.loadOptionsFailed"));
-    }
-  }, [t]);
   const editFormSchema = useMemo(() => createEditFormSchema(t), [t]);
   const editFormResolver = useMemo(
     () => zodResolver(editFormSchema) as Resolver<EditForm>,
@@ -239,6 +237,25 @@ function AgentEditDialogBody({
     register,
     formState: { errors },
   } = form;
+
+  const loadOptions = useCallback(async () => {
+    try {
+      const [usersData, teamsData] = await Promise.all([
+        fetchUsersAll(),
+        fetchAgentTeamsAll(),
+      ]);
+      setUsers(usersData);
+      setTeams(teamsData);
+      if (!itemId && teamsData.length > 0) {
+        const current = form.getValues("teamId");
+        if (!current) {
+          form.setValue("teamId", String(defaultTeamId || teamsData[0].id), { shouldValidate: true });
+        }
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("agentProfile.loadOptionsFailed"));
+    }
+  }, [defaultTeamId, form, itemId, t]);
 
   useEffect(() => {
     async function loadDetail() {
@@ -370,6 +387,81 @@ function AgentEditDialogBody({
                 <FieldError errors={[errors.userId]} />
               </FieldContent>
             </Field>
+
+            <Field data-invalid={!!errors.teamId}>
+              <FieldLabel>{t("agentProfile.linkedTeam")}</FieldLabel>
+              <FieldContent>
+                <Controller
+                  control={control}
+                  name="teamId"
+                  render={({ field }) => (
+                    <Popover
+                      open={teamSelectOpen}
+                      onOpenChange={setTeamSelectOpen}
+                    >
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={teamSelectOpen}
+                            className="w-full justify-between font-normal"
+                          />
+                        }
+                      >
+                        <span className="truncate">
+                          {teamOptions.find(
+                            (option) => option.value === field.value,
+                          )?.label ?? t("agentProfile.selectTeam")}
+                        </span>
+                        <ChevronsUpDownIcon className="ml-2 size-4 shrink-0 opacity-50" />
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popper-anchor-width)] p-0"
+                        align="start"
+                      >
+                        <Command>
+                          <CommandInput placeholder={t("agentProfile.searchTeam")} />
+                          <CommandList>
+                            <CommandEmpty>{t("agentProfile.emptyTeam")}</CommandEmpty>
+                            <CommandGroup>
+                              {teamOptions.map((option) => (
+                                <CommandItem
+                                  key={option.value}
+                                  value={option.label}
+                                  onSelect={() => {
+                                    field.onChange(option.value);
+                                    setTeamSelectOpen(false);
+                                  }}
+                                >
+                                  <CheckIcon
+                                    className={`mr-2 size-4 ${
+                                      field.value === option.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    }`}
+                                  />
+                                  {option.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+                {teams.length === 0 ? (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    {t("agentProfile.noTeamsAvailable")}
+                  </p>
+                ) : null}
+                <FieldError errors={[errors.teamId]} />
+              </FieldContent>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.displayName}>
               <FieldLabel htmlFor="agent-display-name">{t("agentProfile.displayName")}</FieldLabel>
               <FieldContent>
@@ -381,9 +473,7 @@ function AgentEditDialogBody({
                 <FieldError errors={[errors.displayName]} />
               </FieldContent>
             </Field>
-          </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.agentCode}>
               <FieldLabel htmlFor="agent-code">{t("agentProfile.agentCodeLabel")}</FieldLabel>
               <FieldContent>
@@ -393,26 +483,6 @@ function AgentEditDialogBody({
                   {...register("agentCode")}
                 />
                 <FieldError errors={[errors.agentCode]} />
-              </FieldContent>
-            </Field>
-
-            <Field className="min-h-32">
-              <FieldLabel>{t("agentProfile.avatar")}</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="avatar"
-                  render={({ field }) => (
-                    <ImageInput
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={saving}
-                      prefix="avatar"
-                      placeholder={t("agentProfile.avatarUpload")}
-                      className="size-16 rounded-full"
-                    />
-                  )}
-                />
               </FieldContent>
             </Field>
           </div>
@@ -436,6 +506,26 @@ function AgentEditDialogBody({
                   )}
                 />
                 <FieldError errors={[errors.serviceStatus]} />
+              </FieldContent>
+            </Field>
+
+            <Field className="min-h-32">
+              <FieldLabel>{t("agentProfile.avatar")}</FieldLabel>
+              <FieldContent>
+                <Controller
+                  control={control}
+                  name="avatar"
+                  render={({ field }) => (
+                    <ImageInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={saving}
+                      prefix="avatar"
+                      placeholder={t("agentProfile.avatarUpload")}
+                      className="size-16 rounded-full"
+                    />
+                  )}
+                />
               </FieldContent>
             </Field>
           </div>

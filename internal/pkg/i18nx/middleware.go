@@ -26,7 +26,7 @@ var supportedLocales = map[string]string{
 	"ru_ru":   LocaleRuRU,
 }
 
-var DefaultLocale = LocaleZhCN
+var DefaultLocale = LocaleEnUS
 
 func SetDefaultLocale(locale string) {
 	DefaultLocale = NormalizeLocale(locale)

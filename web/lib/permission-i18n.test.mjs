@@ -26,14 +26,18 @@ test("localizes seeded permission display names to English", async () => {
   const { getPermissionDisplayName, getPermissionGroupName } = await loadModule()
 
   assert.equal(getPermissionDisplayName("user.assignRole", "\u5206\u914d\u7528\u6237\u89d2\u8272", "en-US"), "Assign user roles")
-  assert.equal(getPermissionDisplayName("agentTeamSchedule.batchGenerate", "\u6279\u91cf\u751f\u6210\u5ba2\u670d\u7ec4\u6392\u73ed", "en-US"), "Batch generate agent team schedules")
+  assert.equal(getPermissionDisplayName("agentTeamSchedule.batchGenerate", "批量生成客服组排班", "en-US"), "Batch generate agent team schedules")
+  assert.equal(getPermissionDisplayName("branding.view", "查看平台品牌配置", "en-US"), "View branding settings")
+  assert.equal(getPermissionDisplayName("docPage.view", "查看文档中心页面", "en-US"), "View support docs")
   assert.equal(getPermissionGroupName("agentTeamSchedule", "en-US"), "Agent team schedules")
+  assert.equal(getPermissionGroupName("branding", "en-US"), "Branding settings")
 })
 
 test("keeps original permission names for Chinese locale", async () => {
   const { getPermissionDisplayName, getPermissionGroupName } = await loadModule()
 
-  assert.equal(getPermissionDisplayName("user.view", "\u67e5\u770b\u7528\u6237", "zh-CN"), "\u67e5\u770b\u7528\u6237")
+  assert.equal(getPermissionDisplayName("user.view", "查看用户", "zh-CN"), "查看用户")
+  assert.equal(getPermissionDisplayName("branding.view", "查看平台品牌配置", "zh-CN"), "查看平台品牌配置")
   assert.equal(getPermissionGroupName("agentTeam", "zh-CN"), "agentTeam")
 })
 
@@ -41,16 +45,20 @@ test("localizes seeded permission display names to Russian", async () => {
   const { getPermissionDisplayName, getPermissionGroupName } = await loadModule()
 
   assert.equal(
-    getPermissionDisplayName("user.assignRole", "\u5206\u914d\u7528\u6237\u89d2\u8272", "ru-RU"),
-    "\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u0440\u043e\u043b\u0435\u0439 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f\u043c"
+    getPermissionDisplayName("user.assignRole", "分配用户角色", "ru-RU"),
+    "Назначение ролей пользователям"
   )
-  assert.equal(getPermissionDisplayName("user.view", "\u67e5\u770b\u7528\u6237", "ru-RU"), "\u041f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439")
+  assert.equal(getPermissionDisplayName("user.view", "查看用户", "ru-RU"), "Просмотр пользователей")
+  assert.equal(getPermissionDisplayName("branding.view", "查看平台品牌配置", "ru-RU"), "Просмотр настроек брендинга")
+  assert.equal(getPermissionDisplayName("docPage.view", "查看文档中心页面", "ru-RU"), "Просмотр страниц документации")
+  assert.equal(getPermissionDisplayName("supportConfig.update", "更新支持中心配置", "ru-RU"), "Изменение настроек центра поддержки")
   assert.equal(
-    getPermissionDisplayName("agentTeamSchedule.batchGenerate", "\u6279\u91cf\u751f\u6210\u5ba2\u670d\u7ec4\u6392\u73ed", "ru-RU"),
-    "\u041c\u0430\u0441\u0441\u043e\u0432\u043e\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u0435 \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0439 \u043a\u043e\u043c\u0430\u043d\u0434 \u043e\u043f\u0435\u0440\u0430\u0442\u043e\u0440\u043e\u0432"
+    getPermissionDisplayName("agentTeamSchedule.batchGenerate", "批量生成客服组排班", "ru-RU"),
+    "Массовое создание расписаний команд операторов"
   )
-  assert.equal(getPermissionGroupName("agentTeamSchedule", "ru-RU"), "\u0420\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0439 \u043a\u043e\u043c\u0430\u043d\u0434 \u043e\u043f\u0435\u0440\u0430\u0442\u043e\u0440\u043e\u0432")
-  assert.equal(getPermissionGroupName("aiAgent", "ru-RU"), "\u0418\u0418-\u0430\u0433\u0435\u043d\u0442\u043e\u0432")
+  assert.equal(getPermissionGroupName("agentTeamSchedule", "ru-RU"), "Расписаний команд операторов")
+  assert.equal(getPermissionGroupName("aiAgent", "ru-RU"), "ИИ-агентов")
+  assert.equal(getPermissionGroupName("branding", "ru-RU"), "Настроек брендинга")
 })
 
 test("falls back for unknown codes and unsupported locales", async () => {
