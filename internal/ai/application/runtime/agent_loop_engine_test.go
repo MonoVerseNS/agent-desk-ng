@@ -114,6 +114,25 @@ func TestResolveAgentLoopReplyKeepsNormalModelReplyWithoutDecision(t *testing.T)
 	}
 }
 
+func TestResolveAgentLoopReplyDetectsModelHandoffClaimWithoutDecision(t *testing.T) {
+	reply, handoff, reason, err := resolveAgentLoopReply("Перевожу вас на оператора, пожалуйста подождите.", nil)
+	if err != nil || !handoff || reply != "" || reason != "model indicated handoff in reply text" {
+		t.Fatalf("expected handoff from model claim text: reply=%q handoff=%t reason=%q err=%v", reply, handoff, reason, err)
+	}
+
+	replyEn, handoffEn, reasonEn, errEn := resolveAgentLoopReply("Connecting you to a human representative right now.", nil)
+	if errEn != nil || !handoffEn || replyEn != "" || reasonEn != "model indicated handoff in reply text" {
+		t.Fatalf("expected handoff from English model claim text: reply=%q handoff=%t reason=%q err=%v", replyEn, handoffEn, reasonEn, errEn)
+	}
+}
+
+func TestResolveAgentLoopReplyFallbackOnUserHandoffRequestWithoutDecision(t *testing.T) {
+	reply, handoff, reason, err := resolveAgentLoopReply("Чем я могу помочь?", nil, "соедините со специалистом")
+	if err != nil || !handoff || reply != "" || reason != "customer requested human support" {
+		t.Fatalf("expected handoff fallback from user handoff request: reply=%q handoff=%t reason=%q err=%v", reply, handoff, reason, err)
+	}
+}
+
 func TestResolveAgentLoopReplyUsesStructuredHandoffDecision(t *testing.T) {
 	reply, handoff, reason, err := resolveAgentLoopReply("模型自由文本不应生效", &ConversationDecision{
 		Action: ConversationActionHandoff, Reason: "customer requested human support", HandoffInitiator: HandoffInitiatorCustomer, HandoffConfirmed: true,
@@ -796,12 +815,26 @@ func TestAgentLoopEngineMultilingualHandling(t *testing.T) {
 		t.Fatalf("expected Russian language directive in prompt, got %q", ruPrompt)
 	}
 
-	// 2. Language directive appended to English prompt
+	// 2. Language directive appended to English/Spanish/global prompt
 	enPrompt, _ := engine.buildUserPrompt(RunInput{
 		UserMessage: models.Message{Content: "Hello, can I get a refund?"},
 	})
-	if !strings.Contains(enPrompt, "Language directive: The customer is writing in English") {
-		t.Fatalf("expected English language directive in prompt, got %q", enPrompt)
+	if !strings.Contains(enPrompt, "Language directive: You MUST inspect the language used by the customer") {
+		t.Fatalf("expected universal language directive in English prompt, got %q", enPrompt)
+	}
+
+	esPrompt, _ := engine.buildUserPrompt(RunInput{
+		UserMessage: models.Message{Content: "Hola, ¿cómo puedo rastrear mi paquete?"},
+	})
+	if !strings.Contains(esPrompt, "Language directive: You MUST inspect the language used by the customer") {
+		t.Fatalf("expected universal language directive in Spanish prompt, got %q", esPrompt)
+	}
+
+	zhPrompt, _ := engine.buildUserPrompt(RunInput{
+		UserMessage: models.Message{Content: "你好，怎么退款？"},
+	})
+	if !strings.Contains(zhPrompt, "Language directive: The customer is writing in Chinese") {
+		t.Fatalf("expected Chinese language directive in Chinese prompt, got %q", zhPrompt)
 	}
 
 	// 3. Russian confirmation and cancellation parsing

@@ -117,7 +117,7 @@ func (e *AgentLoopEngine) Run(ctx context.Context, req RunInput) (res *RunResult
 		return nil, err
 	}
 	result := &loopResult.ChatCompletionResult
-	replyText, handoffRequested, handoffReason, err := resolveAgentLoopReply(result.Content, state.Decision)
+	replyText, handoffRequested, handoffReason, err := resolveAgentLoopReply(result.Content, state.Decision, req.UserMessage.Content)
 	if err != nil {
 		_, _ = writeAgentLoopRun(req, startedAt, nil, turn.UserPrompt, turn.HistoryCount, turn.RetrieverCount, turn.RetrieveErr, state.SkillContext, turn.ResponsePolicy, toolCalls, err, false, state.WorkflowSteps)
 		return nil, err
@@ -168,9 +168,16 @@ func (e *AgentLoopEngine) Run(ctx context.Context, req RunInput) (res *RunResult
 	}, nil
 }
 
-func resolveAgentLoopReply(modelReply string, decision *ConversationDecision) (reply string, handoffRequested bool, handoffReason string, err error) {
+func resolveAgentLoopReply(modelReply string, decision *ConversationDecision, userMessage ...string) (reply string, handoffRequested bool, handoffReason string, err error) {
 	if decision == nil {
-		return strings.TrimSpace(modelReply), false, "", nil
+		trimmed := strings.TrimSpace(modelReply)
+		if ai.IsModelClaimingHandoff(trimmed) {
+			return "", true, "model indicated handoff in reply text", nil
+		}
+		if len(userMessage) > 0 && ai.IsCustomerHandoffRequest(userMessage[0]) {
+			return "", true, "customer requested human support", nil
+		}
+		return trimmed, false, "", nil
 	}
 	switch decision.Action {
 	case ConversationActionHandoff:
@@ -222,16 +229,7 @@ func (e *AgentLoopEngine) buildUserPrompt(req RunInput) (string, int) {
 	}
 	current := strings.TrimSpace(req.UserMessage.Content)
 	customerContext := buildAgentLoopCustomerContext(req.Conversation)
-	detectedLang := ai.DetectLanguage(current)
-	languageDirective := ""
-	switch detectedLang {
-	case "ru":
-		languageDirective = "Language directive: The customer is writing in Russian. You MUST reply strictly and 100% in natural Russian. Do NOT reply in Chinese."
-	case "en":
-		languageDirective = "Language directive: The customer is writing in English. You MUST reply strictly and 100% in natural English. Do NOT reply in Chinese."
-	case "zh":
-		languageDirective = "Language directive: The customer is writing in Chinese. Reply in Chinese."
-	}
+	languageDirective := buildAgentLoopLanguageDirective(current)
 
 	if len(lines) == 0 && customerContext == "" {
 		if languageDirective != "" {
@@ -262,6 +260,20 @@ func buildAgentLoopCustomerContext(conversation models.Conversation) string {
 		parts = append(parts, "Recent summary: "+summary)
 	}
 	return strings.Join(parts, "\n")
+}
+
+func buildAgentLoopLanguageDirective(userMessage string) string {
+	current := strings.TrimSpace(userMessage)
+	if current == "" {
+		return ""
+	}
+	if ai.IsHan(current) {
+		return "Language directive: The customer is writing in Chinese. Reply in Chinese."
+	}
+	if ai.IsCyrillic(current) {
+		return "Language directive: The customer is writing in Russian/Cyrillic. You MUST reply strictly and 100% in natural Russian. Do NOT reply in Chinese or English."
+	}
+	return "Language directive: You MUST inspect the language used by the customer in their message and reply strictly and 100% in that exact same language (e.g. English, Spanish, German, French, Arabic, Turkish, etc.). Under NO circumstances should you reply in Chinese or any language other than the customer's language."
 }
 
 func agentLoopMessageRole(message models.Message) string {
@@ -573,13 +585,13 @@ var (
 	}
 	agentLoopDecisionTool = ai.ToolDefinition{
 		Name:        "conversation_decision",
-		Description: "Return the final structured conversation decision after completing any needed analysis or tool calls.",
+		Description: "Return the final structured conversation decision after completing any needed analysis or tool calls. When the customer wants to speak with an operator, human agent, specialist, support representative, or live person (expressed in ANY phrasing or language, semantically recognized), set action='handoff', handoffInitiator='customer', handoffConfirmed=true.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"action":           map[string]any{"type": "string", "enum": []string{"reply", "handoff", "ask_handoff_confirmation"}},
-				"reason":           map[string]any{"type": "string"},
-				"reply":            map[string]any{"type": "string"},
+				"action":           map[string]any{"type": "string", "enum": []string{"reply", "handoff", "ask_handoff_confirmation"}, "description": "Choose 'handoff' if the customer wants a human operator/agent/specialist in any language or phrasing. Choose 'reply' to answer normally. Choose 'ask_handoff_confirmation' if you (the agent) proactively suggest handoff."},
+				"reason":           map[string]any{"type": "string", "description": "Reason for the decision or handoff intent"},
+				"reply":            map[string]any{"type": "string", "description": "Customer-facing reply text. Leave empty when action is handoff."},
 				"handoffInitiator": map[string]any{"type": "string", "enum": []string{"none", "customer", "agent"}},
 				"handoffConfirmed": map[string]any{"type": "boolean"},
 			},
@@ -992,13 +1004,12 @@ func (e *AgentLoopEngine) completeConfirmedMCPReply(ctx context.Context, agent m
 		return nil, errors.New("confirmed MCP reply completion is unavailable")
 	}
 	langRule := ""
-	switch ai.DetectLanguage(originalRequest) {
-	case "ru":
-		langRule = "\nReply strictly in Russian. Do NOT reply in Chinese."
-	case "en":
-		langRule = "\nReply strictly in English. Do NOT reply in Chinese."
-	case "zh":
-		langRule = "\nReply in Chinese."
+	if ai.IsHan(originalRequest) {
+		langRule = "\nLanguage directive: The customer wrote in Chinese. Reply in Chinese."
+	} else if ai.IsCyrillic(originalRequest) {
+		langRule = "\nLanguage directive: The customer wrote in Russian/Cyrillic. You MUST reply strictly and 100% in natural Russian. Even if the tool result contains text in Chinese or English, you MUST translate and present all information in natural Russian. Do NOT output Chinese."
+	} else {
+		langRule = "\nLanguage directive: You MUST reply strictly and 100% in the exact same language used by the customer in their original request (e.g. English, Spanish, German, French, Arabic, Turkish, etc.). Even if the tool result contains text in Chinese or English, you MUST translate and present all information in the customer's language. Under NO circumstances should you output Chinese."
 	}
 	systemPrompt := buildAgentLoopSystemPrompt(agent, false, "", nil) + `
 
@@ -1139,7 +1150,7 @@ func buildAgentLoopSystemPrompt(agent models.AIAgent, hasKnowledgeBase bool, kno
 	if prompt == "" {
 		prompt = "You are a customer service assistant. Answer accurately, ask for clarification when evidence is insufficient, and do not invent facts."
 	}
-	prompt += "\n\nCRITICAL LANGUAGE RULE: You MUST always detect and reply strictly in the same language as the customer's current message or inquiry (e.g., if the user writes in Russian, reply in Russian; if in English, reply in English; if in Spanish, reply in Spanish). Do NOT reply in Chinese or any other language unless the customer explicitly spoke or asked in that language."
+	prompt += "\n\nCRITICAL LANGUAGE RULE: You MUST always detect and reply strictly and 100% in the same language as the customer's current message or inquiry (e.g., if the user writes in Russian, reply in Russian; if in English, reply in English; if in Spanish, reply in Spanish; if in German, reply in German, etc.). Even if capability catalogs, tool descriptions, or tool outputs contain Chinese or English, translate everything seamlessly into the customer's language. Do NOT reply in Chinese or any other language unless the customer explicitly spoke or asked in that language."
 	prompt += "\n\nMaintain conversational continuity. If the immediately preceding assistant message already welcomed the customer and the current customer message is only a greeting, reply briefly without repeating the welcome wording, service capabilities, or service scope."
 	if retrieveErr != nil {
 		prompt += "\n\nKnowledge retrieval is temporarily unavailable for this message. You may answer greetings, acknowledgements, gratitude, farewells, and requests for clarification naturally. For product facts, policies, pricing, functions, procedures, timing, refunds, accounts, permissions, or after-sales questions, do not claim that any detail is verified. Explain that you cannot verify it now, ask one focused question when useful, or offer human handoff."

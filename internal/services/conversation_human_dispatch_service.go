@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"agent-desk/internal/ai"
 	"agent-desk/internal/events"
 	"agent-desk/internal/models"
 	"agent-desk/internal/pkg/enums"
@@ -54,6 +55,34 @@ func newConversationHumanDispatchService() *conversationHumanDispatchService {
 	return &conversationHumanDispatchService{}
 }
 
+func (s *conversationHumanDispatchService) resolveConversationLocale(conversationID int64) string {
+	if conversationID <= 0 {
+		return i18nx.DefaultLocale
+	}
+	lastMsg := repositories.MessageRepository.FindOne(sqls.DB(), sqls.NewCnd().Eq("conversation_id", conversationID).Eq("sender_type", enums.IMSenderTypeCustomer).Desc("id"))
+	if lastMsg != nil && strings.TrimSpace(lastMsg.Content) != "" {
+		lang := ai.DetectLanguage(lastMsg.Content)
+		switch lang {
+		case "ru":
+			return "ru-RU"
+		case "zh":
+			return "zh-CN"
+		case "en":
+			return "en-US"
+		}
+	}
+	conv := repositories.ConversationRepository.Get(sqls.DB(), conversationID)
+	if conv != nil {
+		if ai.IsCyrillic(conv.CustomerName) || ai.IsCyrillic(conv.Subject) {
+			return "ru-RU"
+		}
+		if ai.IsHan(conv.CustomerName) || ai.IsHan(conv.Subject) {
+			return "zh-CN"
+		}
+	}
+	return i18nx.DefaultLocale
+}
+
 func (s *conversationHumanDispatchService) TryOffHoursHandoffByAI(conversationID int64, aiAgent models.AIAgent, reason string) (bool, error) {
 	return s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, "")
 }
@@ -71,7 +100,8 @@ func (s *conversationHumanDispatchService) TryOffHoursHandoffByAIWithRequestID(c
 	if err := s.createEventWithRequestID(conversationID, requestID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "转人工失败：非服务时间", strings.TrimSpace(reason)); err != nil {
 		return true, err
 	}
-	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, HandoffOffHoursMessage, requestID); err != nil {
+	offHoursMessage := HandoffOffHoursMessageForLocale(s.resolveConversationLocale(conversationID))
+	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, offHoursMessage, requestID); err != nil {
 		return true, err
 	}
 	return true, nil
@@ -92,7 +122,8 @@ func (s *conversationHumanDispatchService) HandoffByAIWithRequestID(conversation
 		if _, err := s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID); err != nil {
 			return nil, err
 		}
-		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours, Message: HandoffOffHoursMessage}, nil
+		offHoursMessage := HandoffOffHoursMessageForLocale(s.resolveConversationLocale(conversationID))
+		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours, Message: offHoursMessage}, nil
 	}
 
 	if err := s.markHandoff(conversationID, aiAgent, reason, requestID); err != nil {
@@ -106,7 +137,7 @@ func (s *conversationHumanDispatchService) ApplyHumanOnlyCreate(conversationID i
 	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(teamIDs, time.Now())
 	waitingMessage := strings.TrimSpace(aiAgent.HandoffMessage)
 	if waitingMessage == "" {
-		waitingMessage = HandoffWaitingMessage
+		waitingMessage = HandoffWaitingMessageForLocale(s.resolveConversationLocale(conversationID))
 	}
 	if len(activeTeamIDs) == 0 {
 		if err := s.moveToGlobalPool(conversationID, aiAgent.Name); err != nil {
@@ -168,7 +199,7 @@ func (s *conversationHumanDispatchService) dispatchAfterHandoff(conversationID i
 func (s *conversationHumanDispatchService) dispatchAfterHandoffWithRequestID(conversationID int64, aiAgent models.AIAgent, activeTeamIDs []int64, reason string, publishAssignEvent bool, requestID string) (*HandoffDecisionResult, error) {
 	waitingMessage := strings.TrimSpace(aiAgent.HandoffMessage)
 	if waitingMessage == "" {
-		waitingMessage = HandoffWaitingMessage
+		waitingMessage = HandoffWaitingMessageForLocale(s.resolveConversationLocale(conversationID))
 	}
 	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, waitingMessage, requestID); err != nil {
 		return nil, err

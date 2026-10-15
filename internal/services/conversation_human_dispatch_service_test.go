@@ -328,3 +328,43 @@ func TestConversationHumanDispatchCustomHandoffMessage(t *testing.T) {
 		t.Fatalf("expected custom message content, got %q", message.Content)
 	}
 }
+
+func TestHandoffByAIUsesConversationLanguageForWaitingMessage(t *testing.T) {
+	db := setupConversationHumanDispatchTestDB(t)
+	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "1")
+	createHumanDispatchTeam(t, db, 1, "Отдел поддержки")
+	createHumanDispatchActiveSchedule(t, db, 1)
+	createHumanDispatchAgentProfile(t, db, 101, 1, enums.ServiceStatusIdle, 3, true, enums.StatusOk)
+
+	// 1. Russian customer message in conversation
+	convRu := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
+	services.MessageService.Create(&models.Message{
+		ConversationID: convRu.ID,
+		SenderType:     enums.IMSenderTypeCustomer,
+		Content:        "Здравствуйте, соедините со специалистом, пожалуйста.",
+	})
+
+	resultRu, err := services.ConversationHumanDispatchService.HandoffByAI(convRu.ID, aiAgent, "клиент запросил оператора")
+	if err != nil {
+		t.Fatalf("HandoffByAI() error = %v", err)
+	}
+	if resultRu == nil || resultRu.Message != "Мы соединяем вас с оператором поддержки. Пожалуйста, подождите." {
+		t.Fatalf("expected Russian handoff waiting message, got %+v", resultRu)
+	}
+
+	// 2. English customer message in conversation
+	convEn := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
+	services.MessageService.Create(&models.Message{
+		ConversationID: convEn.ID,
+		SenderType:     enums.IMSenderTypeCustomer,
+		Content:        "Can I speak with a human support agent please?",
+	})
+
+	resultEn, err := services.ConversationHumanDispatchService.HandoffByAI(convEn.ID, aiAgent, "customer requested human support")
+	if err != nil {
+		t.Fatalf("HandoffByAI() error = %v", err)
+	}
+	if resultEn == nil || resultEn.Message != "We are connecting you to a human support agent. Please wait." {
+		t.Fatalf("expected English handoff waiting message, got %+v", resultEn)
+	}
+}

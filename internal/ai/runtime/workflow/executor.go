@@ -515,12 +515,12 @@ func understandConversationMessage(rawMessage string) workflowConversationUnders
 		ret.AnswerScope = "direct_reply"
 		ret.Confidence = 0.9
 		ret.Reason = "matched ending phrase"
-	case containsAnyWorkflowText(lower, "人工", "转人工", "真人", "客服", "operator", "agent", "human", "representative", "оператор", "человек", "переведи на оператора", "живой человек", "поддержка"):
+	case ai.IsCustomerHandoffRequest(lower):
 		ret.MessageIntent = "handoff_request"
 		ret.AnswerScope = "needs_handoff"
 		ret.Confidence = 0.95
 		ret.RiskSignals = append(ret.RiskSignals, "handoff_requested")
-		ret.Reason = "matched handoff phrase"
+		ret.Reason = "matched handoff intent"
 	case containsAnyWorkflowText(lower, "投诉", "举报", "差评", "曝光", "起诉", "律师", "12315", "complaint", "complain", "lawyer", "sue", "жалоба", "претензия", "суд", "юрист", "роспотребнадзор"):
 		ret.MessageIntent = "complaint"
 		ret.AnswerScope = "needs_handoff"
