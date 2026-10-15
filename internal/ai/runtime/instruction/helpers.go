@@ -15,14 +15,14 @@ func BuildSelectedSkillActivationInstruction(skill *models.SkillDefinition) stri
 		return ""
 	}
 	lines := []string{
-		"当前命中的专项技能：",
+		"Active Specialized Skill:",
 		fmt.Sprintf("- id: %d", skill.ID),
 		fmt.Sprintf("- name: %s", strings.TrimSpace(skill.Name)),
 	}
 	if desc := strings.TrimSpace(skill.Description); desc != "" {
 		lines = append(lines, fmt.Sprintf("- description: %s", desc))
 	}
-	lines = append(lines, "", "执行要求：", "- 本轮优先处理该技能范围内的问题。", fmt.Sprintf("- 需要专项处理细节时，优先调用 %s 工具加载该技能说明后再继续。", toolx.BuiltinSkill.Name), "- 如果关键信息不足，先向用户追问。", "- 不得调用当前技能未授权的工具。")
+	lines = append(lines, "", "Execution Requirements:", "- Prioritize handling inquiries within this skill's scope this turn.", fmt.Sprintf("- When specialized handling details are needed, invoke %s to load skill documentation before proceeding.", toolx.BuiltinSkill.Name), "- If key information is missing, ask the customer for clarification first.", "- Do not invoke tools unauthorized for this skill.")
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
@@ -35,7 +35,7 @@ func BuildSkillDocument(skill *models.SkillDefinition, toolDefinitions []runtime
 		return ""
 	}
 	lines := []string{
-		"当前命中的专项技能：",
+		"Active Specialized Skill:",
 		fmt.Sprintf("- id: %d", skill.ID),
 		fmt.Sprintf("- name: %s", strings.TrimSpace(skill.Name)),
 	}
@@ -43,16 +43,16 @@ func BuildSkillDocument(skill *models.SkillDefinition, toolDefinitions []runtime
 		lines = append(lines, fmt.Sprintf("- description: %s", desc))
 	}
 	if content := strings.TrimSpace(skill.Instruction); content != "" {
-		lines = append(lines, "", "技能说明：", content)
+		lines = append(lines, "", "Skill Documentation:", content)
 	}
 	if examples := parseJSONStringArray(skill.Examples); len(examples) > 0 {
-		lines = append(lines, "", "典型示例问法：")
+		lines = append(lines, "", "Typical Example Inquiries:")
 		for _, item := range examples {
 			lines = append(lines, "- "+item)
 		}
 	}
 	if len(toolDefinitions) > 0 {
-		lines = append(lines, "", "当前技能允许使用的工具：")
+		lines = append(lines, "", "Authorized Tools for this Skill:")
 		for _, item := range toolDefinitions {
 			if strings.TrimSpace(item.ToolCode) == "" {
 				continue

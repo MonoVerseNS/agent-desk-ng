@@ -784,3 +784,48 @@ func TestAgentLoopEngineRunPassesBoundedMaxSteps(t *testing.T) {
 		t.Fatalf("expected capturedMaxSteps to be capped at 8, got %d", capturedMaxSteps)
 	}
 }
+
+func TestAgentLoopEngineMultilingualHandling(t *testing.T) {
+	engine := NewAgentLoopEngine()
+
+	// 1. Language directive appended to Russian prompt
+	ruPrompt, _ := engine.buildUserPrompt(RunInput{
+		UserMessage: models.Message{Content: "Здравствуйте, как вернуть товар?"},
+	})
+	if !strings.Contains(ruPrompt, "Language directive: The customer is writing in Russian") {
+		t.Fatalf("expected Russian language directive in prompt, got %q", ruPrompt)
+	}
+
+	// 2. Language directive appended to English prompt
+	enPrompt, _ := engine.buildUserPrompt(RunInput{
+		UserMessage: models.Message{Content: "Hello, can I get a refund?"},
+	})
+	if !strings.Contains(enPrompt, "Language directive: The customer is writing in English") {
+		t.Fatalf("expected English language directive in prompt, got %q", enPrompt)
+	}
+
+	// 3. Russian confirmation and cancellation parsing
+	if parseAgentLoopConfirmation("да") != agentLoopConfirmationConfirmed {
+		t.Fatalf("expected 'да' to be confirmed")
+	}
+	if parseAgentLoopConfirmation("подтверждаю") != agentLoopConfirmationConfirmed {
+		t.Fatalf("expected 'подтверждаю' to be confirmed")
+	}
+	if parseAgentLoopConfirmation("нет") != agentLoopConfirmationCancelled {
+		t.Fatalf("expected 'нет' to be cancelled")
+	}
+	if parseAgentLoopConfirmation("отмена") != agentLoopConfirmationCancelled {
+		t.Fatalf("expected 'отмена' to be cancelled")
+	}
+
+	// 4. Russian MCP confirmation prompt and fallback
+	ruConfirmationPrompt := buildAgentLoopMCPConfirmationPrompt("Создание заказа", "Создайте заказ, пожалуйста")
+	if !strings.Contains(ruConfirmationPrompt, "Будет выполнено действие «Создание заказа». Подтверждаете продолжение?") {
+		t.Fatalf("unexpected Russian MCP confirmation prompt: %q", ruConfirmationPrompt)
+	}
+
+	ruFallback := buildAgentLoopConfirmedMCPFallback("Создание заказа", "Создайте заказ, пожалуйста")
+	if !strings.Contains(ruFallback, "Действие «Создание заказа» успешно выполнено.") {
+		t.Fatalf("unexpected Russian MCP fallback: %q", ruFallback)
+	}
+}

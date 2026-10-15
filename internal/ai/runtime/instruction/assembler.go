@@ -34,19 +34,19 @@ func (a *Assembler) Assemble(input AssemblerInput) AssemblyResult {
 	parts := make([]string, 0, 3)
 	summary := AssemblySummary{SectionTitles: make([]string, 0, 3)}
 	if agentInstruction := strings.TrimSpace(input.AgentInstruction); agentInstruction != "" {
-		parts = append(parts, buildInstructionSection("Agent 规则", agentInstruction))
+		parts = append(parts, buildInstructionSection("Agent Rules", agentInstruction))
 		summary.HasAgentRule = true
-		summary.SectionTitles = append(summary.SectionTitles, "Agent 规则")
+		summary.SectionTitles = append(summary.SectionTitles, "Agent Rules")
 	}
 	if skillInstruction := strings.TrimSpace(input.SkillInstruction); skillInstruction != "" {
-		parts = append(parts, buildInstructionSection("当前技能上下文", skillInstruction))
+		parts = append(parts, buildInstructionSection("Current Skill Context", skillInstruction))
 		summary.HasSkillRule = true
-		summary.SectionTitles = append(summary.SectionTitles, "当前技能上下文")
+		summary.SectionTitles = append(summary.SectionTitles, "Current Skill Context")
 	}
 	if appendix := buildToolAppendix(input.ToolAppendices); appendix != "" {
-		parts = append(parts, buildInstructionSection("工具补充规则", appendix))
+		parts = append(parts, buildInstructionSection("Tool Supplementary Rules", appendix))
 		summary.HasToolRule = true
-		summary.SectionTitles = append(summary.SectionTitles, "工具补充规则")
+		summary.SectionTitles = append(summary.SectionTitles, "Tool Supplementary Rules")
 	}
 	return AssemblyResult{
 		Text:    strings.TrimSpace(strings.Join(parts, "\n\n")),
@@ -63,7 +63,7 @@ func buildInstructionSection(title, body string) string {
 	if title == "" {
 		return body
 	}
-	return title + "：\n" + body
+	return title + ":\n" + body
 }
 
 func buildToolAppendix(input []string) string {

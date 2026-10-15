@@ -1052,3 +1052,52 @@ func assertPath(t *testing.T, got []string, want []string) {
 		}
 	}
 }
+
+func TestWorkflowMultilingualReplies(t *testing.T) {
+	executor := NewExecutor()
+
+	// Russian greeting
+	ruGreetingResult, err := executor.Execute(context.Background(), Input{
+		Definition: policyFirstWorkflowDefinition(),
+		UserMessage: models.Message{
+			Content: "Привет! Подскажите пожалуйста",
+		},
+	})
+	if err != nil {
+		t.Fatalf("execute workflow error: %v", err)
+	}
+	if ruGreetingResult.ReplyText != "Здравствуйте! Чем я могу вам помочь?" {
+		t.Fatalf("expected Russian greeting reply, got %q", ruGreetingResult.ReplyText)
+	}
+
+	// English greeting
+	enGreetingResult, err := executor.Execute(context.Background(), Input{
+		Definition: policyFirstWorkflowDefinition(),
+		UserMessage: models.Message{
+			Content: "Hello, good morning!",
+		},
+	})
+	if err != nil {
+		t.Fatalf("execute workflow error: %v", err)
+	}
+	if enGreetingResult.ReplyText != "Hello! How can I help you today?" {
+		t.Fatalf("expected English greeting reply, got %q", enGreetingResult.ReplyText)
+	}
+
+	// Russian thanks
+	ruThanksDecision := decideWorkflowReplyPolicy(models.AIAgent{}, workflowReplyPolicyInput{
+		MessageIntent: "thanks",
+		UserMessage:   "Большое спасибо за помощь!",
+	})
+	if ruThanksDecision.ReplyText != "Пожалуйста! Если у вас появятся другие вопросы, я всегда готов помочь." {
+		t.Fatalf("expected Russian thanks reply, got %q", ruThanksDecision.ReplyText)
+	}
+
+	// Russian knowledge fallback
+	ruFallback := workflowKnowledgeFallbackReply(models.AIAgent{
+		FallbackMode: enums.AIAgentFallbackModeSuggestRetry,
+	}, "Где посмотреть мои заказы?")
+	if !strings.Contains(ruFallback, "В базе знаний не найдено") {
+		t.Fatalf("expected Russian knowledge fallback, got %q", ruFallback)
+	}
+}

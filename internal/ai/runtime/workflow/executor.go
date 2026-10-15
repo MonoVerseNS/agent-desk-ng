@@ -420,20 +420,41 @@ func (e *Executor) executeCreateTicket(state *runState, node dsl.Node) error {
 		"ticketId": item.ID,
 		"ticketNo": item.TicketNo,
 		"created":  output.Created,
-		"message":  buildTicketCreatedMessage(item),
+		"message":  buildTicketCreatedMessage(item, state.input.UserMessage.Content),
 	})
 	return nil
 }
 
-func buildTicketCreatedMessage(item *models.Ticket) string {
+func buildTicketCreatedMessage(item *models.Ticket, userMessage string) string {
+	lang := ai.DetectLanguage(userMessage)
+	if lang == "zh" || (lang == "en" && strings.TrimSpace(userMessage) == "") {
+		if item == nil {
+			return "工单已创建。"
+		}
+		ticketNo := strings.TrimSpace(item.TicketNo)
+		if ticketNo == "" {
+			return fmt.Sprintf("工单已创建，工单 ID：%d。", item.ID)
+		}
+		return "工单已创建，工单号：" + ticketNo + "。"
+	}
+	if lang == "ru" {
+		if item == nil {
+			return "Обращение создано."
+		}
+		ticketNo := strings.TrimSpace(item.TicketNo)
+		if ticketNo == "" {
+			return fmt.Sprintf("Обращение создано, ID обращения: %d.", item.ID)
+		}
+		return "Обращение создано, номер обращения: " + ticketNo + "."
+	}
 	if item == nil {
-		return "工单已创建。"
+		return "Ticket has been created."
 	}
 	ticketNo := strings.TrimSpace(item.TicketNo)
 	if ticketNo == "" {
-		return fmt.Sprintf("工单已创建，工单 ID：%d。", item.ID)
+		return fmt.Sprintf("Ticket has been created, ticket ID: %d.", item.ID)
 	}
-	return "工单已创建，工单号：" + ticketNo + "。"
+	return "Ticket has been created, ticket number: " + ticketNo + "."
 }
 
 type workflowConversationUnderstanding struct {
@@ -484,35 +505,35 @@ func understandConversationMessage(rawMessage string) workflowConversationUnders
 		ret.AnswerScope = "direct_reply"
 		ret.Confidence = 0.98
 		ret.Reason = "matched greeting phrase"
-	case containsAnyWorkflowText(lower, "谢谢", "感谢", "多谢", "辛苦了", "thank"):
+	case containsAnyWorkflowText(lower, "谢谢", "感谢", "多谢", "辛苦了", "thank", "thanks", "thx", "спасибо", "благодарю", "спс"):
 		ret.MessageIntent = "thanks"
 		ret.AnswerScope = "direct_reply"
 		ret.Confidence = 0.95
 		ret.Reason = "matched thanks phrase"
-	case containsAnyWorkflowText(lower, "再见", "拜拜", "不用了", "没事了", "结束"):
+	case containsAnyWorkflowText(lower, "再见", "拜拜", "不用了", "没事了", "结束", "bye", "goodbye", "пока", "до свидания", "до встречи", "все, спасибо", "спасибо, все"):
 		ret.MessageIntent = "end_conversation"
 		ret.AnswerScope = "direct_reply"
 		ret.Confidence = 0.9
 		ret.Reason = "matched ending phrase"
-	case containsAnyWorkflowText(lower, "人工", "转人工", "真人", "客服"):
+	case containsAnyWorkflowText(lower, "人工", "转人工", "真人", "客服", "operator", "agent", "human", "representative", "оператор", "человек", "переведи на оператора", "живой человек", "поддержка"):
 		ret.MessageIntent = "handoff_request"
 		ret.AnswerScope = "needs_handoff"
 		ret.Confidence = 0.95
 		ret.RiskSignals = append(ret.RiskSignals, "handoff_requested")
 		ret.Reason = "matched handoff phrase"
-	case containsAnyWorkflowText(lower, "投诉", "举报", "差评", "曝光", "起诉", "律师", "12315"):
+	case containsAnyWorkflowText(lower, "投诉", "举报", "差评", "曝光", "起诉", "律师", "12315", "complaint", "complain", "lawyer", "sue", "жалоба", "претензия", "суд", "юрист", "роспотребнадзор"):
 		ret.MessageIntent = "complaint"
 		ret.AnswerScope = "needs_handoff"
 		ret.Confidence = 0.92
 		ret.RiskSignals = append(ret.RiskSignals, "complaint_escalation")
 		ret.Reason = "matched complaint phrase"
-	case containsAnyWorkflowText(lower, "工单", "报障", "售后", "登记问题", "记录问题"):
+	case containsAnyWorkflowText(lower, "工单", "报障", "售后", "登记问题", "记录问题", "ticket", "issue", "тикет", "заявка", "обращение"):
 		ret.MessageIntent = "ticket_request"
 		ret.AnswerScope = "needs_ticket"
 		ret.Confidence = 0.9
 		ret.RiskSignals = append(ret.RiskSignals, "ticket_expected")
 		ret.Reason = "matched ticket phrase"
-	case containsAnyWorkflowText(lower, "确认", "可以", "好的", "好", "是的", "取消"):
+	case containsAnyWorkflowText(lower, "确认", "可以", "好的", "好", "是的", "取消", "yes", "confirm", "ok", "cancel", "да", "ок", "хорошо", "согласен", "подтверждаю", "отмена"):
 		ret.MessageIntent = "confirmation"
 		ret.AnswerScope = "direct_reply"
 		ret.Confidence = 0.8
@@ -534,33 +555,76 @@ func understandConversationMessage(rawMessage string) workflowConversationUnders
 func decideWorkflowReplyPolicy(aiAgent models.AIAgent, input workflowReplyPolicyInput) workflowReplyPolicyDecision {
 	intent := strings.TrimSpace(input.MessageIntent)
 	scope := strings.TrimSpace(input.AnswerScope)
+	lang := ai.DetectLanguage(input.UserMessage)
 	if answerability := strings.TrimSpace(input.Answerability); answerability != "" && answerability != "answerable" {
 		return workflowReplyPolicyDecision{
 			Action:           "knowledge_fallback",
-			ReplyText:        workflowKnowledgeFallbackReply(aiAgent),
+			ReplyText:        workflowKnowledgeFallbackReply(aiAgent, input.UserMessage),
 			Reason:           "knowledge is not sufficient for business answer",
 			FinalReplySource: "knowledge_fallback",
 		}
 	}
 	switch {
 	case intent == "greeting":
-		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: "您好，请问有什么可以帮您？", Reason: "greeting can be answered directly", FinalReplySource: "direct_reply"}
+		reply := "Hello! How can I help you today?"
+		switch lang {
+		case "ru":
+			reply = "Здравствуйте! Чем я могу вам помочь?"
+		case "zh":
+			reply = "您好，请问有什么可以帮您？"
+		}
+		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: reply, Reason: "greeting can be answered directly", FinalReplySource: "direct_reply"}
 	case intent == "thanks":
-		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: "不客气，如有其他问题可以继续告诉我。", Reason: "thanks can be answered directly", FinalReplySource: "direct_reply"}
+		reply := "You're welcome! Let me know if you have any other questions."
+		switch lang {
+		case "ru":
+			reply = "Пожалуйста! Если у вас появятся другие вопросы, я всегда готов помочь."
+		case "zh":
+			reply = "不客气，如有其他问题可以继续告诉我。"
+		}
+		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: reply, Reason: "thanks can be answered directly", FinalReplySource: "direct_reply"}
 	case intent == "end_conversation":
-		return workflowReplyPolicyDecision{Action: "end_conversation", ReplyText: "好的，如后续还有问题可以随时联系。", Reason: "conversation ending phrase", FinalReplySource: "direct_reply"}
+		reply := "Goodbye! Feel free to reach out anytime if you have more questions."
+		switch lang {
+		case "ru":
+			reply = "Всего доброго! Если возникнут вопросы, обращайтесь в любое время."
+		case "zh":
+			reply = "好的，如后续还有问题可以随时联系。"
+		}
+		return workflowReplyPolicyDecision{Action: "end_conversation", ReplyText: reply, Reason: "conversation ending phrase", FinalReplySource: "direct_reply"}
 	case intent == "confirmation":
-		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: "好的，请继续补充需要处理的问题。", Reason: "confirmation without pending interrupt", FinalReplySource: "direct_reply"}
+		reply := "Great, please let me know what specific issue or question you'd like to address."
+		switch lang {
+		case "ru":
+			reply = "Хорошо, пожалуйста, уточните ваш вопрос или опишите задачу подробнее."
+		case "zh":
+			reply = "好的，请继续补充需要处理的问题。"
+		}
+		return workflowReplyPolicyDecision{Action: "direct_reply", ReplyText: reply, Reason: "confirmation without pending interrupt", FinalReplySource: "direct_reply"}
 	case intent == "handoff_request" || scope == "needs_handoff":
 		return workflowReplyPolicyDecision{Action: "handoff_to_human", Reason: "user requested human support or risk requires handoff", RequiresFlow: true, TargetFlow: "handoff_to_human", FinalReplySource: "handoff_notice"}
 	case intent == "ticket_request" || scope == "needs_ticket":
 		return workflowReplyPolicyDecision{Action: "prepare_ticket", Reason: "user requested ticket handling", RequiresFlow: true, TargetFlow: "prepare_ticket", FinalReplySource: "ticket_result"}
 	case intent == "ambiguous_question" || scope == "needs_clarification":
-		return workflowReplyPolicyDecision{Action: "clarify", ReplyText: "请补充具体的产品、场景、报错信息或你希望处理的结果，我再继续帮你确认。", Reason: "message needs clarification", FinalReplySource: "clarification"}
+		reply := "Please provide more details about the product, scenario, or error message so I can assist you better."
+		switch lang {
+		case "ru":
+			reply = "Пожалуйста, уточните ваш вопрос, продукт или сообщение об ошибке, чтобы я мог помочь вам точнее."
+		case "zh":
+			reply = "请补充具体的产品、场景、报错信息或你希望处理的结果，我再继续帮你确认。"
+		}
+		return workflowReplyPolicyDecision{Action: "clarify", ReplyText: reply, Reason: "message needs clarification", FinalReplySource: "clarification"}
 	case scope == "needs_knowledge":
 		return workflowReplyPolicyDecision{Action: "retrieve_knowledge", Reason: "business question should be answered with knowledge evidence", RequiresFlow: true, TargetFlow: "knowledge", FinalReplySource: "knowledge_answer"}
 	default:
-		return workflowReplyPolicyDecision{Action: "clarify", ReplyText: "请补充更具体的问题，我再继续帮你处理。", Reason: "fallback to clarification for unclear policy input", FinalReplySource: "clarification"}
+		reply := "Please clarify your question so I can assist you further."
+		switch lang {
+		case "ru":
+			reply = "Пожалуйста, уточните ваш вопрос, чтобы я мог продолжить помощь."
+		case "zh":
+			reply = "请补充更具体的问题，我再继续帮你处理。"
+		}
+		return workflowReplyPolicyDecision{Action: "clarify", ReplyText: reply, Reason: "fallback to clarification for unclear policy input", FinalReplySource: "clarification"}
 	}
 }
 
@@ -576,13 +640,17 @@ func normalizeWorkflowUserMessage(value string) string {
 }
 
 func isGreetingMessage(value string) bool {
-	trimmed := strings.Trim(value, " 	\r\n。.!！?？~～")
-	return containsAnyWorkflowText(trimmed, "你好", "您好", "在吗", "在不在") || trimmed == "hello" || trimmed == "hi"
+	trimmed := strings.Trim(value, " 	\r\n。.!！?？~～,，")
+	return containsAnyWorkflowText(trimmed,
+		"你好", "您好", "在吗", "在不在",
+		"привет", "здравствуйте", "здравствуй", "добрый день", "доброе утро", "добрый вечер", "доброго времени суток", "салют", "ку",
+		"hello", "hi", "hey", "good morning", "good afternoon", "good evening",
+	)
 }
 
 func isAmbiguousWorkflowQuestion(value string) bool {
 	trimmed := strings.Trim(value, " 	\r\n。.!！?？~～")
-	return containsAnyWorkflowText(trimmed, "怎么弄", "怎么办", "怎么处理", "帮我看看", "有问题") || len([]rune(trimmed)) <= 3
+	return containsAnyWorkflowText(trimmed, "怎么弄", "怎么办", "怎么处理", "帮我看看", "有问题", "помогите", "не работает", "что делать", "как сделать", "help", "how to") || len([]rune(trimmed)) <= 3
 }
 
 func containsAnyWorkflowText(value string, needles ...string) bool {
@@ -597,7 +665,14 @@ func containsAnyWorkflowText(value string, needles ...string) bool {
 func (e *Executor) executeHumanConfirm(state *runState, node dsl.Node) error {
 	prompt := strings.TrimSpace(toString(state.resolveInput(node, "prompt")))
 	if prompt == "" {
-		prompt = "请确认是否继续。"
+		lang := ai.DetectLanguage(state.input.UserMessage.Content)
+		if lang == "zh" || (lang == "en" && strings.TrimSpace(state.input.UserMessage.Content) == "") {
+			prompt = "请确认是否继续。"
+		} else if lang == "ru" {
+			prompt = "Пожалуйста, подтвердите продолжение."
+		} else {
+			prompt = "Please confirm to proceed."
+		}
 	}
 	infoPreview, err := json.Marshal(map[string]string{"message": prompt})
 	if err != nil {
@@ -860,7 +935,7 @@ func (e *Executor) executeLLMReply(ctx context.Context, state *runState, node ds
 		systemPrompt = strings.TrimSpace(systemPrompt + "\n\n" + prompt)
 	}
 	if _, declaresKnowledge := node.Data.InputsValues["knowledgeItems"]; declaresKnowledge && !hasItems(state.resolveInput(node, "knowledgeItems")) {
-		state.setNodeVars(node.ID, map[string]any{"replyText": workflowKnowledgeFallbackReply(state.input.AIAgent)})
+		state.setNodeVars(node.ID, map[string]any{"replyText": workflowKnowledgeFallbackReply(state.input.AIAgent, state.input.UserMessage.Content)})
 		return nil
 	}
 	if knowledgeItems != "" {
@@ -876,14 +951,27 @@ func (e *Executor) executeLLMReply(ctx context.Context, state *runState, node ds
 	return nil
 }
 
-func workflowKnowledgeFallbackReply(aiAgent models.AIAgent) string {
+func workflowKnowledgeFallbackReply(aiAgent models.AIAgent, userMessage string) string {
 	if reply := strings.TrimSpace(aiAgent.FallbackMessage); reply != "" {
 		return reply
 	}
-	if aiAgent.FallbackMode == enums.AIAgentFallbackModeSuggestRetry {
-		return "当前知识库里没有找到足够明确的信息，你可以换个更具体的问法再试一次。"
+	lang := ai.DetectLanguage(userMessage)
+	if lang == "zh" || (lang == "en" && strings.TrimSpace(userMessage) == "") {
+		if aiAgent.FallbackMode == enums.AIAgentFallbackModeSuggestRetry {
+			return "当前知识库里没有找到足够明确的信息，你可以换个更具体的问法再试一次。"
+		}
+		return "当前知识库暂无明确信息。"
 	}
-	return "当前知识库暂无明确信息。"
+	if lang == "ru" {
+		if aiAgent.FallbackMode == enums.AIAgentFallbackModeSuggestRetry {
+			return "В базе знаний не найдено достаточно точной информации. Пожалуйста, попробуйте сформулировать вопрос иначе."
+		}
+		return "В базе знаний пока нет информации по этому вопросу."
+	}
+	if aiAgent.FallbackMode == enums.AIAgentFallbackModeSuggestRetry {
+		return "I couldn't find enough clear information in the knowledge base. Please try phrasing your question with more detail."
+	}
+	return "No clear information was found in the knowledge base."
 }
 
 func (s *runState) nextNodeID(sourceNodeID string) (string, bool, error) {

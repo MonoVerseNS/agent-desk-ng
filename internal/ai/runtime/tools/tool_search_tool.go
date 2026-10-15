@@ -56,7 +56,7 @@ func (t *ToolSearchTool) Build(ctx registry.Context) (einotool.BaseTool, error) 
 func (t *ToolSearchTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: toolx.BuiltinToolSearch.Name,
-		Desc: "当你需要使用当前会话允许的长尾 MCP 工具时，先调用本工具搜索合适的 toolCode；确认目标后，可再次调用本工具并传入 toolCode 与 arguments 代理执行。不要用它替代明确固定的内置流程工具。",
+		Desc: "Search and execute allowed MCP tools. Call this tool with a query to find suitable tools, or provide toolCode and arguments to execute a specific tool.",
 		ParamsOneOf: schema.NewParamsOneOfByJSONSchema(&einojsonschema.Schema{
 			Version: einojsonschema.Version,
 			Type:    "object",
@@ -65,21 +65,21 @@ func (t *ToolSearchTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 					Key: "query",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "要搜索的工具意图、能力或关键词；当只想列出候选工具时使用。",
+						Description: "Query or keyword describing the desired capability or tool intent; used when searching for candidate tools.",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "toolCode",
 					Value: &einojsonschema.Schema{
 						Type:        "string",
-						Description: "已确定目标后要调用的 MCP toolCode，例如 mcp_server/tool_name。",
+						Description: "The exact tool code to invoke (e.g. mcp_server/tool_name).",
 					},
 				},
 				orderedmap.Pair[string, *einojsonschema.Schema]{
 					Key: "arguments",
 					Value: &einojsonschema.Schema{
 						Type:                 "object",
-						Description:          "调用目标工具时传入的参数对象。",
+						Description:          "Arguments object passed to the target tool.",
 						AdditionalProperties: &einojsonschema.Schema{},
 					},
 				},
