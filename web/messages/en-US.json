@@ -3309,7 +3309,31 @@
     "step3": "Connect Markdown or a documentation center later."
   },
   "supportCommunityAdmin": {
-    "postStatusUpdated": "Post status updated."
+    "postStatusUpdated": "Post status updated.",
+    "allStatuses": "All statuses",
+    "statusPending": "Pending",
+    "statusNormal": "Normal",
+    "statusResolved": "Resolved",
+    "statusClosed": "Closed",
+    "statusHidden": "Hidden",
+    "allCategories": "All categories",
+    "uncategorized": "Uncategorized",
+    "refresh": "Refresh",
+    "defaultUser": "User",
+    "commentCount": "{count} comments",
+    "noMatchingPosts": "No matching posts found",
+    "loadingPosts": "Loading posts...",
+    "moderateDialogTitle": "Moderate Post",
+    "likesAndViews": "{likes} likes · {views} views",
+    "restoreNormalAction": "Restore",
+    "closePostAction": "Close Post",
+    "hidePostAction": "Hide Post",
+    "commentsTitle": "Comments ({count})",
+    "acceptedBadge": "Accepted",
+    "acceptAnswerAction": "Accept as answer",
+    "commentPlaceholder": "Write a support comment...",
+    "publishCommentAction": "Post comment",
+    "commentSuccess": "Comment posted."
   },
   "systemConfig": {
     "branding": {

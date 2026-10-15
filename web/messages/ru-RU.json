@@ -3309,7 +3309,31 @@
     "step3": "Позже подключить Markdown или центр документации."
   },
   "supportCommunityAdmin": {
-    "postStatusUpdated": "Статус темы обновлён."
+    "postStatusUpdated": "Статус темы обновлён.",
+    "allStatuses": "Все статусы",
+    "statusPending": "На модерации",
+    "statusNormal": "Обычный",
+    "statusResolved": "Решён",
+    "statusClosed": "Закрыт",
+    "statusHidden": "Скрыт",
+    "allCategories": "Все категории",
+    "uncategorized": "Без категории",
+    "refresh": "Обновить",
+    "defaultUser": "Пользователь",
+    "commentCount": "{count} комментариев",
+    "noMatchingPosts": "Нет публикаций, соответствующих фильтрам",
+    "loadingPosts": "Загрузка публикаций...",
+    "moderateDialogTitle": "Модерация публикации",
+    "likesAndViews": "{likes} отм. · {views} просм.",
+    "restoreNormalAction": "Восстановить",
+    "closePostAction": "Закрыть публикацию",
+    "hidePostAction": "Скрыть публикацию",
+    "commentsTitle": "Комментарии ({count})",
+    "acceptedBadge": "Принято",
+    "acceptAnswerAction": "Принять как ответ",
+    "commentPlaceholder": "Введите ответ поддержки...",
+    "publishCommentAction": "Опубликовать ответ",
+    "commentSuccess": "Комментарий опубликован."
   },
   "systemConfig": {
     "branding": {

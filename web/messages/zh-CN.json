@@ -3309,7 +3309,31 @@
     "step3": "后续可接入 markdown 或文档中心能力。"
   },
   "supportCommunityAdmin": {
-    "postStatusUpdated": "主题状态已更新。"
+    "postStatusUpdated": "主题状态已更新。",
+    "allStatuses": "全部状态",
+    "statusPending": "待审核",
+    "statusNormal": "正常",
+    "statusResolved": "已解决",
+    "statusClosed": "已关闭",
+    "statusHidden": "已隐藏",
+    "allCategories": "全部分类",
+    "uncategorized": "未分类",
+    "refresh": "刷新",
+    "defaultUser": "用户",
+    "commentCount": "{count} 个评论",
+    "noMatchingPosts": "暂无符合条件的帖子",
+    "loadingPosts": "正在加载帖子...",
+    "moderateDialogTitle": "帖子处理",
+    "likesAndViews": "{likes} 赞 · {views} 浏览",
+    "restoreNormalAction": "恢复正常",
+    "closePostAction": "关闭帖子",
+    "hidePostAction": "隐藏帖子",
+    "commentsTitle": "评论（{count}）",
+    "acceptedBadge": "已采纳",
+    "acceptAnswerAction": "设为采纳",
+    "commentPlaceholder": "输入客服评论",
+    "publishCommentAction": "发布评论",
+    "commentSuccess": "评论已发布"
   },
   "systemConfig": {
     "branding": {
