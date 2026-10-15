@@ -27,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useI18n } from "@/i18n/provider"
 import {
@@ -130,6 +131,10 @@ export function AIAgentConfigWorkbench({
   const [handoffMode, setHandoffMode] = useState(String(AIAgentHandoffMode.WaitPool))
   const [fallbackMode, setFallbackMode] = useState(String(AIAgentFallbackMode.NoAnswer))
   const [fallbackMessage, setFallbackMessage] = useState("")
+  const [contextWindow, setContextWindow] = useState("10")
+  const [maxSteps, setMaxSteps] = useState("4")
+  const [autoHandoffOnFailure, setAutoHandoffOnFailure] = useState(true)
+  const [handoffMessage, setHandoffMessage] = useState("")
   const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([])
   const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([])
   const [selectedKnowledgeBaseIds, setSelectedKnowledgeBaseIds] = useState<number[]>([])
@@ -191,6 +196,10 @@ export function AIAgentConfigWorkbench({
         setHandoffMode(String(AIAgentHandoffMode.WaitPool))
         setFallbackMode(String(AIAgentFallbackMode.NoAnswer))
         setFallbackMessage("")
+        setContextWindow("10")
+        setMaxSteps("4")
+        setAutoHandoffOnFailure(true)
+        setHandoffMessage("")
         setSelectedTeamIds([])
         setSelectedSkillIds([])
         setSelectedKnowledgeBaseIds([])
@@ -215,6 +224,10 @@ export function AIAgentConfigWorkbench({
       setHandoffMode(String(detail.handoffMode || AIAgentHandoffMode.WaitPool))
       setFallbackMode(String(detail.fallbackMode || AIAgentFallbackMode.NoAnswer))
       setFallbackMessage(detail.fallbackMessage || "")
+      setContextWindow(String(detail.contextWindow ?? 10))
+      setMaxSteps(String(detail.maxSteps ?? 4))
+      setAutoHandoffOnFailure(detail.autoHandoffOnFailure ?? true)
+      setHandoffMessage(detail.handoffMessage || "")
       setSelectedTeamIds((detail.teams ?? []).map((team) => team.id))
       setSelectedSkillIds(detail.skillIds ?? [])
       setSelectedKnowledgeBaseIds(detail.knowledgeBaseIds ?? [])
@@ -415,6 +428,10 @@ export function AIAgentConfigWorkbench({
       handoffMode: Number(handoffMode),
       fallbackMode: Number(fallbackMode),
       fallbackMessage: fallbackMessage.trim(),
+      maxSteps: Number.parseInt(maxSteps, 10) || 4,
+      contextWindow: Number.parseInt(contextWindow, 10) || 10,
+      autoHandoffOnFailure,
+      handoffMessage: handoffMessage.trim(),
       knowledgeBaseIds: uniqueNumbers(selectedKnowledgeBaseIds),
       skillIds: uniqueNumbers(selectedSkillIds),
       mcpTools,
@@ -625,6 +642,38 @@ export function AIAgentConfigWorkbench({
                           {t("aiAgent.seconds")}
                         </span>
                       </div>
+                    </FieldBlock>
+                  </div>
+                </FormSection>
+
+                <FormSection
+                  title={t("aiAgent.sectionContextCosts")}
+                  description={t("aiAgent.contextCostsDescription")}
+                >
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <FieldBlock
+                      label={t("aiAgent.contextWindow")}
+                      help={t("aiAgent.contextWindowHelp")}
+                    >
+                      <Input
+                        type="number"
+                        min={2}
+                        max={30}
+                        value={contextWindow}
+                        onChange={(event) => setContextWindow(event.target.value)}
+                      />
+                    </FieldBlock>
+                    <FieldBlock
+                      label={t("aiAgent.maxSteps")}
+                      help={t("aiAgent.maxStepsHelp")}
+                    >
+                      <Input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={maxSteps}
+                        onChange={(event) => setMaxSteps(event.target.value)}
+                      />
                     </FieldBlock>
                   </div>
                 </FormSection>
@@ -860,21 +909,46 @@ export function AIAgentConfigWorkbench({
                   title={t("aiAgent.sectionFallback")}
                   description={t("aiAgent.fallbackDescription")}
                 >
-                  <FieldBlock label={t("aiAgent.fallbackMode")}>
-                    <OptionCombobox
-                      value={fallbackMode}
-                      options={fallbackModeOptions}
-                      placeholder={t("aiAgent.selectFallbackMode")}
-                      onChange={setFallbackMode}
-                    />
-                  </FieldBlock>
-                  <FieldBlock label={t("aiAgent.fallbackMessage")}>
-                    <Textarea
-                      rows={5}
-                      value={fallbackMessage}
-                      onChange={(event) => setFallbackMessage(event.target.value)}
-                    />
-                  </FieldBlock>
+                  <div className="space-y-4">
+                    <FieldBlock label={t("aiAgent.fallbackMode")}>
+                      <OptionCombobox
+                        value={fallbackMode}
+                        options={fallbackModeOptions}
+                        placeholder={t("aiAgent.selectFallbackMode")}
+                        onChange={setFallbackMode}
+                      />
+                    </FieldBlock>
+                    <FieldBlock label={t("aiAgent.fallbackMessage")}>
+                      <Textarea
+                        rows={3}
+                        value={fallbackMessage}
+                        onChange={(event) => setFallbackMessage(event.target.value)}
+                      />
+                    </FieldBlock>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium">{t("aiAgent.autoHandoffOnFailure")}</Label>
+                        <p className="text-xs text-muted-foreground">{t("aiAgent.autoHandoffOnFailureHelp")}</p>
+                      </div>
+                      <Switch
+                        checked={autoHandoffOnFailure}
+                        onCheckedChange={setAutoHandoffOnFailure}
+                      />
+                    </div>
+                    {autoHandoffOnFailure ? (
+                      <FieldBlock
+                        label={t("aiAgent.handoffMessage")}
+                        help={t("aiAgent.handoffMessageHelp")}
+                      >
+                        <Textarea
+                          rows={2}
+                          value={handoffMessage}
+                          placeholder={t("aiAgent.handoffMessagePlaceholder")}
+                          onChange={(event) => setHandoffMessage(event.target.value)}
+                        />
+                      </FieldBlock>
+                    ) : null}
+                  </div>
                 </FormSection>
               </div>
             ) : null}
@@ -964,11 +1038,13 @@ function FormSection({
 function FieldBlock({
   label,
   required,
+  help,
   className,
   children,
 }: {
   label: string
   required?: boolean
+  help?: string
   className?: string
   children: ReactNode
 }) {
@@ -979,6 +1055,7 @@ function FieldBlock({
         {required ? <span className="ml-1 text-destructive">*</span> : null}
       </Label>
       {children}
+      {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
     </div>
   )
 }

@@ -236,6 +236,8 @@ export type AIAgent = {
   fallbackMode: number
   fallbackModeName: string
   fallbackMessage: string
+  autoHandoffOnFailure?: boolean
+  handoffMessage?: string
 	knowledgeBaseIds: number[]
   skillIds: number[]
   skills: { id: number; name: string }[]
@@ -275,6 +277,8 @@ export type CreateAIAgentPayload = {
   handoffMode: number
   fallbackMode: number
   fallbackMessage: string
+  autoHandoffOnFailure?: boolean
+  handoffMessage?: string
 	knowledgeBaseIds: number[]
   skillIds: number[]
   mcpTools: {
