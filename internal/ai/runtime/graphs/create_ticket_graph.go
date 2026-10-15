@@ -49,6 +49,7 @@ func NewCreateTicketGraph(conversation models.Conversation, aiAgent models.AIAge
 }
 
 func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (string, error) {
+	locale := services.ConversationHumanDispatchService.ResolveConversationLocale(g.conversation.ID)
 	wasInterrupted, hasState, state := componenttool.GetInterruptState[CreateTicketGraphState](ctx)
 	if !wasInterrupted {
 		req, err := g.buildCreateRequest(argumentsInJSON)
@@ -57,7 +58,7 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 		}
 		info := CreateTicketGraphInterruptInfo{
 			Type:    InterruptTypeTicketCreationConfirmation,
-			Message: g.buildConfirmationPrompt(req),
+			Message: g.buildConfirmationPrompt(req, locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, CreateTicketGraphState{Request: req})
 	}
@@ -68,14 +69,14 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 	if !isResumeTarget {
 		info := CreateTicketGraphInterruptInfo{
 			Type:    InterruptTypeTicketCreationConfirmation,
-			Message: g.buildConfirmationPrompt(state.Request),
+			Message: g.buildConfirmationPrompt(state.Request, locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, state)
 	}
 	if !hasData {
 		info := CreateTicketGraphInterruptInfo{
 			Type:    InterruptTypeTicketCreationConfirmation,
-			Message: ConfirmOrCancelPrompt,
+			Message: ConfirmOrCancelPromptForLocale(locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, state)
 	}
@@ -90,7 +91,7 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 			Handled:     true,
 			Terminal:    true,
 			Action:      "ticket_created",
-			ReplyText:   i18nx.Getf(i18nx.DefaultLocale, "graph.ticketCreated", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
+			ReplyText:   i18nx.Getf(locale, "graph.ticketCreated", strings.TrimSpace(item.TicketNo), strings.TrimSpace(item.Title)),
 			ShouldRetry: false,
 		}), nil
 	case ConfirmationDecisionCancel:
@@ -98,13 +99,13 @@ func (g *CreateTicketGraph) Run(ctx context.Context, argumentsInJSON string) (st
 			Handled:     true,
 			Terminal:    true,
 			Action:      "ticket_cancelled",
-			ReplyText:   CancelCreateTicketReply,
+			ReplyText:   CancelCreateTicketReplyForLocale(locale),
 			ShouldRetry: false,
 		}), nil
 	default:
 		info := CreateTicketGraphInterruptInfo{
 			Type:    InterruptTypeTicketCreationConfirmation,
-			Message: NeedExplicitConfirmationPrompt,
+			Message: NeedExplicitConfirmationPromptForLocale(locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, state)
 	}
@@ -134,8 +135,8 @@ func (g *CreateTicketGraph) buildCreateRequest(argumentsInJSON string) (request.
 	return req, nil
 }
 
-func (g *CreateTicketGraph) buildConfirmationPrompt(req request.CreateTicketFromConversationRequest) string {
-	return i18nx.Getf(i18nx.DefaultLocale, "graph.createTicketConfirmPrompt",
+func (g *CreateTicketGraph) buildConfirmationPrompt(req request.CreateTicketFromConversationRequest, locale string) string {
+	return i18nx.Getf(locale, "graph.createTicketConfirmPrompt",
 		strings.TrimSpace(req.Title), strings.TrimSpace(req.Description))
 }
 

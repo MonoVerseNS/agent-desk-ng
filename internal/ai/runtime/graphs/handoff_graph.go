@@ -47,9 +47,10 @@ func NewHandoffGraph(conversation models.Conversation, aiAgent models.AIAgent) *
 }
 
 func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string, error) {
+	locale := services.ConversationHumanDispatchService.ResolveConversationLocale(g.conversation.ID)
 	wasInterrupted, hasState, state := componenttool.GetInterruptState[HandoffGraphState](ctx)
 	if !wasInterrupted {
-		reason, err := g.buildReason(argumentsInJSON)
+		reason, err := g.buildReason(argumentsInJSON, locale)
 		if err != nil {
 			return "", err
 		}
@@ -61,7 +62,7 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 					Handled:     true,
 					Terminal:    true,
 					Action:      "off_hours_handoff",
-					ReplyText:   services.HandoffOffHoursMessage,
+					ReplyText:   services.HandoffOffHoursMessageForLocale(locale),
 					ReplySent:   true,
 					ShouldRetry: false,
 				}), nil
@@ -70,7 +71,7 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 		}
 		info := HandoffGraphInterruptInfo{
 			Type:    InterruptTypeHandoffConfirmation,
-			Message: g.buildConfirmationPrompt(reason),
+			Message: g.buildConfirmationPrompt(reason, locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, HandoffGraphState{Reason: reason})
 	}
@@ -81,14 +82,14 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 	if !isResumeTarget {
 		info := HandoffGraphInterruptInfo{
 			Type:    InterruptTypeHandoffConfirmation,
-			Message: g.buildConfirmationPrompt(state.Reason),
+			Message: g.buildConfirmationPrompt(state.Reason, locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, state)
 	}
 	if !hasData {
 		info := HandoffGraphInterruptInfo{
 			Type:    InterruptTypeHandoffConfirmation,
-			Message: ConfirmOrCancelPrompt,
+			Message: ConfirmOrCancelPromptForLocale(locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, state)
 	}
@@ -110,20 +111,20 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 			Handled:     true,
 			Terminal:    true,
 			Action:      "handoff_cancelled",
-			ReplyText:   CancelHandoffReply,
+			ReplyText:   CancelHandoffReplyForLocale(locale),
 			ShouldRetry: false,
 		}), nil
 	default:
 		info := HandoffGraphInterruptInfo{
 			Type:    InterruptTypeHandoffConfirmation,
-			Message: NeedExplicitConfirmationPrompt,
+			Message: NeedExplicitConfirmationPromptForLocale(locale),
 		}
 		return "", componenttool.StatefulInterrupt(ctx, info, state)
 	}
 }
 
-func (g *HandoffGraph) buildReason(argumentsInJSON string) (string, error) {
-	reason := i18nx.Get("graph.defaultHandoffReason")
+func (g *HandoffGraph) buildReason(argumentsInJSON string, locale string) (string, error) {
+	reason := i18nx.Getf(locale, "graph.defaultHandoffReason")
 	var args handoffGraphArgs
 	if strings.TrimSpace(argumentsInJSON) != "" {
 		if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
@@ -136,8 +137,8 @@ func (g *HandoffGraph) buildReason(argumentsInJSON string) (string, error) {
 	return reason, nil
 }
 
-func (g *HandoffGraph) buildConfirmationPrompt(reason string) string {
-	return i18nx.Getf(i18nx.DefaultLocale, "graph.handoffConfirmPrompt", strings.TrimSpace(reason))
+func (g *HandoffGraph) buildConfirmationPrompt(reason string, locale string) string {
+	return i18nx.Getf(locale, "graph.handoffConfirmPrompt", strings.TrimSpace(reason))
 }
 
 func parseHandoffDecision(value string) ConfirmationDecision {

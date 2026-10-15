@@ -61,6 +61,44 @@ func TestHandoffGraphOffHoursSendsNoticeWithoutConfirmation(t *testing.T) {
 	}
 }
 
+func TestHandoffGraphOffHoursSendsNoticeInRussianForRussianConversation(t *testing.T) {
+	db := setupHandoffGraphTestDB(t)
+	aiAgent := createHandoffGraphAIAgent(t, db, "1")
+	conversation := createHandoffGraphConversation(t, db, aiAgent.ID)
+
+	now := time.Now()
+	if err := db.Create(&models.Message{
+		ConversationID: conversation.ID,
+		SenderType:     enums.IMSenderTypeCustomer,
+		SenderID:       1,
+		Content:        "Привет хочу возрат денег",
+		SentAt:         &now,
+	}).Error; err != nil {
+		t.Fatalf("create message error = %v", err)
+	}
+
+	reply, err := NewHandoffGraph(conversation, aiAgent).Run(context.Background(), `{"reason":"перенаправляю оператору"}`)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	var result tooling.ToolResult
+	if err := json.Unmarshal([]byte(reply), &result); err != nil {
+		t.Fatalf("expected graph tool result JSON, got %q: %v", reply, err)
+	}
+	expectedRuMsg := services.HandoffOffHoursMessageForLocale("ru-RU")
+	if result.Action != "off_hours_handoff" || result.ReplyText != expectedRuMsg {
+		t.Fatalf("unexpected off-hours graph result for ru-RU: %+v, want %q", result, expectedRuMsg)
+	}
+
+	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Eq("sender_type", enums.IMSenderTypeAI).Desc("id"))
+	if message == nil {
+		t.Fatalf("expected off-hours notice message")
+	}
+	if message.Content != expectedRuMsg {
+		t.Fatalf("expected Russian off-hours notice %q, got %q", expectedRuMsg, message.Content)
+	}
+}
+
 func TestHandoffGraphWithActiveScheduleStillRequestsConfirmation(t *testing.T) {
 	db := setupHandoffGraphTestDB(t)
 	aiAgent := createHandoffGraphAIAgent(t, db, "1")

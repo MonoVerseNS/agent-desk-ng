@@ -26,6 +26,10 @@ func TestIsCustomerHandoffRequest(t *testing.T) {
 		{"свяжите с оператором", true},
 		{"переключи на оператора", true},
 		{"дай оператора", true},
+		{"дай человека", true},
+		{"перенаправь оператору", true},
+		{"перенаправьте на специалиста", true},
+		{"тупой бот, дай человека", true},
 		{"нужен оператор", true},
 		{"нужен специалист", true},
 
@@ -48,6 +52,7 @@ func TestIsCustomerHandoffRequest(t *testing.T) {
 		{"请帮我转接人工客服", true},
 
 		// Non-handoff questions & greetings
+		{"Привет хочу возрат денег", false},
 		{"Здравствуйте, как вернуть товар?", false},
 		{"Добрый день, сколько стоит доставка?", false},
 		{"Hello, how do I track my order?", false},
@@ -74,10 +79,13 @@ func TestIsModelClaimingHandoff(t *testing.T) {
 		expected bool
 	}{
 		// Russian model claims
+		{"Похоже я не могу решить ваш вопрос, перенаправляю оператору. Ожидайте!", true},
 		{"Перевожу вас на оператора, пожалуйста подождите.", true},
 		{"Переключаю вас на оператора службы поддержки.", true},
+		{"Перенаправляю вас на специалиста.", true},
 		{"Соединяю со специалистом, оставайтесь на связи.", true},
 		{"Передаю ваш запрос оператору.", true},
+		{"Передаю диалог коллегам из поддержки.", true},
 		{"Сейчас переведу на оператора.", true},
 
 		// English model claims
@@ -85,6 +93,7 @@ func TestIsModelClaimingHandoff(t *testing.T) {
 		{"Connecting you to an operator right away.", true},
 		{"Connecting you to a human representative.", true},
 		{"Routing you to an agent.", true},
+		{"I am passing you to our support team.", true},
 
 		// Chinese model claims
 		{"正在为您转接人工客服，请稍候。", true},

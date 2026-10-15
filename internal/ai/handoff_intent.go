@@ -59,13 +59,16 @@ func IsCustomerHandoffRequest(text string) bool {
 
 	russianTargetStems := []string{
 		"оператор", "человек", "специалист", "сотрудник", "консультант",
-		"менеджер", "живо", "живой", "поддержк", "саппорт",
+		"менеджер", "живо", "живой", "поддержк", "саппорт", "люди", "людей",
+		"админ", "администратор",
 	}
 
 	russianActionStems := []string{
 		"переведи", "переключ", "соедин", "позов", "дайт", "дай", "свяж", "связать",
 		"вызов", "вызовите", "хочу", "нужен", "нужна", "нужно", "можно", "позовите",
 		"соедините", "переведите", "переключите", "пригласи", "пригласите",
+		"перенаправ", "перенаправь", "перенаправьте", "передай", "передайте",
+		"направь", "направьте",
 	}
 
 	// Action + Target combinations in Russian (e.g. "позови сотрудника", "соедини со специалистом", "хочу человека")
@@ -95,7 +98,9 @@ func IsCustomerHandoffRequest(text string) bool {
 		strings.Contains(normalized, " живой есть") ||
 		strings.Contains(normalized, " есть живой") ||
 		strings.Contains(normalized, " есть кто живой") ||
-		strings.Contains(normalized, " можно человека") {
+		strings.Contains(normalized, " можно человека") ||
+		strings.Contains(normalized, " дай человека") ||
+		strings.Contains(normalized, " дай оператора") {
 		return true
 	}
 
@@ -178,7 +183,7 @@ func IsModelClaimingHandoff(text string) bool {
 	}
 	lower := strings.ToLower(raw)
 
-	// Russian model handoff statements
+	// Direct Russian phrases (exact matches)
 	russianModelClaims := []string{
 		"перевожу вас на оператора",
 		"переключаю вас на оператора",
@@ -195,10 +200,36 @@ func IsModelClaimingHandoff(text string) bool {
 		"связываю вас с оператором",
 		"сейчас переведу на оператора",
 		"сейчас переключу на оператора",
+		"перенаправляю оператору",
+		"перенаправляю вас к оператору",
+		"перенаправляю вас на оператора",
+		"перенаправляю на оператора",
+		"перенаправляю вас на специалиста",
+		"перенаправляю на специалиста",
+		"перенаправляю в службу поддержки",
+		"перенаправляю вас",
+		"передаю вас оператору",
+		"передаю диалог",
+		"направляю диалог",
+		"направляю ваш запрос",
 	}
 	for _, claim := range russianModelClaims {
 		if strings.Contains(lower, claim) {
 			return true
+		}
+	}
+
+	// Flexible Russian stem matching (Action + Target)
+	// Catches arbitrary phrasing like "Похоже я не могу решить ваш вопрос, перенаправляю оператору. Ожидайте!"
+	ruActionStems := []string{"перенаправл", "перевод", "переключ", "соедин", "передаю", "передаем", "передам", "направляю", "направляем", "направлю", "связываю", "свяжу"}
+	ruTargetStems := []string{"оператор", "специалист", "сотрудник", "человек", "поддержк", "менеджер", "коллег", "живой"}
+	for _, act := range ruActionStems {
+		if strings.Contains(lower, act) {
+			for _, tgt := range ruTargetStems {
+				if strings.Contains(lower, tgt) {
+					return true
+				}
+			}
 		}
 	}
 
@@ -223,6 +254,19 @@ func IsModelClaimingHandoff(text string) bool {
 		}
 	}
 
+	// Flexible English stem matching (Action + Target)
+	enActionStems := []string{"transfer", "connect", "rout", "hand over", "handing over", "forward", "pass you", "passing you"}
+	enTargetStems := []string{"operator", "agent", "human", "specialist", "representative", "support", "colleague"}
+	for _, act := range enActionStems {
+		if strings.Contains(lower, act) {
+			for _, tgt := range enTargetStems {
+				if strings.Contains(lower, tgt) {
+					return true
+				}
+			}
+		}
+	}
+
 	// Chinese model handoff statements
 	chineseModelClaims := []string{
 		"为您转接人工",
@@ -235,6 +279,19 @@ func IsModelClaimingHandoff(text string) bool {
 	for _, claim := range chineseModelClaims {
 		if strings.Contains(lower, claim) {
 			return true
+		}
+	}
+
+	// Flexible Chinese stem matching
+	zhActionStems := []string{"转接", "转交", "接入", "转给", "转到", "交由"}
+	zhTargetStems := []string{"人工", "客服", "专员", "同事"}
+	for _, act := range zhActionStems {
+		if strings.Contains(lower, act) {
+			for _, tgt := range zhTargetStems {
+				if strings.Contains(lower, tgt) {
+					return true
+				}
+			}
 		}
 	}
 

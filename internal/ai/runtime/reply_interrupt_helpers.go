@@ -36,15 +36,20 @@ func buildConversationInterrupt(conversation models.Conversation, message models
 	item.WorkflowRunID = summary.WorkflowRunID
 	item.WorkflowNodeID = firstInterruptID(summary)
 	item.Status = "pending"
-	item.PromptText = resolveInterruptPrompt(summary)
+	locale := svc.ConversationHumanDispatchService.ResolveConversationLocale(conversation.ID)
+	item.PromptText = resolveInterruptPrompt(summary, locale)
 	item.RequestData = strings.TrimSpace(summary.CheckPointData)
 	item.UpdatedAt = now
 	return item
 }
 
-func resolveInterruptPrompt(summary *applicationruntime.RunResult) string {
+func resolveInterruptPrompt(summary *applicationruntime.RunResult, locale ...string) string {
+	targetLocale := i18nx.DefaultLocale
+	if len(locale) > 0 && strings.TrimSpace(locale[0]) != "" {
+		targetLocale = locale[0]
+	}
 	if summary == nil || len(summary.Interrupts) == 0 {
-		return i18nx.Get("conversation.interrupt.defaultPrompt")
+		return i18nx.Getf(targetLocale, "conversation.interrupt.defaultPrompt")
 	}
 	interrupt := summary.Interrupts[0]
 	if prompt := strings.TrimSpace(interrupt.PromptText); prompt != "" {
@@ -62,9 +67,16 @@ func resolveInterruptPrompt(summary *applicationruntime.RunResult) string {
 		}
 	}
 	if displayName := strings.TrimSpace(interrupt.DisplayName); displayName != "" {
-		return "即将执行“" + displayName + "”，是否确认继续？"
+		switch targetLocale {
+		case "ru-RU":
+			return "Готовится выполнение «" + displayName + "». Подтверждаете продолжение?"
+		case "en-US":
+			return "About to execute \"" + displayName + "\". Confirm to continue?"
+		default:
+			return "即将执行“" + displayName + "”，是否确认继续？"
+		}
 	}
-	return i18nx.Get("conversation.interrupt.defaultPrompt")
+	return i18nx.Getf(targetLocale, "conversation.interrupt.defaultPrompt")
 }
 
 func extractInterruptMessage(infoPreview string) string {

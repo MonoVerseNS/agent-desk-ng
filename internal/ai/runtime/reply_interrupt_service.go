@@ -89,7 +89,8 @@ func (s *replyInterruptService) HandleInterruptedSummary(owner *aiReplyService, 
 		return err
 	}
 	pending = svc.ConversationInterruptService.GetByCheckPointID(summary.CheckPointID)
-	replyText := resolveInterruptPrompt(summary)
+	locale := svc.ConversationHumanDispatchService.ResolveConversationLocale(replyCtx.Conversation.ID)
+	replyText := resolveInterruptPrompt(summary, locale)
 	replyMessage, err := owner.commit.CommitAIReply(replyCommitInput{
 		Conversation:  replyCtx.Conversation,
 		Message:       replyCtx.Message,
@@ -111,7 +112,8 @@ func (s *replyInterruptService) HandleInterruptedResume(owner *aiReplyService, r
 	if replyCtx.PendingInterrupt == nil {
 		return fmt.Errorf("pending interrupt is required")
 	}
-	replyText := resolveInterruptPrompt(summary)
+	locale := svc.ConversationHumanDispatchService.ResolveConversationLocale(replyCtx.Conversation.ID)
+	replyText := resolveInterruptPrompt(summary, locale)
 	replyMessage, err := owner.commit.CommitAIReply(replyCommitInput{
 		Conversation:  replyCtx.Conversation,
 		Message:       replyCtx.Message,

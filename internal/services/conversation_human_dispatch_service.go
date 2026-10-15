@@ -55,19 +55,30 @@ func newConversationHumanDispatchService() *conversationHumanDispatchService {
 	return &conversationHumanDispatchService{}
 }
 
-func (s *conversationHumanDispatchService) resolveConversationLocale(conversationID int64) string {
+func (s *conversationHumanDispatchService) ResolveConversationLocale(conversationID int64) string {
 	if conversationID <= 0 {
 		return i18nx.DefaultLocale
 	}
-	lastMsg := repositories.MessageRepository.FindOne(sqls.DB(), sqls.NewCnd().Eq("conversation_id", conversationID).Eq("sender_type", enums.IMSenderTypeCustomer).Desc("id"))
-	if lastMsg != nil && strings.TrimSpace(lastMsg.Content) != "" {
-		lang := ai.DetectLanguage(lastMsg.Content)
+	recentMsgs := repositories.MessageRepository.Find(sqls.DB(), sqls.NewCnd().
+		Eq("conversation_id", conversationID).
+		Eq("sender_type", enums.IMSenderTypeCustomer).
+		Desc("id").
+		Limit(5))
+	for _, msg := range recentMsgs {
+		content := strings.TrimSpace(msg.Content)
+		if content == "" {
+			continue
+		}
+		lang := ai.DetectLanguage(content)
 		switch lang {
 		case "ru":
 			return "ru-RU"
 		case "zh":
 			return "zh-CN"
-		case "en":
+		}
+	}
+	for _, msg := range recentMsgs {
+		if ai.DetectLanguage(msg.Content) == "en" {
 			return "en-US"
 		}
 	}
@@ -81,6 +92,10 @@ func (s *conversationHumanDispatchService) resolveConversationLocale(conversatio
 		}
 	}
 	return i18nx.DefaultLocale
+}
+
+func ResolveConversationLocale(conversationID int64) string {
+	return ConversationHumanDispatchService.ResolveConversationLocale(conversationID)
 }
 
 func (s *conversationHumanDispatchService) TryOffHoursHandoffByAI(conversationID int64, aiAgent models.AIAgent, reason string) (bool, error) {
@@ -100,7 +115,7 @@ func (s *conversationHumanDispatchService) TryOffHoursHandoffByAIWithRequestID(c
 	if err := s.createEventWithRequestID(conversationID, requestID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "转人工失败：非服务时间", strings.TrimSpace(reason)); err != nil {
 		return true, err
 	}
-	offHoursMessage := HandoffOffHoursMessageForLocale(s.resolveConversationLocale(conversationID))
+	offHoursMessage := HandoffOffHoursMessageForLocale(s.ResolveConversationLocale(conversationID))
 	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, offHoursMessage, requestID); err != nil {
 		return true, err
 	}
@@ -122,7 +137,7 @@ func (s *conversationHumanDispatchService) HandoffByAIWithRequestID(conversation
 		if _, err := s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID); err != nil {
 			return nil, err
 		}
-		offHoursMessage := HandoffOffHoursMessageForLocale(s.resolveConversationLocale(conversationID))
+		offHoursMessage := HandoffOffHoursMessageForLocale(s.ResolveConversationLocale(conversationID))
 		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours, Message: offHoursMessage}, nil
 	}
 
@@ -137,7 +152,7 @@ func (s *conversationHumanDispatchService) ApplyHumanOnlyCreate(conversationID i
 	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(teamIDs, time.Now())
 	waitingMessage := strings.TrimSpace(aiAgent.HandoffMessage)
 	if waitingMessage == "" {
-		waitingMessage = HandoffWaitingMessageForLocale(s.resolveConversationLocale(conversationID))
+		waitingMessage = HandoffWaitingMessageForLocale(s.ResolveConversationLocale(conversationID))
 	}
 	if len(activeTeamIDs) == 0 {
 		if err := s.moveToGlobalPool(conversationID, aiAgent.Name); err != nil {
@@ -199,7 +214,7 @@ func (s *conversationHumanDispatchService) dispatchAfterHandoff(conversationID i
 func (s *conversationHumanDispatchService) dispatchAfterHandoffWithRequestID(conversationID int64, aiAgent models.AIAgent, activeTeamIDs []int64, reason string, publishAssignEvent bool, requestID string) (*HandoffDecisionResult, error) {
 	waitingMessage := strings.TrimSpace(aiAgent.HandoffMessage)
 	if waitingMessage == "" {
-		waitingMessage = HandoffWaitingMessageForLocale(s.resolveConversationLocale(conversationID))
+		waitingMessage = HandoffWaitingMessageForLocale(s.ResolveConversationLocale(conversationID))
 	}
 	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, waitingMessage, requestID); err != nil {
 		return nil, err
