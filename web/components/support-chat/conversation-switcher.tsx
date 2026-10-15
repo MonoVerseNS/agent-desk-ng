@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckIcon, ChevronDownIcon, MessageSquarePlusIcon } from "lucide-react"
+import { CheckCircle2Icon, CheckIcon, ChevronDownIcon, MessageSquarePlusIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useShallow } from "zustand/react/shallow"
 
@@ -27,6 +27,7 @@ import { useI18n } from "@/i18n/provider"
 
 type SupportChatConversationSwitcherProps = {
   onNewRequest: () => void
+  onCloseActiveRequest?: () => void
 }
 
 function getStatusBadgeClass(status: number) {
@@ -41,6 +42,7 @@ function getStatusBadgeClass(status: number) {
 
 export function SupportChatConversationSwitcher({
   onNewRequest,
+  onCloseActiveRequest,
 }: SupportChatConversationSwitcherProps) {
   const t = useI18n()
 
@@ -173,20 +175,35 @@ export function SupportChatConversationSwitcher({
           </div>
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="my-0" />
-        <div className="p-1.5">
+        <div className="flex items-center gap-1.5 p-1.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
             disabled={creatingConversation}
             onClick={onNewRequest}
-            className="h-8 w-full justify-start gap-1.5 text-xs"
+            className="h-8 flex-1 justify-start gap-1.5 text-xs"
           >
             <MessageSquarePlusIcon className="size-3.5" />
-            {creatingConversation
-              ? t("supportChat.creatingRequest")
-              : t("supportChat.newRequest")}
+            <span className="truncate">
+              {creatingConversation
+                ? t("supportChat.creatingRequest")
+                : t("supportChat.newRequest")}
+            </span>
           </Button>
+          {active && active.status !== 4 && onCloseActiveRequest ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCloseActiveRequest}
+              className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
+              title={t("supportChat.confirmClose")}
+            >
+              <CheckCircle2Icon className="size-3.5" />
+              <span>{t("supportChat.confirmClose")}</span>
+            </Button>
+          ) : null}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

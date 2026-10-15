@@ -95,6 +95,12 @@ func TestRussianLocaleTranslatesRepresentativeKeys(t *testing.T) {
 			args: []any{"timeout"},
 			want: "Не удалось получить список инструментов MCP: timeout",
 		},
+		{
+			name: "too many open requests",
+			key:  "error.conversation.tooManyOpen",
+			args: []any{3},
+			want: "У вас уже 3 открытых обращений. Закройте одно из них, прежде чем создать новое.",
+		},
 	}
 
 	for _, tt := range tests {

@@ -1,11 +1,8 @@
 "use client"
 
 import {
+  CheckCircle2Icon,
   HeadphonesIcon,
-  Maximize2Icon,
-  Minimize2Icon,
-  MoreHorizontalIcon,
-  MinusIcon,
   RotateCwIcon,
   XIcon,
 } from "lucide-react"
@@ -34,9 +31,7 @@ import {
 } from "@/components/support-chat/message-list"
 import {
   bindSupportHostBridge,
-  requestSupportHostClose,
   requestSupportHostMinimize,
-  requestSupportHostToggleMaximize,
 } from "@/lib/support-host-bridge"
 import { useSupportChatStore } from "@/lib/stores/support-chat"
 import { Button } from "@/components/ui/button"
@@ -48,12 +43,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/provider"
 
@@ -135,7 +124,6 @@ function SupportChatPanelContent() {
 
   const messageListRef = useRef<SupportChatMessageListHandle | null>(null)
   const [isEmbedded, setIsEmbedded] = useState(false)
-  const [isMaximized, setIsMaximized] = useState(false)
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
   const [isClosingConversation, setIsClosingConversation] = useState(false)
   const [isNewRequestDialogOpen, setIsNewRequestDialogOpen] = useState(false)
@@ -218,9 +206,6 @@ function SupportChatPanelContent() {
       onMinimize: () => {
         setIsVisible(false)
       },
-      onMaximizedChange: (nextIsMaximized) => {
-        setIsMaximized(nextIsMaximized)
-      },
     })
   }, [setIsOpen, setIsVisible])
 
@@ -261,13 +246,13 @@ function SupportChatPanelContent() {
     messageListRef.current?.scrollToBottom()
   }
 
-  function handleMinimize() {
+  function handleCloseWindow() {
     setIsVisible(false)
-    requestSupportHostMinimize()
-  }
-
-  function handleToggleMaximize() {
-    requestSupportHostToggleMaximize()
+    if (isEmbedded) {
+      requestSupportHostMinimize()
+    } else {
+      window.location.replace(getStandaloneClosedUrl())
+    }
   }
 
   async function confirmCloseConversation() {
@@ -280,11 +265,6 @@ function SupportChatPanelContent() {
         await closeConversation()
       }
       setIsCloseDialogOpen(false)
-      if (isEmbedded) {
-        requestSupportHostClose()
-      } else {
-        window.location.replace(getStandaloneClosedUrl())
-      }
     } catch (closeError) {
       window.alert(closeError instanceof Error ? closeError.message : t("supportChat.closeConversationFailed"))
     } finally {
@@ -335,9 +315,10 @@ function SupportChatPanelContent() {
             </div>
             <SupportChatConversationSwitcher
               onNewRequest={() => setIsNewRequestDialogOpen(true)}
+              onCloseActiveRequest={() => setIsCloseDialogOpen(true)}
             />
-            <div className="flex shrink-0 items-center gap-0.5 sm:hidden">
-              {!isEmbedded && status !== "connected" ? (
+            <div className="flex shrink-0 items-center gap-0.5">
+              {status !== "connected" ? (
                 <WindowActionButton
                   onClick={retry}
                   aria-label={t("supportChat.retry")}
@@ -346,87 +327,20 @@ function SupportChatPanelContent() {
                   <RotateCwIcon className="size-4" />
                 </WindowActionButton>
               ) : null}
-              {isEmbedded ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={<WindowActionButton aria-label={t("supportChat.moreActions")} title={t("supportChat.moreActions")} />}
-                  >
-                    <MoreHorizontalIcon className="size-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={retry}>
-                      <RotateCwIcon className="size-4" />
-                      {t("supportChat.retry")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleMinimize}>
-                      <MinusIcon className="size-4" />
-                      {t("supportChat.minimize")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleToggleMaximize}>
-                      {isMaximized ? (
-                        <Minimize2Icon className="size-4" />
-                      ) : (
-                        <Maximize2Icon className="size-4" />
-                      )}
-                      {isMaximized ? t("supportChat.restoreWindow") : t("supportChat.maximize")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => setIsCloseDialogOpen(true)}
-                    >
-                      <XIcon className="size-4" />
-                      {t("supportChat.closeWindow")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
+              {conversation && conversation.status !== 4 ? (
                 <WindowActionButton
                   onClick={() => setIsCloseDialogOpen(true)}
-                  aria-label={t("supportChat.closeChatWindow")}
-                  title={t("supportChat.closeChatWindow")}
-                  className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
+                  aria-label={t("supportChat.confirmClose")}
+                  title={t("supportChat.confirmClose")}
+                  className="hover:bg-foreground/[0.06] hover:text-foreground"
                 >
-                  <XIcon className="size-4" />
+                  <CheckCircle2Icon className="size-4" />
                 </WindowActionButton>
-              )}
-            </div>
-            <div className="hidden shrink-0 items-center gap-1 sm:flex">
-              {status !== "connected" ? (
-                <SupportChatConnectionStatus status={status} />
               ) : null}
               <WindowActionButton
-                onClick={retry}
-                aria-label={t("supportChat.retry")}
-                title={t("supportChat.retry")}
-              >
-                <RotateCwIcon className="size-4" />
-              </WindowActionButton>
-              {isEmbedded ? (
-                <>
-                  <WindowActionButton
-                    onClick={handleMinimize}
-                    aria-label={t("supportChat.minimize")}
-                    title={t("supportChat.minimize")}
-                  >
-                    <MinusIcon className="size-4" />
-                  </WindowActionButton>
-                  <WindowActionButton
-                    onClick={handleToggleMaximize}
-                    aria-label={isMaximized ? t("supportChat.restoreWindow") : t("supportChat.maximizeWindow")}
-                    title={isMaximized ? t("supportChat.restoreWindow") : t("supportChat.maximizeWindow")}
-                  >
-                    {isMaximized ? (
-                      <Minimize2Icon className="size-4" />
-                    ) : (
-                      <Maximize2Icon className="size-4" />
-                    )}
-                  </WindowActionButton>
-                </>
-              ) : null}
-              <WindowActionButton
-                onClick={() => setIsCloseDialogOpen(true)}
-                aria-label={t("supportChat.closeChatWindow")}
-                title={t("supportChat.closeChatWindow")}
+                onClick={handleCloseWindow}
+                aria-label={t("supportChat.closeWindow")}
+                title={t("supportChat.closeWindow")}
                 className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/45 dark:hover:text-rose-300"
               >
                 <XIcon className="size-4" />
