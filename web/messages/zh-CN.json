@@ -1823,6 +1823,7 @@
     "loadTeamDetailFailed": "加载客服组详情失败",
     "teamEditTitle": "编辑",
     "teamCreateTitle": "新建",
+    "createTeamAction": "创建客服组",
     "teamName": "客服组名称",
     "teamNamePlaceholder": "请输入客服组名称",
     "leader": "组长",

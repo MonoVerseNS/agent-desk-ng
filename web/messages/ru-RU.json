@@ -1823,6 +1823,7 @@
     "loadTeamDetailFailed": "Не удалось загрузить детали команды поддержки.",
     "teamEditTitle": "Изменение",
     "teamCreateTitle": "Создание",
+    "createTeamAction": "Создать команду",
     "teamName": "Название команды",
     "teamNamePlaceholder": "Введите название команды",
     "leader": "Руководитель команды",

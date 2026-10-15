@@ -33,7 +33,9 @@ import {
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { EditDialog as TeamEditDialog } from "./team-edit";
 import {
+  createAgentTeam,
   fetchAgentProfile,
   fetchAgentTeamsAll,
   fetchUsersAll,
@@ -41,6 +43,7 @@ import {
   type AdminAgentTeam,
   type AdminUser,
   type CreateAdminAgentProfilePayload,
+  type CreateAdminAgentTeamPayload,
 } from "@/lib/api/admin";
 import { useI18n } from "@/i18n/provider";
 import { ServiceStatus } from "@/lib/generated/enums";
@@ -211,7 +214,26 @@ function AgentEditDialogBody({
   const [teams, setTeams] = useState<AdminAgentTeam[]>([]);
   const [userSelectOpen, setUserSelectOpen] = useState(false);
   const [teamSelectOpen, setTeamSelectOpen] = useState(false);
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [createTeamSaving, setCreateTeamSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleCreateTeamSubmit = async (payload: CreateAdminAgentTeamPayload) => {
+    setCreateTeamSaving(true);
+    try {
+      const newTeam = await createAgentTeam(payload);
+      toast.success(t("agentProfile.teamCreated", { name: payload.name }));
+      setTeams((prev) => [...prev, newTeam]);
+      form.setValue("teamId", String(newTeam.id), { shouldValidate: true });
+      setCreateTeamOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("agentProfile.teamSaveFailed"),
+      );
+    } finally {
+      setCreateTeamSaving(false);
+    }
+  };
   const userOptions = users.map((user) => ({
     value: String(user.id),
     label: `${user.nickname || user.username} (${user.username})`,
@@ -289,6 +311,7 @@ function AgentEditDialogBody({
   const formId = "agent-edit-form";
 
   return (
+    <>
     <ProjectDialog
       open={open}
       onOpenChange={onOpenChange}
@@ -389,7 +412,18 @@ function AgentEditDialogBody({
             </Field>
 
             <Field data-invalid={!!errors.teamId}>
-              <FieldLabel>{t("agentProfile.linkedTeam")}</FieldLabel>
+              <div className="flex items-center justify-between">
+                <FieldLabel>{t("agentProfile.linkedTeam")}</FieldLabel>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-primary hover:underline"
+                  onClick={() => setCreateTeamOpen(true)}
+                >
+                  + {t("agentProfile.createTeamAction")}
+                </Button>
+              </div>
               <FieldContent>
                 <Controller
                   control={control}
@@ -452,9 +486,16 @@ function AgentEditDialogBody({
                   )}
                 />
                 {teams.length === 0 ? (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {t("agentProfile.noTeamsAvailable")}
-                  </p>
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    <span>{t("agentProfile.noTeamsAvailable")}</span>
+                    <button
+                      type="button"
+                      className="underline font-medium hover:text-amber-700 dark:hover:text-amber-300"
+                      onClick={() => setCreateTeamOpen(true)}
+                    >
+                      {t("agentProfile.createTeamAction")}
+                    </button>
+                  </div>
                 ) : null}
                 <FieldError errors={[errors.teamId]} />
               </FieldContent>
@@ -606,5 +647,13 @@ function AgentEditDialogBody({
         </form>
       )}
     </ProjectDialog>
+    <TeamEditDialog
+      open={createTeamOpen}
+      saving={createTeamSaving}
+      itemId={null}
+      onOpenChange={setCreateTeamOpen}
+      onSubmit={handleCreateTeamSubmit}
+    />
+    </>
   );
 }

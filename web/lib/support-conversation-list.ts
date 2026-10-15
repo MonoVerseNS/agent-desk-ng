@@ -167,3 +167,30 @@ export function totalUnreadConversations(
     0
   )
 }
+/**
+ * Builds the state patch for switching the visible request. `conversation` is
+ * re-derived from the list together with the active id, so the header, the
+ * composer and the message loader can never point at different requests.
+ * Returns null when there is nothing to switch to.
+ */
+export function buildSelectConversationPatch(
+  state: {
+    conversations: readonly ImConversation[]
+    activeConversationId: number
+  },
+  conversationId: number
+) {
+  const target = findConversationById(state.conversations, conversationId)
+  if (!target || target.id === state.activeConversationId) {
+    return null
+  }
+  return {
+    activeConversationId: target.id,
+    conversation: target,
+    // Messages belong to the request they were loaded for.
+    messages: [] as never[],
+    messagesCursor: "",
+    messagesHasMore: false,
+    error: "",
+  }
+}

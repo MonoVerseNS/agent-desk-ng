@@ -3,6 +3,7 @@ import test from "node:test"
 import { readFile } from "node:fs/promises"
 
 import {
+  buildSelectConversationPatch,
   findConversationById,
   isOpenImConversation,
   pickConversationToResume,
@@ -246,4 +247,23 @@ test("a missing unread count counts as zero", () => {
     ]),
     0
   )
+})
+test("switching requests re-derives the conversation along with the active id", () => {
+  const a = makeConversation({ id: 1 })
+  const b = makeConversation({ id: 2 })
+  const patch = buildSelectConversationPatch(
+    { conversations: [a, b], activeConversationId: 1 },
+    2
+  )
+  assert.equal(patch.activeConversationId, 2)
+  assert.equal(patch.conversation.id, 2)
+  assert.deepEqual(patch.messages, [])
+  assert.equal(patch.messagesHasMore, false)
+})
+
+test("switching to an unknown or already active request is a no-op", () => {
+  const a = makeConversation({ id: 1 })
+  const state = { conversations: [a], activeConversationId: 1 }
+  assert.equal(buildSelectConversationPatch(state, 99), null)
+  assert.equal(buildSelectConversationPatch(state, 1), null)
 })

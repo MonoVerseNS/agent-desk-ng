@@ -221,7 +221,6 @@ func (s *channelService) ParseWebChannelConfig(raw string) (*dto.WebChannelConfi
 	return cfg, nil
 }
 
-
 func (s *channelService) ParseTelegramChannelConfig(raw string) (*dto.TelegramChannelConfig, error) {
 	raw = strings.TrimSpace(raw)
 	cfg := &dto.TelegramChannelConfig{}

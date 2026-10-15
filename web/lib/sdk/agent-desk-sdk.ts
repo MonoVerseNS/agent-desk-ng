@@ -301,14 +301,18 @@ type FrameMessage =
     frame.style.overflow = "hidden"
     frame.style.background = "#fff"
     frame.style.zIndex = "2147483000"
-    frame.style.boxShadow = "0 28px 80px rgba(15, 35, 65, 0.28)"
+    frame.style.boxShadow =
+      "0 0 0 1px rgba(15, 35, 65, 0.06), 0 4px 12px rgba(15, 35, 65, 0.08), 0 24px 64px rgba(15, 35, 65, 0.22)"
     frame.style.willChange = "top,right,bottom,left,width,height,opacity,transform,border-radius"
     frame.style.transition =
       "top 260ms cubic-bezier(0.22, 1, 0.36, 1), right 260ms cubic-bezier(0.22, 1, 0.36, 1), bottom 260ms cubic-bezier(0.22, 1, 0.36, 1), left 260ms cubic-bezier(0.22, 1, 0.36, 1), width 260ms cubic-bezier(0.22, 1, 0.36, 1), height 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease"
     frame.style.transformOrigin =
       config.position === "left" ? "left bottom" : "right bottom"
 
-    if (state.isMaximized) {
+    // Phones get the full viewport instead of a floating card that squeezes the chat.
+    const isCompact =
+      typeof window.innerWidth === "number" && window.innerWidth > 0 && window.innerWidth <= 480
+    if (state.isMaximized || isCompact) {
       frame.style.top = "max(12px, env(safe-area-inset-top))"
       frame.style.right = "max(12px, env(safe-area-inset-right))"
       frame.style.bottom = "max(12px, env(safe-area-inset-bottom))"
@@ -323,7 +327,7 @@ type FrameMessage =
     }
 
     frame.style.top = ""
-    frame.style.bottom = "max(88px, calc(72px + env(safe-area-inset-bottom)))"
+    frame.style.bottom = "max(88px, calc(84px + env(safe-area-inset-bottom)))"
     frame.style.right = config.position === "left" ? "" : "max(12px, env(safe-area-inset-right))"
     frame.style.left = config.position === "left" ? "max(12px, env(safe-area-inset-left))" : ""
     frame.style.width = config.width || "380px"
@@ -331,7 +335,7 @@ type FrameMessage =
       "calc(100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)))"
     frame.style.height =
       "min(760px, calc(100dvh - max(104px, calc(88px + env(safe-area-inset-bottom))) - max(12px, env(safe-area-inset-top))))"
-    frame.style.borderRadius = "18px"
+    frame.style.borderRadius = "16px"
   }
 
   function postToFrame(message: FrameMessage) {
@@ -495,13 +499,14 @@ type FrameMessage =
     }
     const button = document.createElement("button")
     const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-    const iconPaths = [
-      "M3 11a9 9 0 1 1 18 0",
-      "M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
-      "M21 11h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2z",
-      "M21 16v2a4 4 0 0 1-4 4h-5",
-    ]
+    const iconPaths = ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"]
     const text = document.createElement("span")
+    const themeColor = config.themeColor || "#0f6cbd"
+    const reduceMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const restShadow = "0 1px 2px rgba(15, 35, 65, 0.16), 0 8px 24px rgba(15, 35, 65, 0.22)"
+    const hoverShadow = "0 2px 4px rgba(15, 35, 65, 0.18), 0 12px 32px rgba(15, 35, 65, 0.28)"
     button.type = "button"
     button.dataset.agentDeskWidget = "launcher"
     button.setAttribute("aria-label", config.title || getDefaultWidgetTitle(config))
@@ -512,38 +517,60 @@ type FrameMessage =
     icon.setAttribute("stroke-linecap", "round")
     icon.setAttribute("stroke-linejoin", "round")
     icon.setAttribute("aria-hidden", "true")
-    icon.style.width = "24px"
-    icon.style.height = "24px"
+    icon.style.width = "26px"
+    icon.style.height = "26px"
     icon.style.flex = "0 0 auto"
     iconPaths.forEach((pathData) => {
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
       path.setAttribute("d", pathData)
       icon.appendChild(path)
     })
+    // Visually hidden: the icon carries the meaning, the label serves assistive tech.
     text.textContent = getLauncherText(config)
-    text.style.display = "block"
+    text.style.position = "absolute"
+    text.style.width = "1px"
+    text.style.height = "1px"
+    text.style.overflow = "hidden"
+    text.style.clip = "rect(0 0 0 0)"
+    text.style.whiteSpace = "nowrap"
     button.style.position = "fixed"
-    button.style.bottom = "24px"
-    button.style.right = config.position === "left" ? "" : "24px"
-    button.style.left = config.position === "left" ? "24px" : ""
+    button.style.bottom = "max(20px, env(safe-area-inset-bottom))"
+    button.style.right = config.position === "left" ? "" : "max(20px, env(safe-area-inset-right))"
+    button.style.left = config.position === "left" ? "max(20px, env(safe-area-inset-left))" : ""
     button.style.zIndex = "2147483000"
     button.style.display = "inline-flex"
-    button.style.flexDirection = "column"
     button.style.alignItems = "center"
     button.style.justifyContent = "center"
-    button.style.gap = "4px"
-    button.style.width = "64px"
-    button.style.height = "64px"
+    button.style.width = "56px"
+    button.style.height = "56px"
     button.style.border = "0"
     button.style.borderRadius = "999px"
     button.style.padding = "0"
-    button.style.background = config.themeColor || "#0f6cbd"
+    button.style.background = themeColor
     button.style.color = "#fff"
-    button.style.font = "600 13px/1 sans-serif"
-    button.style.boxShadow = "0 18px 40px rgba(15, 35, 65, 0.24)"
+    button.style.boxShadow = restShadow
     button.style.cursor = "pointer"
+    button.style.outline = "none"
+    button.style.transition = reduceMotion
+      ? "none"
+      : "transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease"
     button.appendChild(icon)
     button.appendChild(text)
+
+    const lift = () => {
+      button.style.transform = "translateY(-2px)"
+      button.style.boxShadow = hoverShadow
+    }
+    const rest = () => {
+      button.style.transform = "none"
+      button.style.boxShadow = restShadow
+    }
+    button.addEventListener("mouseenter", lift)
+    button.addEventListener("mouseleave", rest)
+    button.addEventListener("focus", () => {
+      button.style.boxShadow = `${hoverShadow}, 0 0 0 3px ${themeColor}55`
+    })
+    button.addEventListener("blur", rest)
 
     button.addEventListener("click", () => {
       if (state.isOpen) {

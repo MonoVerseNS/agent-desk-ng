@@ -1823,6 +1823,7 @@
     "loadTeamDetailFailed": "Could not load support team details.",
     "teamEditTitle": "Edit",
     "teamCreateTitle": "New",
+    "createTeamAction": "Create Team",
     "teamName": "Team Name",
     "teamNamePlaceholder": "Enter team name",
     "leader": "Team Lead",
