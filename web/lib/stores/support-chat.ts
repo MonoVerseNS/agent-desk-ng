@@ -221,6 +221,59 @@ function t(key: string) {
 }
 
 export const useSupportChatStore = create<SupportChatStore>((set, get) => {
+  let subscribedConversationId: number | null = null
+
+  const sendSubscription = (
+    socket: WebSocket | null,
+    prevId: number | null,
+    nextId: number | null
+  ) => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return
+    }
+    if (prevId && prevId !== nextId) {
+      socket.send(
+        JSON.stringify({
+          type: "unsubscribe",
+          topics: [`conversation:${prevId}`],
+        })
+      )
+    }
+    if (nextId && nextId > 0) {
+      socket.send(
+        JSON.stringify({
+          type: "subscribe",
+          topics: [`conversation:${nextId}`],
+        })
+      )
+    }
+  }
+
+  const scheduleMessageReplyCheck = (
+    conversationId: number,
+    sentMessageId: number
+  ) => {
+    setTimeout(() => {
+      const current = get()
+      if (current.conversation?.id === conversationId) {
+        const hasNewer = current.messages.some((m) => m.id > sentMessageId)
+        if (!hasNewer) {
+          void current.syncLatestMessages()
+        }
+      }
+    }, 3500)
+
+    setTimeout(() => {
+      const current = get()
+      if (current.conversation?.id === conversationId) {
+        const hasNewer = current.messages.some((m) => m.id > sentMessageId)
+        if (!hasNewer) {
+          void current.syncLatestMessages()
+        }
+      }
+    }, 7000)
+  }
+
   const realtime = createRealtimeConnectionManager({
     beforeConnect: () => ensureCustomerSession(),
     createSocket: createImRealtimeConnection,
@@ -232,6 +285,25 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     },
     onSocketChange: (socket) => {
       set({ socket })
+    },
+    onOpen: (socket) => {
+      const activeConversationId =
+        get().conversation?.id || get().activeConversationId
+      if (activeConversationId > 0) {
+        socket.send(
+          JSON.stringify({
+            type: "subscribe",
+            topics: [`conversation:${activeConversationId}`],
+          })
+        )
+        subscribedConversationId = activeConversationId
+        void get().syncLatestMessages()
+      } else {
+        subscribedConversationId = null
+      }
+    },
+    onClose: () => {
+      subscribedConversationId = null
     },
     onMessage: (messageEvent) => {
       let event: ImRealtimeEnvelope
@@ -337,6 +409,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
   })
 
   const closeSocket = (options?: { reconnect?: boolean }) => {
+    subscribedConversationId = null
     realtime.disconnect({
       reconnect: options?.reconnect ?? false,
       updateStatus: true,
@@ -344,10 +417,21 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
   }
 
   const connectSocket = () => {
-    if (!get().conversation?.id) {
+    const activeConversationId =
+      get().conversation?.id || get().activeConversationId
+    if (!activeConversationId) {
       return
     }
     realtime.connect()
+    const socket = get().socket
+    if (
+      socket &&
+      socket.readyState === WebSocket.OPEN &&
+      activeConversationId !== subscribedConversationId
+    ) {
+      sendSubscription(socket, subscribedConversationId, activeConversationId)
+      subscribedConversationId = activeConversationId
+    }
   }
 
   return {
@@ -512,6 +596,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     },
 
     selectConversation: async (conversationId: number) => {
+      const prevId = get().conversation?.id || get().activeConversationId
       const patch = buildSelectConversationPatch(get(), conversationId)
       if (!patch) {
         return
@@ -524,6 +609,12 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         ...patch,
         activeAgentActivity: null,
       })
+
+      const socket = get().socket
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        sendSubscription(socket, prevId, conversationId)
+        subscribedConversationId = conversationId
+      }
 
       try {
         await get().refreshMessages()
@@ -539,6 +630,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
 
       set({ creatingConversation: true, error: "", activeAgentActivity: null })
       try {
+        const prevId = get().conversation?.id || get().activeConversationId
         const created = await createImConversation(subject)
         set((state) => ({
           creatingConversation: false,
@@ -552,6 +644,13 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             created.id
           ),
         }))
+
+        const socket = get().socket
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          sendSubscription(socket, prevId, created.id)
+          subscribedConversationId = created.id
+        }
+
         await get().refreshMessages()
       } catch (error) {
         set({
@@ -743,6 +842,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             lastMessageSummary: summarizeIMMessage(nextMessage),
           }),
         }))
+        scheduleMessageReplyCheck(conversationId, nextMessage.id)
       } catch (error) {
         set({
           sending: false,
@@ -805,6 +905,7 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             lastMessageSummary: summarizeIMMessage(nextMessage),
           }),
         }))
+        scheduleMessageReplyCheck(conversationId, nextMessage.id)
       } catch (error) {
         set({
           uploadingAsset: false,

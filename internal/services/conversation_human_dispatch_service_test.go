@@ -45,8 +45,9 @@ func TestConversationHumanDispatchAIHandoffOffHoursQueuesAndSendsNotice(t *testi
 	if message == nil {
 		t.Fatalf("expected off-hours notice message")
 	}
-	if message.SenderType != enums.IMSenderTypeAI || message.Content != services.HandoffOffHoursMessage {
-		t.Fatalf("unexpected off-hours message: %+v", message)
+	expectedMsg := services.HandoffOffHoursMessageForLocale("zh-CN")
+	if message.SenderType != enums.IMSenderTypeAI || message.Content != expectedMsg {
+		t.Fatalf("unexpected off-hours message: %+v, want %q", message, expectedMsg)
 	}
 }
 
@@ -151,8 +152,9 @@ func TestConversationHumanDispatchHumanOnlyCreateOffHoursUsesGlobalPendingPool(t
 	}
 
 	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Desc("id"))
-	if message == nil || message.Content != services.HandoffWaitingMessage {
-		t.Fatalf("expected waiting message, got %+v", message)
+	expectedWaiting := services.HandoffWaitingMessageForLocale("zh-CN")
+	if message == nil || message.Content != expectedWaiting {
+		t.Fatalf("expected waiting message %q, got %+v", expectedWaiting, message)
 	}
 }
 
@@ -188,7 +190,7 @@ func TestConversationAutoAssignManualDispatchOffHoursReturnsBusinessMessage(t *t
 	if err == nil {
 		t.Fatalf("expected off-hours manual dispatch to fail")
 	}
-	if !strings.Contains(err.Error(), "当前暂不在人工客服服务时间内") {
+	if !strings.Contains(err.Error(), "Human support is currently outside service hours") && !strings.Contains(err.Error(), "当前暂不在人工客服服务时间内") {
 		t.Fatalf("expected off-hours error, got %v", err)
 	}
 }

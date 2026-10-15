@@ -32,6 +32,9 @@ func TestIsCustomerHandoffRequest(t *testing.T) {
 		{"тупой бот, дай человека", true},
 		{"нужен оператор", true},
 		{"нужен специалист", true},
+		{"оператор", true},
+		{"человек", true},
+		{"к оператору", true},
 
 		// English varied phrasing
 		{"can I speak to someone?", true},
@@ -43,6 +46,8 @@ func TestIsCustomerHandoffRequest(t *testing.T) {
 		{"human please", true},
 		{"stop bot and get human", true},
 		{"live agent", true},
+		{"operator", true},
+		{"human", true},
 
 		// Other languages
 		{"necesito hablar con una persona", true},
@@ -51,12 +56,16 @@ func TestIsCustomerHandoffRequest(t *testing.T) {
 		{"转人工", true},
 		{"请帮我转接人工客服", true},
 
-		// Non-handoff questions & greetings
+		// Non-handoff questions & greetings (including mentions of operators without transfer intent)
 		{"Привет хочу возрат денег", false},
 		{"Здравствуйте, как вернуть товар?", false},
 		{"Добрый день, сколько стоит доставка?", false},
 		{"Hello, how do I track my order?", false},
 		{"Can I get a refund for my purchase?", false},
+		{"Операторы не создаются", false},
+		{"Операторы не создаються", false},
+		{"Кто такой оператор?", false},
+		{"Оператор работает ночью?", false},
 		{"Спасибо, всё понятно!", false},
 		{"OK, thank you very much", false},
 		{"", false},

@@ -51,7 +51,7 @@ func (e *replyEligibility) CanReply(conversation models.Conversation, message mo
 	if message.SenderType != enums.IMSenderTypeCustomer {
 		return false
 	}
-	if conversation.HandoffAt != nil || conversation.CurrentAssigneeID > 0 {
+	if conversation.CurrentAssigneeID > 0 {
 		return false
 	}
 	if aiAgent.ServiceMode == enums.IMConversationServiceModeHumanOnly {

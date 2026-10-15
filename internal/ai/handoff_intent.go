@@ -82,16 +82,29 @@ func IsCustomerHandoffRequest(text string) bool {
 		}
 	}
 
+	// Single-word requests (e.g. user just typed "оператор", "человек", "operator", "human")
+	if normalized == " оператор " ||
+		normalized == " оператора " ||
+		normalized == " человек " ||
+		normalized == " специалист " ||
+		normalized == " support " ||
+		normalized == " operator " ||
+		normalized == " agent " ||
+		normalized == " human " {
+		return true
+	}
+
 	// Direct targets in Russian with prepositions or adjectives (e.g. "к оператору", "с человеком", "со специалистом", "живой человек")
-	if strings.Contains(normalized, " оператор") ||
-		strings.Contains(normalized, " оператора") ||
-		strings.Contains(normalized, " оператором") ||
+	if strings.Contains(normalized, " к оператору") ||
+		strings.Contains(normalized, " на оператора") ||
+		strings.Contains(normalized, " с оператором") ||
+		strings.Contains(normalized, " со специалистом") ||
+		strings.Contains(normalized, " к специалисту") ||
+		strings.Contains(normalized, " с человеком") ||
+		strings.Contains(normalized, " с сотрудником") ||
 		strings.Contains(normalized, " живой человек") ||
 		strings.Contains(normalized, " живого человека") ||
 		strings.Contains(normalized, " живым человеком") ||
-		strings.Contains(normalized, " со специалистом") ||
-		strings.Contains(normalized, " с человеком") ||
-		strings.Contains(normalized, " с сотрудником") ||
 		strings.Contains(normalized, " поговорить с кем") ||
 		strings.Contains(normalized, " поговорить со ") ||
 		strings.Contains(normalized, " реальный человек") ||

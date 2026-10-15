@@ -26,8 +26,9 @@ func TestReplyEligibilityCanReply(t *testing.T) {
 
 	message = newCustomerMessageFixture("hello")
 	conversation.HandoffAt = ptrTime(time.Now())
-	if eligibility.CanReply(conversation, message, aiAgent) {
-		t.Fatalf("expected handed-off conversation to be rejected")
+	conversation.CurrentAssigneeID = 0
+	if !eligibility.CanReply(conversation, message, aiAgent) {
+		t.Fatalf("expected unassigned handed-off conversation to still be replyable by AI")
 	}
 
 	conversation = newConversationFixture()
@@ -111,8 +112,11 @@ func TestResolveInterruptPrompt(t *testing.T) {
 		DisplayName: "获取当前时间",
 		InfoPreview: "system/server_time",
 	}
-	if got := resolveInterruptPrompt(summary); got != "即将执行“获取当前时间”，是否确认继续？" {
+	if got := resolveInterruptPrompt(summary, "zh-CN"); got != "即将执行“获取当前时间”，是否确认继续？" {
 		t.Fatalf("tool code leaked into customer prompt: %q", got)
+	}
+	if got := resolveInterruptPrompt(summary, "en-US"); got != "About to execute \"获取当前时间\". Confirm to continue?" {
+		t.Fatalf("expected en-US prompt, got: %q", got)
 	}
 
 	summary.Interrupts[0].PromptText = "请确认是否更新客户资料。"

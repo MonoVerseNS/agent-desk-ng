@@ -37,16 +37,17 @@ func TestHandoffGraphOffHoursSendsNoticeWithoutConfirmation(t *testing.T) {
 	if !result.ReplySent {
 		t.Fatalf("expected graph result to mark replySent, got %+v", result)
 	}
-	if result.Action != "off_hours_handoff" || result.ReplyText != services.HandoffOffHoursMessage {
-		t.Fatalf("unexpected off-hours graph result: %+v", result)
+	expectedMsg := services.HandoffOffHoursMessageForLocale(services.ResolveConversationLocale(conversation.ID))
+	if result.Action != "off_hours_handoff" || result.ReplyText != expectedMsg {
+		t.Fatalf("unexpected off-hours graph result: %+v, want %q", result, expectedMsg)
 	}
 
 	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Desc("id"))
 	if message == nil {
 		t.Fatalf("expected off-hours notice message")
 	}
-	if message.Content != services.HandoffOffHoursMessage {
-		t.Fatalf("expected off-hours notice, got %q", message.Content)
+	if message.Content != expectedMsg {
+		t.Fatalf("expected off-hours notice %q, got %q", expectedMsg, message.Content)
 	}
 
 	current := services.ConversationService.Get(conversation.ID)
@@ -170,6 +171,8 @@ func setupHandoffGraphTestDB(t *testing.T) *gorm.DB {
 		}
 	})
 	if err := db.AutoMigrate(
+		&models.Channel{},
+		&models.CustomerIdentity{},
 		&models.AIAgent{},
 		&models.AgentTeam{},
 		&models.AgentTeamSchedule{},
