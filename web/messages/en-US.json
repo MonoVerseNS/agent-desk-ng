@@ -1453,7 +1453,10 @@
     "autoHandoffOnFailureHelp": "When the AI model errors, exhausts steps, or has no knowledge, immediately transfer the customer to a human agent.",
     "handoffMessage": "Customer Notice upon Handoff",
     "handoffMessageHelp": "Sent to the customer so they know they have been transferred to an operator and are not being ignored.",
-    "handoffMessagePlaceholder": "We are connecting you to a human support agent. Please wait."
+    "handoffMessagePlaceholder": "We are connecting you to a human support agent. Please wait.",
+    "offHoursMessage": "Off-hours notification message",
+    "offHoursMessageHelp": "Custom message sent when a customer is queued outside operator working hours or when no operators are available. Leave empty for system default.",
+    "offHoursMessagePlaceholder": "Support is currently offline. Your request has been queued and will be reviewed by an operator later."
   },
   "aiConfig": {
     "allStatuses": "All statuses",

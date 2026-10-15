@@ -86,6 +86,7 @@ type agentRevisionAgent struct {
 	AllowedMCPTools      string `json:"allowedMcpTools"`
 	AutoHandoffOnFailure *bool  `json:"autoHandoffOnFailure,omitempty"`
 	HandoffMessage       string `json:"handoffMessage,omitempty"`
+	OffHoursMessage      string `json:"offHoursMessage,omitempty"`
 }
 
 // AgentRevisionSnapshot is the immutable runtime configuration restored from
@@ -160,6 +161,7 @@ func applyRevisionAgentSnapshot(agent *models.AIAgent, definition agentRevisionA
 		agent.AutoHandoffOnFailure = true
 	}
 	agent.HandoffMessage = definition.HandoffMessage
+	agent.OffHoursMessage = definition.OffHoursMessage
 }
 
 func applyRevisionModelSnapshot(config *models.AIConfig, definition agentRevisionModel) {
@@ -198,6 +200,7 @@ func (s *agentRevisionService) publishSnapshot(db *gorm.DB, agent *models.AIAgen
 			FallbackMode: int(agent.FallbackMode), FallbackMessage: agent.FallbackMessage, KnowledgeIDs: agent.KnowledgeIDs,
 			SkillIDs: agent.SkillIDs, AllowedMCPTools: agent.AllowedMCPTools,
 			AutoHandoffOnFailure: &agent.AutoHandoffOnFailure, HandoffMessage: agent.HandoffMessage,
+			OffHoursMessage: agent.OffHoursMessage,
 		},
 		Model: model,
 	}

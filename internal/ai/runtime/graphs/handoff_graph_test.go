@@ -53,11 +53,11 @@ func TestHandoffGraphOffHoursSendsNoticeWithoutConfirmation(t *testing.T) {
 	if current == nil {
 		t.Fatalf("expected conversation")
 	}
-	if current.Status != enums.IMConversationStatusAIServing {
-		t.Fatalf("expected conversation to stay ai-serving, got %d", current.Status)
+	if current.Status != enums.IMConversationStatusPending {
+		t.Fatalf("expected conversation to be queued in pending status, got %d", current.Status)
 	}
-	if current.HandoffAt != nil {
-		t.Fatalf("expected handoff_at to remain nil, got %v", current.HandoffAt)
+	if current.HandoffAt == nil {
+		t.Fatalf("expected handoff_at to be set, got nil")
 	}
 }
 
@@ -96,6 +96,30 @@ func TestHandoffGraphOffHoursSendsNoticeInRussianForRussianConversation(t *testi
 	}
 	if message.Content != expectedRuMsg {
 		t.Fatalf("expected Russian off-hours notice %q, got %q", expectedRuMsg, message.Content)
+	}
+}
+
+func TestHandoffGraphOffHoursUsesCustomAgentNotice(t *testing.T) {
+	db := setupHandoffGraphTestDB(t)
+	aiAgent := createHandoffGraphAIAgent(t, db, "1")
+	aiAgent.OffHoursMessage = "Операторы сейчас оффлайн. Мы ответим позже!"
+	conversation := createHandoffGraphConversation(t, db, aiAgent.ID)
+
+	reply, err := NewHandoffGraph(conversation, aiAgent).Run(context.Background(), `{"reason":"позови человека"}`)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	var result tooling.ToolResult
+	if err := json.Unmarshal([]byte(reply), &result); err != nil {
+		t.Fatalf("expected graph tool result JSON, got %q: %v", reply, err)
+	}
+	if result.Action != "off_hours_handoff" || result.ReplyText != aiAgent.OffHoursMessage {
+		t.Fatalf("expected custom notice %q, got %+v", aiAgent.OffHoursMessage, result)
+	}
+
+	current := services.ConversationService.Get(conversation.ID)
+	if current == nil || current.Status != enums.IMConversationStatusPending {
+		t.Fatalf("expected conversation to be queued in pending status, got %v", current)
 	}
 }
 
@@ -150,6 +174,7 @@ func setupHandoffGraphTestDB(t *testing.T) *gorm.DB {
 		&models.AgentTeam{},
 		&models.AgentTeamSchedule{},
 		&models.Conversation{},
+		&models.ConversationAssignment{},
 		&models.ConversationEventLog{},
 		&models.ConversationReadState{},
 		&models.Message{},

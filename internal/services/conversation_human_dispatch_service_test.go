@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-func TestConversationHumanDispatchAIHandoffOffHoursKeepsAIServingAndSendsNotice(t *testing.T) {
+func TestConversationHumanDispatchAIHandoffOffHoursQueuesAndSendsNotice(t *testing.T) {
 	db := setupConversationHumanDispatchTestDB(t)
 	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "1")
 	conversation := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
@@ -31,11 +31,14 @@ func TestConversationHumanDispatchAIHandoffOffHoursKeepsAIServingAndSendsNotice(
 	}
 
 	current := services.ConversationService.Get(conversation.ID)
-	if current.Status != enums.IMConversationStatusAIServing {
-		t.Fatalf("expected conversation to stay AI serving, got status=%d", current.Status)
+	if current.Status != enums.IMConversationStatusPending {
+		t.Fatalf("expected conversation to be queued in pending status, got status=%d", current.Status)
 	}
-	if current.HandoffAt != nil {
-		t.Fatalf("expected handoffAt to stay nil, got %v", current.HandoffAt)
+	if current.HandoffAt == nil {
+		t.Fatalf("expected handoffAt to be set")
+	}
+	if current.CurrentTeamID != 1 || current.CurrentAssigneeID != 0 {
+		t.Fatalf("expected conversation in team pool 1, got team=%d assignee=%d", current.CurrentTeamID, current.CurrentAssigneeID)
 	}
 
 	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Desc("id"))
@@ -44,6 +47,32 @@ func TestConversationHumanDispatchAIHandoffOffHoursKeepsAIServingAndSendsNotice(
 	}
 	if message.SenderType != enums.IMSenderTypeAI || message.Content != services.HandoffOffHoursMessage {
 		t.Fatalf("unexpected off-hours message: %+v", message)
+	}
+}
+
+func TestConversationHumanDispatchCustomOffHoursMessage(t *testing.T) {
+	db := setupConversationHumanDispatchTestDB(t)
+	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "1")
+	aiAgent.OffHoursMessage = "Операторы сейчас оффлайн. Мы ответим вам в рабочее время!"
+	conversation := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
+
+	result, err := services.ConversationHumanDispatchService.HandoffByAI(conversation.ID, aiAgent, "нужен оператор")
+	if err != nil {
+		t.Fatalf("HandoffByAI() error = %v", err)
+	}
+	if result == nil || result.Decision != services.HandoffDecisionOffHours {
+		t.Fatalf("expected off_hours decision, got %+v", result)
+	}
+	if result.Message != aiAgent.OffHoursMessage {
+		t.Fatalf("expected custom off-hours message %q, got %q", aiAgent.OffHoursMessage, result.Message)
+	}
+
+	message := services.MessageService.FindOne(sqls.NewCnd().Eq("conversation_id", conversation.ID).Desc("id"))
+	if message == nil {
+		t.Fatalf("expected off-hours notice message")
+	}
+	if message.Content != aiAgent.OffHoursMessage {
+		t.Fatalf("expected custom notice %q, got %q", aiAgent.OffHoursMessage, message.Content)
 	}
 }
 

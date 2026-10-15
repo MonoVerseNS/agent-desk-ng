@@ -135,6 +135,7 @@ export function AIAgentConfigWorkbench({
   const [maxSteps, setMaxSteps] = useState("4")
   const [autoHandoffOnFailure, setAutoHandoffOnFailure] = useState(true)
   const [handoffMessage, setHandoffMessage] = useState("")
+  const [offHoursMessage, setOffHoursMessage] = useState("")
   const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([])
   const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([])
   const [selectedKnowledgeBaseIds, setSelectedKnowledgeBaseIds] = useState<number[]>([])
@@ -200,6 +201,7 @@ export function AIAgentConfigWorkbench({
         setMaxSteps("4")
         setAutoHandoffOnFailure(true)
         setHandoffMessage("")
+        setOffHoursMessage("")
         setSelectedTeamIds([])
         setSelectedSkillIds([])
         setSelectedKnowledgeBaseIds([])
@@ -228,6 +230,7 @@ export function AIAgentConfigWorkbench({
       setMaxSteps(String(detail.maxSteps ?? 4))
       setAutoHandoffOnFailure(detail.autoHandoffOnFailure ?? true)
       setHandoffMessage(detail.handoffMessage || "")
+      setOffHoursMessage(detail.offHoursMessage || "")
       setSelectedTeamIds((detail.teams ?? []).map((team) => team.id))
       setSelectedSkillIds(detail.skillIds ?? [])
       setSelectedKnowledgeBaseIds(detail.knowledgeBaseIds ?? [])
@@ -432,6 +435,7 @@ export function AIAgentConfigWorkbench({
       contextWindow: Number.parseInt(contextWindow, 10) || 10,
       autoHandoffOnFailure,
       handoffMessage: handoffMessage.trim(),
+      offHoursMessage: offHoursMessage.trim(),
       knowledgeBaseIds: uniqueNumbers(selectedKnowledgeBaseIds),
       skillIds: uniqueNumbers(selectedSkillIds),
       mcpTools,
@@ -948,6 +952,17 @@ export function AIAgentConfigWorkbench({
                         />
                       </FieldBlock>
                     ) : null}
+                    <FieldBlock
+                      label={t("aiAgent.offHoursMessage")}
+                      help={t("aiAgent.offHoursMessageHelp")}
+                    >
+                      <Textarea
+                        rows={2}
+                        value={offHoursMessage}
+                        placeholder={t("aiAgent.offHoursMessagePlaceholder")}
+                        onChange={(event) => setOffHoursMessage(event.target.value)}
+                      />
+                    </FieldBlock>
                   </div>
                 </FormSection>
               </div>

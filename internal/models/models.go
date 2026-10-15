@@ -551,6 +551,7 @@ type AIAgent struct {
 	SortNo                 int                             `gorm:"type:int;not null;default:0;index"`           // SortNo 为后台展示排序号。
 	AutoHandoffOnFailure   bool                            `gorm:"type:tinyint(1);not null;default:1"`          // AutoHandoffOnFailure: whether to transfer to human when AI fails or has no answer.
 	HandoffMessage         string                          `gorm:"type:text"`                                   // HandoffMessage: custom notification sent to customer upon handoff.
+	OffHoursMessage        string                          `gorm:"type:text"`                                   // OffHoursMessage: custom notice sent to customer when handoff occurs outside active operator hours.
 	AuditFields
 }
 

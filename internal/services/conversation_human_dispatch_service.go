@@ -112,10 +112,30 @@ func (s *conversationHumanDispatchService) TryOffHoursHandoffByAIWithRequestID(c
 	if len(activeTeamIDs) > 0 {
 		return false, nil
 	}
-	if err := s.createEventWithRequestID(conversationID, requestID, enums.IMEventTypeTransfer, enums.IMSenderTypeAI, aiAgent.ID, "转人工失败：非服务时间", strings.TrimSpace(reason)); err != nil {
+
+	if err := s.markHandoff(conversationID, aiAgent, reason, requestID); err != nil {
 		return true, err
 	}
-	offHoursMessage := HandoffOffHoursMessageForLocale(s.ResolveConversationLocale(conversationID))
+
+	var queuedConversation *models.Conversation
+	var poolErr error
+	if len(teamIDs) > 0 {
+		queuedConversation, poolErr = s.moveToTeamPoolWithRequestID(conversationID, teamIDs[0], reason, requestID)
+	} else {
+		poolErr = s.moveToGlobalPool(conversationID, aiAgent.Name)
+		queuedConversation = ConversationService.Get(conversationID)
+	}
+	if poolErr != nil {
+		return true, poolErr
+	}
+	if queuedConversation != nil {
+		WsService.PublishConversationChanged(queuedConversation, enums.IMRealtimeEventConversationUpdated)
+	}
+
+	offHoursMessage := strings.TrimSpace(aiAgent.OffHoursMessage)
+	if offHoursMessage == "" {
+		offHoursMessage = HandoffOffHoursMessageForLocale(s.ResolveConversationLocale(conversationID))
+	}
 	if err := s.sendAITextWithRequestID(conversationID, aiAgent.ID, offHoursMessage, requestID); err != nil {
 		return true, err
 	}
@@ -137,8 +157,15 @@ func (s *conversationHumanDispatchService) HandoffByAIWithRequestID(conversation
 		if _, err := s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID); err != nil {
 			return nil, err
 		}
-		offHoursMessage := HandoffOffHoursMessageForLocale(s.ResolveConversationLocale(conversationID))
-		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours, Message: offHoursMessage}, nil
+		offHoursMessage := strings.TrimSpace(aiAgent.OffHoursMessage)
+		if offHoursMessage == "" {
+			offHoursMessage = HandoffOffHoursMessageForLocale(s.ResolveConversationLocale(conversationID))
+		}
+		var teamID int64
+		if len(teamIDs) > 0 {
+			teamID = teamIDs[0]
+		}
+		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours, TeamID: teamID, Message: offHoursMessage}, nil
 	}
 
 	if err := s.markHandoff(conversationID, aiAgent, reason, requestID); err != nil {

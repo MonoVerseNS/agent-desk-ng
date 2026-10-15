@@ -1453,7 +1453,10 @@
     "autoHandoffOnFailureHelp": "当 AI 模型报错、超出步数或知识库无答案时，立即将客户自动转接给人工客服。",
     "handoffMessage": "转人工提示文案",
     "handoffMessageHelp": "自动转人工时发送给客户的通知消息，避免客户认为请求被忽略。",
-    "handoffMessagePlaceholder": "正在为你接入人工客服，请稍候。"
+    "handoffMessagePlaceholder": "正在为你接入人工客服，请稍候。",
+    "offHoursMessage": "非服务时间提示文案",
+    "offHoursMessageHelp": "当在非服务时间或无可用客服时转接人工发送给客户的提示文案，留空则使用系统默认提示。",
+    "offHoursMessagePlaceholder": "当前不在人工客服服务时间内。您的请求已进入排队队列，客服上班后将尽快为您处理。"
   },
   "aiConfig": {
     "allStatuses": "全部状态",

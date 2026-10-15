@@ -125,6 +125,7 @@ func (s *aIAgentService) UpdateAIAgent(req request.UpdateAIAgentRequest, operato
 		"allowed_mcp_tools":       item.AllowedMCPTools,
 		"auto_handoff_on_failure": item.AutoHandoffOnFailure,
 		"handoff_message":         item.HandoffMessage,
+		"off_hours_message":       item.OffHoursMessage,
 		"update_user_id":          operator.UserID,
 		"update_user_name":        operator.Username,
 		"updated_at":              time.Now(),
@@ -393,6 +394,7 @@ func (s *aIAgentService) buildAIAgentModel(id int64, req request.CreateAIAgentRe
 		AllowedMCPTools:      mcpToolsJSON,
 		AutoHandoffOnFailure: autoHandoffOnFailure,
 		HandoffMessage:       strings.TrimSpace(req.HandoffMessage),
+		OffHoursMessage:      strings.TrimSpace(req.OffHoursMessage),
 	}, nil
 }
 

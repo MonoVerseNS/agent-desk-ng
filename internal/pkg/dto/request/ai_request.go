@@ -75,6 +75,7 @@ type CreateAIAgentRequest struct {
 	WorkflowBindings     []AIAgentWorkflowBindingRequest `json:"workflowBindings"`
 	AutoHandoffOnFailure *bool                           `json:"autoHandoffOnFailure"`
 	HandoffMessage       string                          `json:"handoffMessage"`
+	OffHoursMessage      string                          `json:"offHoursMessage"`
 }
 
 type UpdateAIAgentRequest struct {

@@ -452,7 +452,7 @@ tool.graph.handoffConversation.appendix: |-
   5. If the issue can still be solved in the current conversation, continue helping instead of escalating too early.
   6. If the tool returns terminal=true and shouldRetry=false, the handoff flow has ended. Do not call it repeatedly.
 conversation.handoff.waiting: "We are connecting you to a human support agent. Please wait."
-conversation.handoff.offHours: "Human support is currently outside service hours. You can keep describing the issue and I will do my best to help. You can also request a human agent again when service hours resume."
+conversation.handoff.offHours: "Support is currently offline. Your request has been queued and will be reviewed by an operator later."
 notification.ticketAssigned.title: "Ticket assigned"
 notification.ticketAssigned.line: "Ticket %s has been assigned to you."
 notification.ticketAssigned.reason: "Assignment reason: %s"

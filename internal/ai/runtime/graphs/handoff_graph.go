@@ -58,11 +58,15 @@ func (g *HandoffGraph) Run(ctx context.Context, argumentsInJSON string) (string,
 		handled, err := services.ConversationService.TryOffHoursHandoffByAIWithRequestID(g.conversation.ID, g.aiAgent, reason, requestID)
 		if err != nil || handled {
 			if handled && err == nil {
+				offHoursMsg := strings.TrimSpace(g.aiAgent.OffHoursMessage)
+				if offHoursMsg == "" {
+					offHoursMsg = services.HandoffOffHoursMessageForLocale(locale)
+				}
 				return tooling.MarshalToolResult(tooling.ToolResult{
 					Handled:     true,
 					Terminal:    true,
 					Action:      "off_hours_handoff",
-					ReplyText:   services.HandoffOffHoursMessageForLocale(locale),
+					ReplyText:   offHoursMsg,
 					ReplySent:   true,
 					ShouldRetry: false,
 				}), nil

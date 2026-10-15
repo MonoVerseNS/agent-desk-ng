@@ -125,6 +125,7 @@ type AIAgentResponse struct {
 	SortNo                 int                              `json:"sortNo"`
 	AutoHandoffOnFailure   bool                             `json:"autoHandoffOnFailure"`
 	HandoffMessage         string                           `json:"handoffMessage"`
+	OffHoursMessage        string                           `json:"offHoursMessage"`
 	CreatedAt              string                           `json:"createdAt"`
 	UpdatedAt              string                           `json:"updatedAt"`
 	CreateUserName         string                           `json:"createUserName"`
