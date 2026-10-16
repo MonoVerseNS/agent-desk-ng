@@ -185,12 +185,15 @@ export function buildSelectConversationPatch(
     return null
   }
   return {
+    conversations: state.conversations,
     activeConversationId: target.id,
     conversation: target,
     // Messages belong to the request they were loaded for.
     messages: [] as never[],
     messagesCursor: "",
     messagesHasMore: false,
+    messagesLoadingMore: false,
+    readingMessageId: 0,
     error: "",
   }
 }

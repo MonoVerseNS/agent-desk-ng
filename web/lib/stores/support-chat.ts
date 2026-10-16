@@ -42,7 +42,6 @@ import {
   patchConversationListWithMessage,
 } from "@/lib/im-realtime-state"
 import {
-  buildSelectConversationPatch,
   CLOSED_IM_CONVERSATION_STATUS,
   findConversationById,
   pickConversationToResume,
@@ -218,6 +217,29 @@ let bootstrapToken = 0
 
 function t(key: string) {
   return translateCurrentMessage(key)
+}
+
+function buildSelectConversationPatch(
+  state: {
+    conversations: ImConversation[]
+    activeConversationId: number
+  },
+  conversationId: number
+) {
+  const conversation = findConversationById(state.conversations, conversationId)
+  if (!conversation) {
+    return null
+  }
+  return {
+    conversations: state.conversations,
+    activeConversationId: conversation.id,
+    conversation,
+    messages: [] as ImMessage[],
+    messagesCursor: "",
+    messagesHasMore: false,
+    messagesLoadingMore: false,
+    readingMessageId: 0,
+  }
 }
 
 export const useSupportChatStore = create<SupportChatStore>((set, get) => {
