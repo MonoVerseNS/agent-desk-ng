@@ -2,7 +2,7 @@
 
 import {
   CheckCircle2Icon,
-  HeadphonesIcon,
+  MessageSquarePlusIcon,
   RotateCwIcon,
   XIcon,
 } from "lucide-react"
@@ -62,16 +62,6 @@ function WindowActionButton({
       {...props}
     />
   )
-}
-
-function getStatusDotClass(status: string) {
-  if (status === "connected") {
-    return "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]"
-  }
-  if (status === "connecting") {
-    return "bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.16)]"
-  }
-  return "bg-muted-foreground shadow-[0_0_0_3px_rgba(148,163,184,0.14)]"
 }
 
 function useSupportChatSystemTheme() {
@@ -292,32 +282,22 @@ function SupportChatPanelContent() {
         style={{ "--primary": themeColor } as CSSProperties}
       >
         <header className="shrink-0 border-b border-border/70 bg-card/95 px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur dark:border-border/60 dark:bg-card/90 sm:px-4">
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15 dark:ring-primary/25">
-                <HeadphonesIcon className="size-4" />
-                <span
-                  className={cn(
-                    "absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full ring-2 ring-card",
-                    getStatusDotClass(status)
-                  )}
-                  aria-hidden="true"
-                />
-              </div>
-              <div className="min-w-0 space-y-0.5">
-                <div className="truncate text-sm font-semibold leading-5 text-foreground">
-                  {title}
-                </div>
-                <div className="truncate text-[11px] leading-4 text-muted-foreground">
-                  {subtitle}
-                </div>
-              </div>
-            </div>
+          <div className="flex min-w-0 items-center justify-between gap-2.5">
             <SupportChatConversationSwitcher
+              title={title}
+              subtitle={subtitle}
+              status={status}
               onNewRequest={() => setIsNewRequestDialogOpen(true)}
               onCloseActiveRequest={() => setIsCloseDialogOpen(true)}
             />
             <div className="flex shrink-0 items-center gap-0.5">
+              <WindowActionButton
+                onClick={() => setIsNewRequestDialogOpen(true)}
+                aria-label={t("supportChat.newRequest")}
+                title={t("supportChat.newRequest")}
+              >
+                <MessageSquarePlusIcon className="size-4" />
+              </WindowActionButton>
               {status !== "connected" ? (
                 <WindowActionButton
                   onClick={retry}

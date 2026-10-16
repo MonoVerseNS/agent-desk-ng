@@ -1,6 +1,12 @@
 "use client"
 
-import { CheckCircle2Icon, CheckIcon, ChevronDownIcon, MessageSquarePlusIcon } from "lucide-react"
+import {
+  CheckCircle2Icon,
+  CheckIcon,
+  ChevronDownIcon,
+  HeadphonesIcon,
+  MessageSquarePlusIcon,
+} from "lucide-react"
 import { useMemo } from "react"
 import { useShallow } from "zustand/react/shallow"
 
@@ -26,6 +32,9 @@ import { cn, formatDateTime } from "@/lib/utils"
 import { useI18n } from "@/i18n/provider"
 
 type SupportChatConversationSwitcherProps = {
+  title: string
+  subtitle: string
+  status: string
   onNewRequest: () => void
   onCloseActiveRequest?: () => void
 }
@@ -40,7 +49,20 @@ function getStatusBadgeClass(status: number) {
   return "bg-emerald-500/12 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
 }
 
+function getStatusDotClass(status: string) {
+  if (status === "connected") {
+    return "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]"
+  }
+  if (status === "connecting") {
+    return "bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.16)]"
+  }
+  return "bg-muted-foreground shadow-[0_0_0_3px_rgba(148,163,184,0.14)]"
+}
+
 export function SupportChatConversationSwitcher({
+  title,
+  subtitle,
+  status,
   onNewRequest,
   onCloseActiveRequest,
 }: SupportChatConversationSwitcherProps) {
@@ -73,23 +95,45 @@ export function SupportChatConversationSwitcher({
     [conversations, activeConversationId]
   )
 
-  // A visitor with a single open request has nothing to switch between, so the
-  // control would be a dead end. Keep it for the new-request action only.
-  if (conversations.length <= 1) {
+  const activeSubject = active?.subject?.trim()
+  const hasMultiple = conversations.length > 1
+
+  const displayTitle = activeSubject
+    ? activeSubject
+    : hasMultiple && active
+      ? resolveConversationTitle(active, t("supportChat.requestFallbackTitle"))
+      : title
+
+  const displaySubtitle = activeSubject || hasMultiple
+    ? title
+    : subtitle
+
+  const avatarElement = (
+    <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15 dark:ring-primary/25">
+      <HeadphonesIcon className="size-4" />
+      <span
+        className={cn(
+          "absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full ring-2 ring-card",
+          getStatusDotClass(status)
+        )}
+        aria-hidden="true"
+      />
+    </div>
+  )
+
+  if (!hasMultiple) {
     return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled={creatingConversation}
-        onClick={onNewRequest}
-        className="h-8 shrink-0 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        <MessageSquarePlusIcon className="size-4" />
-        <span className="hidden sm:inline">
-          {creatingConversation ? t("supportChat.creatingRequest") : t("supportChat.newRequest")}
-        </span>
-      </Button>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 p-1 -m-1">
+        {avatarElement}
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="truncate text-sm font-semibold leading-5 text-foreground">
+            {displayTitle}
+          </div>
+          <div className="truncate text-[11px] leading-4 text-muted-foreground">
+            {displaySubtitle}
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -97,22 +141,29 @@ export function SupportChatConversationSwitcher({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 min-w-0 max-w-[190px] gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md p-1 -m-1 text-left transition-colors hover:bg-foreground/[0.04] group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+            aria-label={t("supportChat.myRequests")}
           >
-            <span className="truncate">
-              {resolveConversationTitle(active, t("supportChat.requestFallbackTitle"))}
-            </span>
-            {totalUnread > 0 ? (
-              <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
-                {totalUnread > 99 ? "99+" : totalUnread}
-              </span>
-            ) : null}
-            <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
-          </Button>
+            {avatarElement}
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-semibold leading-5 text-foreground">
+                  {displayTitle}
+                </span>
+                <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100 transition-opacity" />
+                {totalUnread > 0 ? (
+                  <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                ) : null}
+              </div>
+              <div className="truncate text-[11px] leading-4 text-muted-foreground">
+                {displaySubtitle}
+              </div>
+            </div>
+          </button>
         }
       >
       </DropdownMenuTrigger>
