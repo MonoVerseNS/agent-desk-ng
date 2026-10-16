@@ -132,6 +132,28 @@ func TestConversationHumanDispatchAIHandoffFallsBackToFirstScheduledTeam(t *test
 	}
 }
 
+func TestConversationHumanDispatchEmptyAgentTeamIDsFallsBackToActiveTeam(t *testing.T) {
+	db := setupConversationHumanDispatchTestDB(t)
+	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeAIFirst, "")
+	createHumanDispatchTeam(t, db, 1, "Отдел поддержки")
+	createHumanDispatchActiveSchedule(t, db, 1)
+	createHumanDispatchAgentProfile(t, db, 101, 1, enums.ServiceStatusIdle, 3, true, enums.StatusOk)
+	conversation := createHumanDispatchConversation(t, db, aiAgent.ID, enums.IMConversationStatusAIServing)
+
+	result, err := services.ConversationHumanDispatchService.HandoffByAI(conversation.ID, aiAgent, "AI execution failure")
+	if err != nil {
+		t.Fatalf("HandoffByAI() error = %v", err)
+	}
+	if result == nil || result.Decision != services.HandoffDecisionAssigned {
+		t.Fatalf("expected assigned decision when active team has schedule and idle agent even with empty aiAgent.TeamIDs, got %+v", result)
+	}
+
+	current := services.ConversationService.Get(conversation.ID)
+	if current.Status != enums.IMConversationStatusActive || current.CurrentAssigneeID != 101 || current.CurrentTeamID != 1 {
+		t.Fatalf("expected active assigned conversation (team=1, assignee=101), got status=%d team=%d assignee=%d", current.Status, current.CurrentTeamID, current.CurrentAssigneeID)
+	}
+}
+
 func TestConversationHumanDispatchHumanOnlyCreateOffHoursUsesGlobalPendingPool(t *testing.T) {
 	db := setupConversationHumanDispatchTestDB(t)
 	aiAgent := createHumanDispatchAIAgent(t, db, enums.IMConversationServiceModeHumanOnly, "1")

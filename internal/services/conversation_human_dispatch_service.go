@@ -107,7 +107,7 @@ func (s *conversationHumanDispatchService) TryOffHoursHandoffByAIWithRequestID(c
 	if conversation == nil {
 		return false, errorsx.InvalidParamI18n("error.e0116")
 	}
-	teamIDs := orderedPositiveIDs(aiAgent.TeamIDs)
+	teamIDs := resolveDispatchTeamIDs(aiAgent.TeamIDs)
 	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(teamIDs, time.Now())
 	if len(activeTeamIDs) > 0 {
 		return false, nil
@@ -151,7 +151,7 @@ func (s *conversationHumanDispatchService) HandoffByAIWithRequestID(conversation
 	if conversation == nil {
 		return nil, errorsx.InvalidParamI18n("error.e0116")
 	}
-	teamIDs := orderedPositiveIDs(aiAgent.TeamIDs)
+	teamIDs := resolveDispatchTeamIDs(aiAgent.TeamIDs)
 	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(teamIDs, time.Now())
 	if len(activeTeamIDs) == 0 {
 		if _, err := s.TryOffHoursHandoffByAIWithRequestID(conversationID, aiAgent, reason, requestID); err != nil {
@@ -175,7 +175,7 @@ func (s *conversationHumanDispatchService) HandoffByAIWithRequestID(conversation
 }
 
 func (s *conversationHumanDispatchService) ApplyHumanOnlyCreate(conversationID int64, aiAgent models.AIAgent) (*HandoffDecisionResult, error) {
-	teamIDs := orderedPositiveIDs(aiAgent.TeamIDs)
+	teamIDs := resolveDispatchTeamIDs(aiAgent.TeamIDs)
 	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(teamIDs, time.Now())
 	waitingMessage := strings.TrimSpace(aiAgent.HandoffMessage)
 	if waitingMessage == "" {
@@ -201,7 +201,7 @@ func (s *conversationHumanDispatchService) DispatchPendingConversation(conversat
 	if conversation.Status != enums.IMConversationStatusPending || conversation.CurrentAssigneeID > 0 {
 		return nil, errorsx.InvalidParamI18n("error.e0137")
 	}
-	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(orderedPositiveIDs(aiAgent.TeamIDs), time.Now())
+	activeTeamIDs := ConversationDispatchService.findActiveScheduleTeamIDs(resolveDispatchTeamIDs(aiAgent.TeamIDs), time.Now())
 	if len(activeTeamIDs) == 0 {
 		return &HandoffDecisionResult{Decision: HandoffDecisionOffHours}, nil
 	}
@@ -400,6 +400,24 @@ func (s *conversationHumanDispatchService) sendAIText(conversationID, aiAgentID 
 func (s *conversationHumanDispatchService) sendAITextWithRequestID(conversationID, aiAgentID int64, content string, requestID string) error {
 	_, err := MessageService.SendAIServiceNoticeWithRequestID(conversationID, aiAgentID, content, requestID)
 	return err
+}
+
+func resolveDispatchTeamIDs(value string) []int64 {
+	ids := orderedPositiveIDs(value)
+	if len(ids) > 0 {
+		return ids
+	}
+	teams := AgentTeamService.Find(sqls.NewCnd().Eq("status", enums.StatusOk).Asc("id"))
+	if len(teams) == 0 {
+		return nil
+	}
+	fallback := make([]int64, 0, len(teams))
+	for _, team := range teams {
+		if team.ID > 0 {
+			fallback = append(fallback, team.ID)
+		}
+	}
+	return fallback
 }
 
 func orderedPositiveIDs(value string) []int64 {

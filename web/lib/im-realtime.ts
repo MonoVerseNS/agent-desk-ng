@@ -28,7 +28,7 @@ export type ImRealtimeEnvelope = {
 
 export function createImRealtimeConnection() {
   const config = readSupportChatRuntimeConfig()
-  const apiBaseUrl = (config.apiBaseUrl || "").trim()
+  const apiBaseUrl = (config.apiBaseUrl || config.baseUrl || "").trim()
   const baseUrl = apiBaseUrl
     ? apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "")
     : createWebSocketBaseUrl()

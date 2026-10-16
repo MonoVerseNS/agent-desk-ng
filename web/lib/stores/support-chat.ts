@@ -275,25 +275,20 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     conversationId: number,
     sentMessageId: number
   ) => {
-    setTimeout(() => {
-      const current = get()
-      if (current.conversation?.id === conversationId) {
-        const hasNewer = current.messages.some((m) => m.id > sentMessageId)
-        if (!hasNewer) {
-          void current.syncLatestMessages()
+    for (const delay of [1500, 3500, 7000]) {
+      setTimeout(() => {
+        const current = get()
+        if (current.conversation?.id === conversationId) {
+          if (current.isOpen && (!current.socket || current.socket.readyState !== WebSocket.OPEN)) {
+            connectSocket()
+          }
+          const hasNewer = current.messages.some((m) => m.id > sentMessageId)
+          if (!hasNewer) {
+            void current.syncLatestMessages()
+          }
         }
-      }
-    }, 3500)
-
-    setTimeout(() => {
-      const current = get()
-      if (current.conversation?.id === conversationId) {
-        const hasNewer = current.messages.some((m) => m.id > sentMessageId)
-        if (!hasNewer) {
-          void current.syncLatestMessages()
-        }
-      }
-    }, 7000)
+      }, delay)
+    }
   }
 
   const realtime = createRealtimeConnectionManager({
@@ -444,16 +439,21 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
     if (!activeConversationId) {
       return
     }
-    realtime.connect()
     const socket = get().socket
-    if (
-      socket &&
-      socket.readyState === WebSocket.OPEN &&
-      activeConversationId !== subscribedConversationId
-    ) {
-      sendSubscription(socket, subscribedConversationId, activeConversationId)
-      subscribedConversationId = activeConversationId
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      if (activeConversationId !== subscribedConversationId) {
+        sendSubscription(socket, subscribedConversationId, activeConversationId)
+        subscribedConversationId = activeConversationId
+      }
+      if (get().status !== "connected") {
+        set({ status: "connected" })
+      }
+      return
     }
+    if (socket && socket.readyState === WebSocket.CONNECTING) {
+      return
+    }
+    void realtime.connect()
   }
 
   return {
@@ -636,6 +636,8 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
       if (socket && socket.readyState === WebSocket.OPEN) {
         sendSubscription(socket, prevId, conversationId)
         subscribedConversationId = conversationId
+      } else if (get().isOpen) {
+        connectSocket()
       }
 
       try {
@@ -671,9 +673,13 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
         if (socket && socket.readyState === WebSocket.OPEN) {
           sendSubscription(socket, prevId, created.id)
           subscribedConversationId = created.id
+        } else if (get().isOpen) {
+          connectSocket()
         }
 
         await get().refreshMessages()
+        const latestMsgId = get().messages.at(-1)?.id ?? 0
+        scheduleMessageReplyCheck(created.id, latestMsgId)
       } catch (error) {
         set({
           creatingConversation: false,
@@ -864,6 +870,9 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             lastMessageSummary: summarizeIMMessage(nextMessage),
           }),
         }))
+        if (get().isOpen && (!get().socket || get().socket?.readyState !== WebSocket.OPEN)) {
+          connectSocket()
+        }
         scheduleMessageReplyCheck(conversationId, nextMessage.id)
       } catch (error) {
         set({
@@ -927,6 +936,9 @@ export const useSupportChatStore = create<SupportChatStore>((set, get) => {
             lastMessageSummary: summarizeIMMessage(nextMessage),
           }),
         }))
+        if (get().isOpen && (!get().socket || get().socket?.readyState !== WebSocket.OPEN)) {
+          connectSocket()
+        }
         scheduleMessageReplyCheck(conversationId, nextMessage.id)
       } catch (error) {
         set({

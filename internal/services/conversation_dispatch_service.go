@@ -15,7 +15,6 @@ import (
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/enums"
 	"agent-desk/internal/pkg/eventbus"
-	"agent-desk/internal/pkg/utils"
 	"agent-desk/internal/repositories"
 
 	"github.com/mlogclub/simple/sqls"
@@ -81,7 +80,7 @@ func (s *conversationDispatchService) DispatchPendingConversation(conversation *
 		return nil, nil
 	}
 
-	teamIDs := utils.SplitInt64s(aiAgent.TeamIDs)
+	teamIDs := resolveDispatchTeamIDs(aiAgent.TeamIDs)
 	if len(teamIDs) == 0 {
 		slog.Debug("skip auto dispatch due to empty ai agent team ids",
 			"conversation_id", conversation.ID,

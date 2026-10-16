@@ -1348,13 +1348,19 @@ func (s *setupReadinessService) fixAIAgentHandoff(targetAgentID int64, operator 
 			newTeamCSV = defaultTeamIDsCSV
 		}
 
-		newServiceMode := agent.ServiceMode
-		if newServiceMode == enums.IMConversationServiceModeAIOnly || newServiceMode == 0 {
-			if agent.AIConfigID > 0 {
-				newServiceMode = enums.IMConversationServiceModeAIFirst
-			} else {
-				newServiceMode = enums.IMConversationServiceModeHumanOnly
+		hasValidAIConfig := false
+		if agent.AIConfigID > 0 {
+			var aiCfg models.AIConfig
+			if err := db.Where("id = ? AND status = ?", agent.AIConfigID, enums.StatusOk).First(&aiCfg).Error; err == nil && aiCfg.ID > 0 {
+				hasValidAIConfig = true
 			}
+		}
+
+		newServiceMode := agent.ServiceMode
+		if !hasValidAIConfig {
+			newServiceMode = enums.IMConversationServiceModeHumanOnly
+		} else if newServiceMode == enums.IMConversationServiceModeAIOnly || newServiceMode == 0 {
+			newServiceMode = enums.IMConversationServiceModeAIFirst
 		}
 
 		rollout := agent.RolloutPercent

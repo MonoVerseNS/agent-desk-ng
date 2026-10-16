@@ -19,7 +19,10 @@ const REQUEST_TOGGLE_MAXIMIZE_MESSAGE_TYPE = "agent-desk:request-toggle-maximize
 
 function trustedParentOrigin() {
   try {
-    const value = new URLSearchParams(window.location.search).get("parentOrigin") || document.referrer
+    const value =
+      new URLSearchParams(window.location.search).get("parentOrigin") ||
+      document.referrer ||
+      window.location.origin
     const origin = value ? new URL(value).origin : ""
     return origin && origin !== "null" ? origin : ""
   } catch {
