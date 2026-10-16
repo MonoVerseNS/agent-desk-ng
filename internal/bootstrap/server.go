@@ -24,7 +24,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlogclub/simple/web"
-
 )
 
 func NewServer() (*gin.Engine, error) {
@@ -192,6 +191,7 @@ func addRouter(app *gin.Engine) {
 
 	dashboardGroup := app.Group("/api/dashboard", middleware.AuthMiddleware)
 	registerDashboardDashboardRoutes(dashboardGroup.Group("/dashboard"))
+	registerDashboardSetupRoutes(dashboardGroup.Group("/setup"))
 	registerDashboardUserRoutes(dashboardGroup.Group("/user"))
 	registerDashboardOrganizationRoutes(dashboardGroup.Group("/organization"))
 	registerDashboardCompanyRoutes(dashboardGroup.Group("/company"))

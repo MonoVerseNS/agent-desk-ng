@@ -80,9 +80,12 @@ async function loadSdk(config) {
         origin: "https://host.example",
       },
       addEventListener() {},
+      removeEventListener() {},
       clearTimeout() {},
-      setTimeout(handler) {
-        handler()
+      setTimeout(handler, delay) {
+        if (!delay || delay < 1000) {
+          handler()
+        }
         return 1
       },
     },
@@ -102,7 +105,7 @@ async function loadSdk(config) {
   return sandbox
 }
 
-async function flushPromises(count = 10) {
+async function flushPromises(count = 30) {
   for (let i = 0; i < count; i += 1) {
     await Promise.resolve()
   }
@@ -125,6 +128,7 @@ test("getChatUrl resolves a fresh userToken for each call", async () => {
   assert.equal(new URL(second).pathname, "/support/chat/")
   assert.equal(new URL(first).searchParams.get("userToken"), "token_1")
   assert.equal(new URL(second).searchParams.get("userToken"), "token_2")
+  assert.equal(new URL(first).searchParams.get("parentOrigin"), "https://host.example")
   assert.equal(calls, 2)
 })
 
@@ -241,6 +245,40 @@ test("launcher click creates chat iframe with a freshly resolved userToken", asy
   assert.ok(frame)
   assert.equal(new URL(frame.src).pathname, "/support/chat/")
   assert.equal(new URL(frame.src).searchParams.get("userToken"), "click_token")
+})
+
+test("requireUserToken rejects opening when getUserToken is missing or empty", async () => {
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    requireUserToken: true,
+    getUserToken: async () => "   ",
+  })
+  await flushPromises()
+
+  await assert.rejects(
+    () => sandbox.window.AgentDeskWidget.open(),
+    /Support user token is required/
+  )
+  const frame = sandbox.document.body.children.find(
+    (child) => child.dataset.agentDeskWidget === "frame"
+  )
+  assert.equal(frame, undefined)
+})
+
+test("ru-RU language configures Russian launcher and default title", async () => {
+  const sandbox = await loadSdk({
+    channelId: "ch_1",
+    baseUrl: "https://api.example",
+    language: "ru-RU",
+  })
+  await flushPromises()
+  const launcher = sandbox.document.body.children.find(
+    (child) => child.dataset.agentDeskWidget === "launcher"
+  )
+  assert.ok(launcher)
+  assert.equal(launcher.attributes["aria-label"], "Поддержка")
+  assert.equal(launcher.children.at(-1)?.textContent, "Чат")
 })
 
 test("chat iframe layout uses dynamic viewport height for iOS browser chrome", async () => {

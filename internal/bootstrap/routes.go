@@ -146,6 +146,12 @@ func registerDashboardDashboardRoutes(group *gin.RouterGroup) {
 	group.GET("/overview", dashboard.DashboardGetOverview)
 }
 
+func registerDashboardSetupRoutes(group *gin.RouterGroup) {
+	group.GET("/readiness", dashboard.SetupGetReadiness)
+	group.POST("/simulate_route", dashboard.SetupPostSimulate_route)
+	group.POST("/quick_fix", dashboard.SetupPostQuick_fix)
+}
+
 func registerDashboardUserRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", dashboard.UserGetBy)
 	group.POST("/assign_role", dashboard.UserPostAssign_role)

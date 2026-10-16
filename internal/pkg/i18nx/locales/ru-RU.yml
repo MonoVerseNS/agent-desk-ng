@@ -565,3 +565,5 @@ tool.graph.prepareTicketDraft.param.issue: "Проблема или сообще
 tool.graph.prepareTicketDraft.param.impact: "Область воздействия, например невозможность войти, оформить заказ или прерывание работы."
 tool.graph.prepareTicketDraft.param.expectedOutcome: "Ожидаемый результат или запрос пользователя."
 tool.graph.prepareTicketDraft.param.currentAttempt: "Предпринятые шаги по устранению. Необязательно."
+error.setup.invalidQuickFixAction: "Неподдерживаемое действие быстрой настройки: %v"
+error.setup.authRequired: "Войдите в систему для запуска диагностики или быстрой настройки"

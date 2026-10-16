@@ -565,3 +565,5 @@ tool.graph.prepareTicketDraft.param.issue: "用户正在遇到的问题或报错
 tool.graph.prepareTicketDraft.param.impact: "影响范围，例如无法登录、无法下单或业务中断。"
 tool.graph.prepareTicketDraft.param.expectedOutcome: "用户期望的处理结果或诉求。"
 tool.graph.prepareTicketDraft.param.currentAttempt: "当前已尝试过的处理步骤，可选。"
+error.setup.invalidQuickFixAction: "不支持的一键修复操作：%v"
+error.setup.authRequired: "请先登录以执行配置诊断或一键修复"

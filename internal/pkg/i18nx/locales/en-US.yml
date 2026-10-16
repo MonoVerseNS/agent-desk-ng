@@ -565,3 +565,5 @@ tool.graph.prepareTicketDraft.param.issue: "The issue or error message the user 
 tool.graph.prepareTicketDraft.param.impact: "Impact scope, such as unable to sign in, unable to place an order, or business interruption."
 tool.graph.prepareTicketDraft.param.expectedOutcome: "The user's expected outcome or request."
 tool.graph.prepareTicketDraft.param.currentAttempt: "Current attempted troubleshooting steps. Optional."
+error.setup.invalidQuickFixAction: "Unsupported setup quick-fix action: %v"
+error.setup.authRequired: "Sign in to run setup diagnostics or quick fixes"

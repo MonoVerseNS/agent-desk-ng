@@ -26,15 +26,21 @@ type WidgetState = {
   frameReady: boolean
   initSent: boolean
   isOpen: boolean
+  opening: boolean
   isMaximized: boolean
+  mounted: boolean
+  mountGeneration: number
+  openGeneration: number
+  cancelOpen: (() => void) | null
   configLoading: boolean
+  configPromise: Promise<void> | null
   frameHideTimer: number | null
-  frameDestroyTimer: number | null
   config: NormalizedAgentDeskConfig | null
   frameConfig: SupportChatRuntimeConfig | null
   frameUrl: URL | null
   animationDuration: number
-  listenerBound?: boolean
+  messageListener: ((event: MessageEvent) => void) | null
+  resizeListener: (() => void) | null
 }
 
 type WidgetConfigResponse = {
@@ -53,15 +59,24 @@ type PublicConfigResponse = {
 }
 
 function normalizeWidgetLanguage(language: string | undefined) {
-  return String(language || "").toLowerCase().startsWith("en") ? "en-US" : "zh-CN"
+  const lang = String(language || "").toLowerCase()
+  if (lang.startsWith("ru")) return "ru-RU"
+  if (lang.startsWith("en")) return "en-US"
+  return "zh-CN"
 }
 
 function getDefaultWidgetTitle(config?: NormalizedAgentDeskConfig | null) {
-  return normalizeWidgetLanguage(config?.language) === "en-US" ? "Support" : "\u5728\u7ebf\u5ba2\u670d"
+  const lang = normalizeWidgetLanguage(config?.language)
+  if (lang === "ru-RU") return "Поддержка"
+  if (lang === "en-US") return "Support"
+  return "\u5728\u7ebf\u5ba2\u670d"
 }
 
 function getLauncherText(config?: NormalizedAgentDeskConfig | null) {
-  return normalizeWidgetLanguage(config?.language) === "en-US" ? "Support" : "\u5ba2\u670d"
+  const lang = normalizeWidgetLanguage(config?.language)
+  if (lang === "ru-RU") return "Чат"
+  if (lang === "en-US") return "Support"
+  return "\u5ba2\u670d"
 }
 
 type FrameMessage =
@@ -70,7 +85,7 @@ type FrameMessage =
   | { type: "agent-desk:minimize" }
   | { type: "agent-desk:maximized"; payload: { isMaximized: boolean } }
 
-(function () {
+;(function () {
   const DEFAULT_CONFIG: Pick<
     NormalizedAgentDeskConfig,
     "language" | "position" | "themeColor" | "width"
@@ -81,7 +96,14 @@ type FrameMessage =
     width: "380px",
   }
 
+  // Capture the SDK origin while currentScript still refers to this script.
+  const currentScript = document.currentScript as HTMLScriptElement | null
+  const scriptBaseUrl = currentScript?.src
+    ? currentScript.src.replace(/\/sdk\/agent-desk-sdk\.min\.js(?:\?.*)?$/, "")
+    : ""
   const existingState = window.__CS_AI_AGENT_WIDGET_STATE__ as WidgetState | undefined
+  // Re-evaluating the script must not leave callbacks from an older instance.
+  if (existingState) window.AgentDeskWidget?.destroy()
   const state: WidgetState =
     existingState || {
       button: null,
@@ -90,14 +112,21 @@ type FrameMessage =
       frameReady: false,
       initSent: false,
       isOpen: false,
+      opening: false,
       isMaximized: false,
+      mounted: false,
+      mountGeneration: 0,
+      openGeneration: 0,
+      cancelOpen: null,
       configLoading: false,
+      configPromise: null,
       frameHideTimer: null,
-      frameDestroyTimer: null,
       config: null,
       frameConfig: null,
       frameUrl: null,
       animationDuration: 260,
+      messageListener: null,
+      resizeListener: null,
     }
   if (!existingState) {
     window.__CS_AI_AGENT_WIDGET_STATE__ = state
@@ -123,11 +152,14 @@ type FrameMessage =
   }
 
   function resolveWidgetBaseUrl(config: NormalizedAgentDeskConfig) {
-    const currentScript = document.currentScript as HTMLScriptElement | null
-    if (currentScript?.src) {
-      return currentScript.src.replace(/\/sdk\/agent-desk-sdk\.min\.js(?:\?.*)?$/, "")
-    }
-    return String(config.widgetBaseUrl || config.baseUrl || window.location.origin).replace(/\/$/, "")
+    return String(config.widgetBaseUrl || scriptBaseUrl || config.baseUrl || window.location.origin).replace(/\/$/, "")
+  }
+
+  function resolveConfig(config: AgentDeskConfig) {
+    const normalized = normalizeConfig(config)
+    normalized.widgetBaseUrl = resolveWidgetBaseUrl(normalized)
+    if (!config.baseUrl) normalized.baseUrl = normalized.widgetBaseUrl
+    return normalized
   }
 
   function createFrameUrl(
@@ -139,6 +171,8 @@ type FrameMessage =
     const frameUrl = new URL(`${widgetBaseUrl}/support/chat/`)
     frameUrl.searchParams.set("channelId", config.channelId)
     frameUrl.searchParams.set("baseUrl", config.baseUrl)
+    frameUrl.searchParams.set("parentOrigin", window.location.origin)
+    if (config.requireUserToken) frameUrl.searchParams.set("requireUserToken", "true")
     if (config.apiBaseUrl) frameUrl.searchParams.set("apiBaseUrl", config.apiBaseUrl)
     if (config.externalId) frameUrl.searchParams.set("externalId", config.externalId)
     if (identity.signature) frameUrl.searchParams.set("externalIdSignature", identity.signature)
@@ -170,15 +204,17 @@ type FrameMessage =
     return payload as SupportChatRuntimeConfig
   }
 
-  function resolveUserToken() {
-    const config = state.config
+  function resolveUserToken(config: NormalizedAgentDeskConfig) {
     if (typeof config?.getUserToken !== "function") {
+      if (config.requireUserToken) return Promise.reject(new Error("Support user token is required"))
       return Promise.resolve("")
     }
     try {
-      return Promise.resolve(config.getUserToken()).then((token) =>
-        String(token || "").trim()
-      )
+      return Promise.resolve(config.getUserToken()).then((token) => {
+        const value = String(token || "").trim()
+        if (config.requireUserToken && !value) throw new Error("Support user token is required")
+        return value
+      })
     } catch (error) {
       return Promise.reject(error)
     }
@@ -187,8 +223,7 @@ type FrameMessage =
   // Resolved per open(), like getUserToken, so the pair is always fresh and a
   // long-lived host page does not keep replaying an expired signature. A missing
   // signer simply means the visitor stays an anonymous guest.
-  function resolveExternalIdentity(): Promise<ResolvedExternalIdentity> {
-    const config = state.config
+  function resolveExternalIdentity(config: NormalizedAgentDeskConfig): Promise<ResolvedExternalIdentity> {
     if (!config?.externalId || typeof config.signExternalId !== "function") {
       return Promise.resolve({ signature: "", issuedAt: 0 })
     }
@@ -202,16 +237,14 @@ type FrameMessage =
     }
   }
 
-  function prepareFrameUrl() {
-    return Promise.all([resolveUserToken(), resolveExternalIdentity()]).then(
-      ([userToken, identity]) => {
-        if (!state.config) {
-          throw new Error("channelId is required")
-        }
-        state.frameUrl = createFrameUrl(state.config, userToken, identity)
-        state.frameConfig = createFrameConfig(state.config, userToken, identity)
-        return state.frameUrl
-      }
+  function prepareFrame(config: NormalizedAgentDeskConfig) {
+    // Resolve against one snapshot. A later mount must never receive a token or
+    // signature requested for the previous channel or visitor.
+    return Promise.all([resolveUserToken(config), resolveExternalIdentity(config)]).then(
+      ([userToken, identity]) => ({
+        frameUrl: createFrameUrl(config, userToken, identity),
+        frameConfig: createFrameConfig(config, userToken, identity),
+      })
     )
   }
 
@@ -233,20 +266,44 @@ type FrameMessage =
     return merged
   }
 
+  function fetchConfigPayload<T>(url: string, options: RequestInit): Promise<T> {
+    const controller = typeof AbortController === "function" ? new AbortController() : null
+    // Remote defaults are optional. A slow config service must not prevent the
+    // host from opening with its own configuration indefinitely.
+    return new Promise<T>((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        controller?.abort()
+        reject(new Error("Widget configuration request timed out"))
+      }, 5000)
+      Promise.resolve()
+        .then(() => fetch(url, { ...options, signal: controller?.signal }))
+        .then((response) => response.json() as Promise<T>)
+        .then(
+          (payload) => {
+            window.clearTimeout(timer)
+            resolve(payload)
+          },
+          (error) => {
+            window.clearTimeout(timer)
+            reject(error)
+          }
+        )
+    })
+  }
+
   function fetchWidgetConfig(config: NormalizedAgentDeskConfig) {
     const baseUrl = String(config.apiBaseUrl || config.baseUrl || "").replace(/\/$/, "")
     if (!baseUrl || !config.channelId || typeof fetch !== "function") {
       return Promise.resolve(config)
     }
     const url = `${baseUrl}/api/channel/config?channelId=${encodeURIComponent(config.channelId)}`
-    return fetch(url, {
+    return fetchConfigPayload<WidgetConfigResponse>(url, {
       method: "GET",
       cache: "no-store",
       headers: {
         "X-Channel-Id": config.channelId,
       },
     })
-      .then((response) => response.json() as Promise<WidgetConfigResponse>)
       .then((payload) => {
         if (!payload || payload.success === false) {
           return config
@@ -261,11 +318,10 @@ type FrameMessage =
     if (!baseUrl || typeof fetch !== "function") {
       return Promise.resolve(config)
     }
-    return fetch(`${baseUrl}/api/config`, {
+    return fetchConfigPayload<PublicConfigResponse>(`${baseUrl}/api/config`, {
       method: "GET",
       cache: "no-store",
     })
-      .then((response) => response.json() as Promise<PublicConfigResponse>)
       .then((payload) => {
         if (!payload || payload.success === false) {
           return config
@@ -279,13 +335,9 @@ type FrameMessage =
   }
 
   function clearFrameTimers() {
-    if (state.frameHideTimer) {
+    if (state.frameHideTimer !== null) {
       window.clearTimeout(state.frameHideTimer)
       state.frameHideTimer = null
-    }
-    if (state.frameDestroyTimer) {
-      window.clearTimeout(state.frameDestroyTimer)
-      state.frameDestroyTimer = null
     }
   }
 
@@ -350,7 +402,7 @@ type FrameMessage =
   }
 
   function flushFrameState() {
-    if (!state.frame || !state.frameLoaded || !state.frameReady || !state.config) {
+    if (!state.frame || !state.frameLoaded || !state.frameReady || !state.frameConfig) {
       return
     }
 
@@ -358,7 +410,7 @@ type FrameMessage =
       state.initSent = true
       postToFrame({
         type: "agent-desk:init",
-        payload: state.frameConfig || createFrameConfig(state.config, "", { signature: "", issuedAt: 0 }),
+        payload: state.frameConfig,
       })
     }
 
@@ -369,7 +421,13 @@ type FrameMessage =
     })
   }
 
+  function syncLauncherState() {
+    state.button?.setAttribute("aria-expanded", String(state.isOpen || state.opening))
+    state.button?.setAttribute("aria-busy", String(state.opening))
+  }
+
   function syncFrameVisibility() {
+    syncLauncherState()
     const frame = state.frame
     if (!frame) {
       return
@@ -382,11 +440,11 @@ type FrameMessage =
       frame.style.visibility = "visible"
       frame.style.pointerEvents = "auto"
       state.frameHideTimer = window.setTimeout(() => {
-        if (!state.frame) {
+        if (state.frame !== frame || !state.isOpen || !state.mounted) {
           return
         }
-        state.frame.style.opacity = "1"
-        state.frame.style.transform = "translate3d(0, 0, 0) scale(1)"
+        frame.style.opacity = "1"
+        frame.style.transform = "translate3d(0, 0, 0) scale(1)"
       }, 16)
       flushFrameState()
       return
@@ -398,87 +456,73 @@ type FrameMessage =
       ? "translate3d(0, 10px, 0) scale(0.985)"
       : "translate3d(0, 16px, 0) scale(0.96)"
     state.frameHideTimer = window.setTimeout(() => {
-      if (!state.frame || state.isOpen) {
+      if (state.frame !== frame || state.isOpen || !state.mounted) {
         return
       }
-      state.frame.style.visibility = "hidden"
+      frame.style.visibility = "hidden"
     }, state.animationDuration)
     flushFrameState()
   }
 
-  function destroyFrame() {
-    if (!state.frame) {
-      return
-    }
+  function removeFrame() {
     clearFrameTimers()
-    state.frame.style.pointerEvents = "none"
-    state.frame.style.opacity = "0"
-    state.frame.style.transform = "translate3d(0, 18px, 0) scale(0.94)"
-    state.frame.style.visibility = "hidden"
-    state.frameDestroyTimer = window.setTimeout(() => {
-      if (!state.frame) {
-        return
-      }
-      if (state.frame.parentNode) {
-        state.frame.parentNode.removeChild(state.frame)
-      }
-      state.frame = null
-      state.frameLoaded = false
-      state.frameReady = false
-      state.initSent = false
-      state.isOpen = false
-      state.isMaximized = false
-      clearFrameTimers()
-    }, state.animationDuration)
+    if (state.frame?.parentNode) state.frame.parentNode.removeChild(state.frame)
+    state.frame = null
+    state.frameLoaded = false
+    state.frameReady = false
+    state.initSent = false
   }
 
   function createFrame() {
     if (state.frame) {
       return state.frame
     }
-    if (!state.frameUrl || !state.config) {
+    if (!state.frameUrl || !state.config || !state.mounted) {
       return null
     }
 
-    state.frame = document.createElement("iframe")
-    state.frame.dataset.agentDeskWidget = "frame"
-    state.frame.title = state.config.title || getDefaultWidgetTitle(state.config)
-    state.frame.src = state.frameUrl.toString()
+    const frame = document.createElement("iframe")
+    state.frame = frame
+    frame.dataset.agentDeskWidget = "frame"
+    frame.title = state.config.title || getDefaultWidgetTitle(state.config)
+    frame.src = state.frameUrl.toString()
     applyFrameLayout()
-    state.frame.style.display = "block"
-    state.frame.style.visibility = "hidden"
-    state.frame.style.pointerEvents = "none"
-    state.frame.style.opacity = "0"
-    state.frame.style.transform = "translate3d(0, 18px, 0) scale(0.96)"
-    state.frame.addEventListener("load", () => {
+    frame.style.display = "block"
+    frame.style.visibility = "hidden"
+    frame.style.pointerEvents = "none"
+    frame.style.opacity = "0"
+    frame.style.transform = "translate3d(0, 18px, 0) scale(0.96)"
+    frame.addEventListener("load", () => {
+      if (state.frame !== frame || !state.mounted) return
       state.frameLoaded = true
       syncFrameVisibility()
     })
 
-    document.body.appendChild(state.frame)
-    return state.frame
+    document.body.appendChild(frame)
+    return frame
   }
 
   function handleWindowMessage(event: MessageEvent) {
-    if (!state.frame || event.source !== state.frame.contentWindow) {
+    if (
+      !state.mounted ||
+      !state.frame ||
+      !state.frameUrl ||
+      event.source !== state.frame.contentWindow ||
+      event.origin !== state.frameUrl.origin
+    ) {
       return
     }
 
-    const data = (event.data || {}) as { type?: string }
+    if (!event.data || typeof event.data !== "object") return
+    const data = event.data as { type?: string }
     if (data.type === "agent-desk:ready") {
       state.frameReady = true
       flushFrameState()
       return
     }
 
-    if (data.type === "agent-desk:request-minimize") {
-      state.isOpen = false
-      syncFrameVisibility()
-      return
-    }
-
-    if (data.type === "agent-desk:request-close") {
-      destroyFrame()
+    if (data.type === "agent-desk:request-minimize" || data.type === "agent-desk:request-close") {
+      closeWidget()
       return
     }
 
@@ -573,124 +617,154 @@ type FrameMessage =
     button.addEventListener("blur", rest)
 
     button.addEventListener("click", () => {
-      if (state.isOpen) {
-        state.isOpen = false
-        syncFrameVisibility()
+      if (state.isOpen || state.opening) {
+        closeWidget()
         return
       }
 
-      void openWidget()
+      // openWidget logs active failures; native clicks have no Promise caller.
+      void openWidget().catch(() => {})
     })
 
     document.body.appendChild(button)
     state.button = button
+    syncLauncherState()
     return button
   }
 
   function mount(config?: AgentDeskConfig) {
-    const rawConfig = config || window.AgentDeskConfig || { channelId: "" }
-    state.config = normalizeConfig(rawConfig)
-    const widgetBaseUrl = resolveWidgetBaseUrl(state.config)
-    if (!rawConfig.baseUrl) {
-      state.config.baseUrl = widgetBaseUrl
-    }
+    const rawConfig = { ...(config || window.AgentDeskConfig || { channelId: "" }) }
+    // A remount replaces the previous UI and invalidates every pending request.
+    // Conversation history belongs to the chat, not this disposable host UI.
+    destroy()
+    state.config = resolveConfig(rawConfig)
     if (!state.config.channelId) {
       console.error("[agent-desk-widget] channelId is required")
       return
     }
 
+    state.mounted = true
+    state.messageListener = handleWindowMessage
+    state.resizeListener = applyFrameLayout
+    window.addEventListener("message", state.messageListener)
+    window.addEventListener("resize", state.resizeListener)
+    const mountGeneration = state.mountGeneration
     state.configLoading = true
-    fetchPublicConfig(state.config)
-      .then((nextConfig) => fetchWidgetConfig(nextConfig))
+    const publicConfig = rawConfig.language
+      ? Promise.resolve(state.config)
+      : fetchPublicConfig(state.config)
+    state.configPromise = publicConfig
       .then((nextConfig) => {
+        if (!state.mounted || state.mountGeneration !== mountGeneration) return null
+        return fetchWidgetConfig(nextConfig)
+      })
+      .then((nextConfig) => {
+        if (!nextConfig || !state.mounted || state.mountGeneration !== mountGeneration) return
         state.configLoading = false
         state.config = normalizeConfig(nextConfig)
-        if (state.button?.parentNode) {
-          state.button.parentNode.removeChild(state.button)
-          state.button = null
-        }
         createLauncher()
       })
   }
 
   function destroy() {
-    clearFrameTimers()
-    if (state.frame?.parentNode) {
-      state.frame.parentNode.removeChild(state.frame)
-    }
+    state.mounted = false
+    state.mountGeneration = (state.mountGeneration || 0) + 1
+    cancelPendingOpen()
+    if (state.messageListener) window.removeEventListener("message", state.messageListener)
+    if (state.resizeListener) window.removeEventListener("resize", state.resizeListener)
+    state.messageListener = null
+    state.resizeListener = null
+    removeFrame()
     if (state.button?.parentNode) {
       state.button.parentNode.removeChild(state.button)
     }
     state.button = null
-    state.frame = null
-    state.frameLoaded = false
-    state.frameReady = false
-    state.initSent = false
     state.isOpen = false
     state.isMaximized = false
     state.configLoading = false
+    state.configPromise = null
     state.frameConfig = null
     state.frameUrl = null
   }
 
-  function openWidget() {
-    return prepareFrameUrl()
-      .then(() => {
-        if (!state.frame) {
-          createFrame()
-        } else if (state.frameUrl && state.frame.src !== state.frameUrl.toString()) {
-          // The resolved URL carries a freshly signed identity and a freshly
-          // issued userToken. A frame created by an earlier open() would keep
-          // the stale pair, so reload it instead of silently letting an expired
-          // signature downgrade the visitor to a guest.
-          reloadFrame()
-        }
-        if (!state.frame) {
-          return
-        }
-        state.isOpen = true
-        syncFrameVisibility()
-      })
-      .catch((error) => {
-        console.error("[agent-desk-widget] open failed", error)
-      })
+  function cancelPendingOpen() {
+    state.openGeneration = (state.openGeneration || 0) + 1
+    state.cancelOpen?.()
+    state.cancelOpen = null
+    state.opening = false
   }
 
-  function reloadFrame() {
-    if (!state.frame || !state.frameUrl) {
-      return
+  function closeWidget() {
+    cancelPendingOpen()
+    state.isOpen = false
+    syncFrameVisibility()
+  }
+
+  async function openWidget() {
+    if (!state.mounted) mount(state.config || window.AgentDeskConfig)
+    if (!state.config?.channelId || !state.mounted) return
+
+    cancelPendingOpen()
+    const mountGeneration = state.mountGeneration
+    const openGeneration = state.openGeneration
+    const canceled = new Promise<null>((resolve) => {
+      state.cancelOpen = () => resolve(null)
+    })
+    const isCurrentOpen = () =>
+      state.mounted &&
+      state.mountGeneration === mountGeneration &&
+      state.openGeneration === openGeneration
+    state.opening = true
+    syncLauncherState()
+    try {
+      await Promise.race([state.configPromise, canceled])
+      if (!isCurrentOpen() || !state.config) return
+      const prepared = await Promise.race([prepareFrame({ ...state.config }), canceled])
+      // close(), destroy(), and a newer open()/mount() all cancel this open.
+      // Do not assign identity, create a frame or flash stale UI afterwards.
+      if (!prepared || !isCurrentOpen()) return
+      state.frameUrl = prepared.frameUrl
+      state.frameConfig = prepared.frameConfig
+      if (state.frame && state.frame.src !== prepared.frameUrl.toString()) {
+        // A fresh identity needs a new document. Replacing the element also
+        // fences delayed load/ready events from its previous document.
+        removeFrame()
+      }
+      if (!state.frame) createFrame()
+      if (!state.frame) return
+      state.opening = false
+      state.isOpen = true
+      syncFrameVisibility()
+    } catch (error) {
+      if (isCurrentOpen()) {
+        console.error("[agent-desk-widget] open failed", error)
+        throw error
+      }
+    } finally {
+      if (isCurrentOpen()) {
+        state.cancelOpen = null
+        state.opening = false
+        syncLauncherState()
+      }
     }
-    state.frameLoaded = false
-    state.frameReady = false
-    state.initSent = false
-    state.frame.style.visibility = "hidden"
-    state.frame.style.pointerEvents = "none"
-    state.frame.src = state.frameUrl.toString()
   }
 
   window.AgentDeskWidget = {
     mount,
     destroy,
     open: () => openWidget(),
-    close: () => {
-      state.isOpen = false
-      syncFrameVisibility()
-    },
+    close: closeWidget,
     getChatUrl: () => {
-      if (!state.config) {
-        mount(window.AgentDeskConfig || { channelId: "" })
-      }
-      if (!state.config?.channelId) {
+      const config = state.config
+        ? { ...state.config }
+        : resolveConfig(window.AgentDeskConfig || { channelId: "" })
+      if (!config.channelId) {
         return Promise.reject(new Error("channelId is required"))
       }
-      return prepareFrameUrl().then((frameUrl) => frameUrl.toString())
+      // A standalone link must not change the active frame's URL or identity.
+      return prepareFrame(config).then(({ frameUrl }) => frameUrl.toString())
     },
   } satisfies AgentDeskWidget
-
-  if (!state.listenerBound) {
-    window.addEventListener("message", handleWindowMessage)
-    state.listenerBound = true
-  }
 
   if (window.AgentDeskConfig) {
     mount(window.AgentDeskConfig)

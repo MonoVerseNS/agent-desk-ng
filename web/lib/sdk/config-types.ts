@@ -25,6 +25,8 @@ export type AgentDeskConfig = {
   externalName?: string
   /** Gets the user JWT issued by the host system before opening support. */
   getUserToken?: () => string | Promise<string>
+  /** Reject missing tokens/session downgrades instead of opening as a guest. */
+  requireUserToken?: boolean
   title?: string
   subtitle?: string
   language?: string

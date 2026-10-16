@@ -189,6 +189,11 @@ function SupportChatPanelContent() {
 
   useEffect(() => {
     return bindSupportHostBridge({
+      onInit: () => {
+        if (useSupportChatStore.getState().isOpen) {
+          bootstrap()
+        }
+      },
       onOpen: () => {
         setIsOpen(true)
         setIsVisible(true)
@@ -197,7 +202,7 @@ function SupportChatPanelContent() {
         setIsVisible(false)
       },
     })
-  }, [setIsOpen, setIsVisible])
+  }, [bootstrap, setIsOpen, setIsVisible])
 
   useEffect(() => {
     bootstrap()

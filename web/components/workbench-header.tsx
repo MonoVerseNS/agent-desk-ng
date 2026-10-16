@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
+import { OperatorReadinessIndicator } from "@/components/operator-readiness-indicator"
 import { PaletteToggle } from "@/components/palette-toggle"
 import { RealtimeConnectionStatus } from "@/components/realtime-connection-status"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -32,6 +33,7 @@ export function WorkbenchHeader() {
     <header className="flex h-(--header-height) shrink-0 items-center border-b border-border/70 bg-background/88 backdrop-blur supports-[backdrop-filter]:bg-background/76">
       <div className="flex w-full min-w-0 items-center justify-end gap-3 px-3 lg:px-4">
         <div className="flex min-w-0 items-center justify-end gap-2">
+          <OperatorReadinessIndicator />
           <div className="hidden sm:block">
             <RealtimeConnectionStatus status={realtimeStatus} compact />
           </div>

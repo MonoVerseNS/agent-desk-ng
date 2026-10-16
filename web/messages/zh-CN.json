@@ -123,7 +123,8 @@
   "api": {
     "requestFailed": "请求失败",
     "authExpired": "未登录或登录已过期",
-    "customerSessionNotReady": "客服会话未初始化"
+    "customerSessionNotReady": "客服会话未初始化",
+    "supportAuthenticationRequired": "无法验证您的客服身份。请重新加载聊天后重试；未开启访客会话。"
   },
   "supportHelpWorkbench": {
     "title": "帮助中心",
@@ -3158,6 +3159,7 @@
   },
   "nav": {
     "overview": "总览",
+    "setupWizard": "配置向导与诊断",
     "receptionCenter": "接待中心",
     "conversations": "会话",
     "tickets": "工单",
@@ -3361,5 +3363,163 @@
     "copy": "复制",
     "copied": "已复制",
     "summaryGenerated": "总结生成成功"
+  },
+  "setupWizard": {
+    "title": "分步配置向导与人工坐席路由诊断",
+    "description": "逐步检查客户消息到达人工坐席的完整链路，一键修复未就绪项，并模拟实时会话分配。",
+    "statusReady": "已就绪，可正常接待请求",
+    "statusNeedsSetup": "配置未就绪（已完成 {ready}/{total} 步）",
+    "stepsProgress": "已就绪 {ready} / {total} 步",
+    "quickSetupAll": "一键完成全部基础配置",
+    "quickSetupRunning": "正在应用配置...",
+    "quickFixSuccess": "配置已自动修复并重新检测",
+    "refresh": "重新检测",
+    "openSettings": "前往设置",
+    "openSetupWizard": "分步配置向导",
+    "stepBadgeOk": "已就绪",
+    "stepBadgeWarning": "需注意",
+    "stepBadgeError": "未就绪",
+    "readyCountLabel": "就绪：{ready} / {total}",
+    "currentOperatorTitle": "当前坐席接单状态诊断",
+    "currentOperatorReady": "您当前处于在线空闲状态，可正常接收客户会话。",
+    "currentOperatorBlocked": "客户请求当前无法分配给您，原因如下：",
+    "currentOperatorLoad": "当前会话负载：{active} / {max}",
+    "currentOperatorTeam": "所属客服组：{team}",
+    "currentOperatorNoTeam": "未分配客服组",
+    "enableMyReceptionBtn": "一键开启我的接单状态",
+    "checklistSectionTitle": "客户请求到达坐席的 6 步配置检查",
+    "steps": {
+      "teams": {
+        "title": "人工客服组",
+        "description": "至少需要一个处于启用状态的人工客服组，用于聚合坐席人员并配置值班排班。"
+      },
+      "schedules": {
+        "title": "实时值班排班",
+        "description": "客服组必须拥有覆盖当前时段的有效值班排班；非工作时间段的请求将排队等待。"
+      },
+      "operators": {
+        "title": "坐席档案与服务容量",
+        "description": "坐席需启用档案、归属有效客服组、开启自动分配、处于空闲状态且并发会话未达上限。"
+      },
+      "ai_agents": {
+        "title": "AI 智能体与人工转接",
+        "description": "AI 智能体服务模式须允许转接人工（开启失败转接的 AIFirst 或纯人工模式），并关联有效的客服组。"
+      },
+      "channels": {
+        "title": "客户接入渠道",
+        "description": "至少需要一个处于启用状态的接入渠道（Web、API、企业微信），关联有效的 AI 智能体且分流比例大于 0%。"
+      },
+      "end_to_end": {
+        "title": "完整链路贯通检测",
+        "description": "验证从客户渠道进线的新消息能否完整走通路由链路，并在当前时刻被实时分配给就绪的人工坐席。"
+      }
+    },
+    "issues": {
+      "no_active_team": "未找到已启用的客服组。系统至少需要一个有效客服组。",
+      "team_no_schedule_configured": "客服组未配置任何排班计划。",
+      "team_off_hours_now": "客服组当前处于非工作时段（无生效中的排班）。",
+      "no_operator_profile": "系统中暂无坐席档案，无法分配人工会话。",
+      "operator_profile_disabled": "坐席的客服档案已被禁用。",
+      "operator_user_disabled": "坐席用户的系统账号已被禁用或删除。",
+      "operator_no_active_team": "坐席未归属于任何已启用的客服组。",
+      "operator_auto_assign_off": "坐席未开启自动分配开关。",
+      "operator_busy": "坐席当前处于忙碌状态。",
+      "operator_at_capacity": "坐席当前接待会话数已达上限。",
+      "no_active_ai_agent": "未找到已启用的 AI 智能体。",
+      "agent_ai_only_mode": "AI 智能体设置为纯 AI 模式，无法转接人工坐席。",
+      "agent_no_teams": "AI 智能体未关联任何有效的转接客服组。",
+      "agent_auto_handoff_disabled": "AI 智能体未开启兜底自动转人工。",
+      "no_active_channel": "未找到已启用的接入渠道。",
+      "channel_no_agent": "接入渠道未关联 AI 智能体。",
+      "channel_agent_disabled": "接入渠道关联的 AI 智能体已被禁用或不存在。",
+      "channel_zero_rollout": "接入渠道的 AI 智能体分流比例为 0%。",
+      "no_end_to_end_path": "当前没有任何渠道能成功连通到空闲可用的人工坐席。"
+    },
+    "operatorBlockers": {
+      "not_authenticated": "您尚未登录系统。",
+      "missing_profile": "您的账号尚未创建客服坐席档案。",
+      "profile_disabled": "您的客服档案已被停用。",
+      "no_team": "您尚未分配至任何有效客服组。",
+      "team_off_hours": "您所在的客服组当前处于非工作时段（无生效排班）。",
+      "auto_assign_disabled": "您的坐席档案未开启自动分配。",
+      "status_busy": "您的服务状态为「忙碌」。",
+      "at_capacity": "您的当前接待会话量已达上限。"
+    },
+    "quickFixLabels": {
+      "quick_setup_all": "一键完成全部基础配置",
+      "ensure_team_and_schedule": "创建/启用客服组及 24/7 排班",
+      "enable_my_operator_profile": "启用我的坐席并设为空闲",
+      "fix_ai_agent_handoff": "修复 AI 转人工模式并绑定客服组",
+      "ensure_default_channel": "创建/修复默认 Web 渠道"
+    },
+    "simulator": {
+      "title": "人工坐席路由模拟器",
+      "description": "模拟客户通过指定渠道进线后的完整路由流转过程，逐级查看每个节点的调度决策。",
+      "selectChannelPlaceholder": "选择要模拟的渠道...",
+      "runSimulation": "开始模拟分发",
+      "running": "正在模拟...",
+      "outcomeSuccess": "请求将成功分配给坐席：{operator}",
+      "outcomeBlocked": "请求无法到达人工坐席",
+      "outcomes": {
+        "assigned_to_operator": "成功：会话将分配给处于空闲状态的就绪坐席。",
+        "blocked_no_channel": "受阻：系统中没有可用渠道或指定的渠道不存在。",
+        "blocked_channel_disabled": "受阻：该接入渠道已被禁用。",
+        "blocked_zero_rollout": "受阻：该渠道的 AI 智能体分流比例为 0%。",
+        "blocked_missing_ai_agent": "受阻：该渠道关联的 AI 智能体不存在或已被停用。",
+        "blocked_ai_only_mode": "受阻：AI 智能体为纯 AI 模式，禁止转接人工。",
+        "blocked_agent_no_teams": "受阻：AI 智能体未配置有效的转接客服组。",
+        "queued_off_hours_no_schedule": "排队中：目标客服组当前无生效排班（非工作时间）。",
+        "queued_no_eligible_operator": "排队中：当前处于工作排班内，但暂无可接待空闲坐席。"
+      },
+      "hops": {
+        "channel": "接入渠道",
+        "ai_agent": "AI 智能体",
+        "teams": "目标客服组",
+        "schedules": "值班排班",
+        "operators": "坐席分配"
+      },
+      "hopReasons": {
+        "ok": "节点配置正常且就绪",
+        "ok_human_only": "纯人工接待：消息直接穿透至人工坐席",
+        "ok_ai_first_handoff": "AI 优先接待：客户可主动申请转人工或触发故障自动转接",
+        "warning_auto_handoff_off": "开启了 AI 优先，但未启用失败自动转人工",
+        "blocked_no_channel": "未找到有效渠道",
+        "blocked_channel_disabled": "渠道已被停用",
+        "blocked_zero_rollout": "渠道分流比例为 0%",
+        "blocked_missing_ai_agent": "AI 智能体不存在或已被禁用",
+        "blocked_ai_only_mode": "AI 智能体为纯 AI 模式（禁止转接人工）",
+        "blocked_agent_no_teams": "AI 智能体未关联有效客服组",
+        "queued_off_hours_no_schedule": "当前时刻无生效中的工作排班（非工作时段）",
+        "queued_no_eligible_operator": "当前客服组内暂无空闲且容量充足的坐席",
+        "assigned_to_operator": "成功分配给符合条件的坐席"
+      },
+      "candidateTableTitle": "参评候选坐席明细",
+      "colOperator": "坐席",
+      "colTeam": "客服组",
+      "colStatus": "在线状态",
+      "colAutoAssign": "自动分配",
+      "colLoad": "当前负载",
+      "colResult": "判定结果",
+      "statusIdle": "空闲",
+      "statusBusy": "忙碌",
+      "eligibleBadge": "符合条件",
+      "skipReasons": {
+        "profile_disabled": "档案已停用",
+        "user_disabled": "账号已停用",
+        "team_not_in_agent": "客服组未在智能体转接范围内",
+        "team_off_hours": "客服组处于非值班时段",
+        "auto_assign_off": "自动分配已关闭",
+        "status_busy": "处于忙碌状态",
+        "at_capacity": "接待量已达上限"
+      }
+    },
+    "banner": {
+      "title": "人工坐席接待链路未就绪",
+      "description": "客户发起的会话当前无法正常分配至人工坐席，请完成所有路由步骤配置。"
+    },
+    "headerIndicator": {
+      "readyLabel": "接单就绪",
+      "blockedLabel": "接单受阻 ({count})"
+    }
   }
 }

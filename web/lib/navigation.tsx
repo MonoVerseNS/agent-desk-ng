@@ -9,6 +9,7 @@ import {
   GlobeIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
+  ListChecksIcon,
   MessageSquareCodeIcon,
   MessageSquareMoreIcon,
   SettingsIcon,
@@ -105,6 +106,11 @@ export const dashboardNavSections: DashboardNavSectionConfig[] = [
         titleKey: "nav.overview",
         url: "/dashboard",
         icon: <LayoutDashboardIcon />,
+      },
+      {
+        titleKey: "nav.setupWizard",
+        url: "/dashboard/setup",
+        icon: <ListChecksIcon />,
       },
       {
         titleKey: "nav.conversations",

@@ -123,7 +123,8 @@
   "api": {
     "requestFailed": "Request failed.",
     "authExpired": "Your session has expired. Please sign in again.",
-    "customerSessionNotReady": "The support chat is not ready yet."
+    "customerSessionNotReady": "The support chat is not ready yet.",
+    "supportAuthenticationRequired": "Your support identity could not be verified. Reload the chat to retry; no guest session was opened."
   },
   "supportHelpWorkbench": {
     "title": "Help Center",
@@ -3158,6 +3159,7 @@
   },
   "nav": {
     "overview": "Overview",
+    "setupWizard": "Setup & Diagnostics",
     "receptionCenter": "Support Desk",
     "conversations": "Conversations",
     "tickets": "Tickets",
@@ -3361,5 +3363,163 @@
     "copy": "Copy",
     "copied": "Copied",
     "summaryGenerated": "Summary generated successfully"
+  },
+  "setupWizard": {
+    "title": "Step-by-Step Setup & Operator Routing Diagnostics",
+    "description": "Verify every stage of the customer-to-operator routing chain, fix blockers in one click, and simulate live conversation dispatch.",
+    "statusReady": "Ready to Receive Requests",
+    "statusNeedsSetup": "Setup Incomplete ({ready}/{total} steps ready)",
+    "stepsProgress": "{ready} of {total} steps ready",
+    "quickSetupAll": "Configure Everything in 1 Click",
+    "quickSetupRunning": "Applying setup...",
+    "quickFixSuccess": "Configuration updated and routing re-checked",
+    "refresh": "Re-check Readiness",
+    "openSettings": "Open Settings",
+    "openSetupWizard": "Step-by-Step Setup",
+    "stepBadgeOk": "Ready",
+    "stepBadgeWarning": "Warning",
+    "stepBadgeError": "Not Ready",
+    "readyCountLabel": "{ready} / {total} ready",
+    "currentOperatorTitle": "My Operator Reception Status",
+    "currentOperatorReady": "You are online and ready to receive customer chats right now.",
+    "currentOperatorBlocked": "Customer requests cannot reach you right now:",
+    "currentOperatorLoad": "Active chats: {active} / {max}",
+    "currentOperatorTeam": "Team: {team}",
+    "currentOperatorNoTeam": "Not assigned",
+    "enableMyReceptionBtn": "Enable My Reception in 1 Click",
+    "checklistSectionTitle": "6-Step Routing Chain Checklist",
+    "steps": {
+      "teams": {
+        "title": "Operator Teams",
+        "description": "At least one active operator team is required to group agents and define shift schedules."
+      },
+      "schedules": {
+        "title": "Shift Schedules (Active Now)",
+        "description": "Teams require an active schedule covering the current time; off-hours requests stay in queue."
+      },
+      "operators": {
+        "title": "Operator Profiles & Capacity",
+        "description": "Operators must have an enabled profile, belong to an active team, have auto-assign on, be idle, and have free capacity."
+      },
+      "ai_agents": {
+        "title": "AI Agents & Human Handoff",
+        "description": "The AI agent must allow human handoff (AIFirst with auto-handoff or HumanOnly) and be linked to active teams."
+      },
+      "channels": {
+        "title": "Inbound Customer Channels",
+        "description": "At least one active channel (Web, API, WeCom) must route to an active AI agent with rollout > 0%."
+      },
+      "end_to_end": {
+        "title": "End-to-End Routing Path",
+        "description": "Verifies that an incoming message from a channel can traverse the entire chain and reach a live operator right now."
+      }
+    },
+    "issues": {
+      "no_active_team": "No active operator teams found. At least one team is required.",
+      "team_no_schedule_configured": "Team has no shift schedule configured.",
+      "team_off_hours_now": "Team is currently off-hours (no shift schedule active right now).",
+      "no_operator_profile": "No operator profiles exist. Operators cannot be assigned.",
+      "operator_profile_disabled": "Operator profile is disabled.",
+      "operator_user_disabled": "Operator user account is disabled or deleted.",
+      "operator_no_active_team": "Operator is not assigned to an active team.",
+      "operator_auto_assign_off": "Operator has auto-assign disabled.",
+      "operator_busy": "Operator is currently set to Busy.",
+      "operator_at_capacity": "Operator is at full concurrent conversation capacity.",
+      "no_active_ai_agent": "No active AI agents found.",
+      "agent_ai_only_mode": "AI agent is set to AI-Only mode and cannot hand off to human operators.",
+      "agent_no_teams": "AI agent has no active teams assigned for human handoff.",
+      "agent_auto_handoff_disabled": "AI agent has automatic handoff on failure disabled.",
+      "no_active_channel": "No active customer channels found.",
+      "channel_no_agent": "Channel is not connected to an AI agent.",
+      "channel_agent_disabled": "Channel points to a disabled or missing AI agent.",
+      "channel_zero_rollout": "Channel has a 0% AI agent rollout rate.",
+      "no_end_to_end_path": "No channel can successfully route to an available human operator right now."
+    },
+    "operatorBlockers": {
+      "not_authenticated": "You are not signed in.",
+      "missing_profile": "No operator profile created for your account.",
+      "profile_disabled": "Your operator profile is disabled.",
+      "no_team": "You are not assigned to an active operator team.",
+      "team_off_hours": "Your team is currently off-hours (no active shift schedule).",
+      "auto_assign_disabled": "Automatic conversation assignment is disabled for your profile.",
+      "status_busy": "Your status is set to Busy.",
+      "at_capacity": "You have reached your maximum active conversation limit."
+    },
+    "quickFixLabels": {
+      "quick_setup_all": "Configure Everything in 1 Click",
+      "ensure_team_and_schedule": "Create/Enable Team & 24/7 Schedule",
+      "enable_my_operator_profile": "Enable My Reception & Set Idle",
+      "fix_ai_agent_handoff": "Fix AI Agent Handoff & Bind Teams",
+      "ensure_default_channel": "Create/Fix Default Web Channel"
+    },
+    "simulator": {
+      "title": "Operator Route Simulator",
+      "description": "Simulate what happens when a customer sends a message on a channel and see every decision hop in real time.",
+      "selectChannelPlaceholder": "Select a channel to simulate...",
+      "runSimulation": "Simulate Dispatch",
+      "running": "Simulating...",
+      "outcomeSuccess": "Request WILL reach operator: {operator}",
+      "outcomeBlocked": "Request WILL NOT reach an operator",
+      "outcomes": {
+        "assigned_to_operator": "Success: The conversation is assigned to an idle operator.",
+        "blocked_no_channel": "Blocked: No channels exist or the requested channel was not found.",
+        "blocked_channel_disabled": "Blocked: This channel is disabled.",
+        "blocked_zero_rollout": "Blocked: Channel AI agent rollout rate is set to 0%.",
+        "blocked_missing_ai_agent": "Blocked: The AI agent bound to this channel is missing or disabled.",
+        "blocked_ai_only_mode": "Blocked: AI agent is set to AI-Only mode and never hands off to human operators.",
+        "blocked_agent_no_teams": "Blocked: AI agent has no valid operator teams assigned for handoff.",
+        "queued_off_hours_no_schedule": "Queued: Target teams have no active shift schedule right now (Off-Hours).",
+        "queued_no_eligible_operator": "Queued: Shift is active, but no idle operators with available capacity are online."
+      },
+      "hops": {
+        "channel": "Channel",
+        "ai_agent": "AI Agent",
+        "teams": "Target Teams",
+        "schedules": "Shift Schedule",
+        "operators": "Operator Dispatch"
+      },
+      "hopReasons": {
+        "ok": "Node is configured and ready",
+        "ok_human_only": "Human-Only reception: directly passes through to operators",
+        "ok_ai_first_handoff": "AI-First reception: customer can request human or auto-handoff triggers",
+        "warning_auto_handoff_off": "AI-First mode active, but auto-handoff on failure is disabled",
+        "blocked_no_channel": "No channels found",
+        "blocked_channel_disabled": "Channel is disabled",
+        "blocked_zero_rollout": "Channel rollout is set to 0%",
+        "blocked_missing_ai_agent": "AI agent is missing or disabled",
+        "blocked_ai_only_mode": "AI agent is configured as AI-Only (human routing blocked)",
+        "blocked_agent_no_teams": "No active teams assigned to this agent",
+        "queued_off_hours_no_schedule": "No active shift schedule covers the current time (Off-Hours)",
+        "queued_no_eligible_operator": "No idle operators with available capacity in active teams",
+        "assigned_to_operator": "Assigned to eligible operator"
+      },
+      "candidateTableTitle": "Evaluated Operator Candidates",
+      "colOperator": "Operator",
+      "colTeam": "Team",
+      "colStatus": "Status",
+      "colAutoAssign": "Auto Assign",
+      "colLoad": "Active Load",
+      "colResult": "Dispatch Result",
+      "statusIdle": "Idle",
+      "statusBusy": "Busy",
+      "eligibleBadge": "Eligible",
+      "skipReasons": {
+        "profile_disabled": "Profile disabled",
+        "user_disabled": "User account disabled",
+        "team_not_in_agent": "Team not in agent scope",
+        "team_off_hours": "Team off-hours",
+        "auto_assign_off": "Auto-assign disabled",
+        "status_busy": "Status is Busy",
+        "at_capacity": "At maximum capacity"
+      }
+    },
+    "banner": {
+      "title": "Operator Routing Setup Incomplete",
+      "description": "Customer messages cannot currently reach human operators until all routing steps are ready."
+    },
+    "headerIndicator": {
+      "readyLabel": "Ready for Chats",
+      "blockedLabel": "Routing Blocked ({count})"
+    }
   }
 }

@@ -17,6 +17,7 @@ import { SummaryCards } from "./summary-cards"
 import { TrendPanel } from "./trend-panel"
 import { TeamLoadPanel } from "./team-load-panel"
 import { AlertList } from "./alert-list"
+import { SetupReadinessBanner } from "./setup-readiness-banner"
 
 function LoadingCards() {
   return (
@@ -73,6 +74,7 @@ export function DashboardHome() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 lg:p-5">
+      <SetupReadinessBanner onUpdated={() => void loadData(range, true)} />
       <div className="flex justify-end">
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-md border bg-background p-1">

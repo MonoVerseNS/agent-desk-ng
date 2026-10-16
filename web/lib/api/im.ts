@@ -146,6 +146,7 @@ export type ImCustomerSessionExchangeResponse = {
 
 export type ImCustomerSession = ImCustomerSessionExchangeResponse & {
   channelId: string
+  baseUrl: string
 }
 
 const GUEST_STORAGE_KEY = "cs_ai_agent_im_guest_id"
@@ -157,7 +158,7 @@ const API_BASE_URL =
 const OPEN_IM_CHANNEL_ID =
   process.env.NEXT_PUBLIC_OPEN_IM_CHANNEL_ID?.trim() || ""
 
-let entryUserTokenExchangeKey = ""
+let entryIdentityExchangeKey = ""
 
 function buildGuestId() {
   return `guest_${generateUUID()}`
@@ -189,6 +190,70 @@ function getRuntimeImConfig() {
     externalIdSignedAt: Number(widgetConfig.externalIdSignedAt) || 0,
     externalName: (widgetConfig.externalName || "").trim(),
     userToken: (widgetConfig.userToken || "").trim(),
+    requireUserToken: widgetConfig.requireUserToken === true,
+  }
+}
+
+type RuntimeImConfig = ReturnType<typeof getRuntimeImConfig>
+
+function identityContextKey(config: RuntimeImConfig) {
+  return JSON.stringify([
+    config.baseUrl,
+    config.channelId,
+    config.externalId,
+    config.userToken,
+    config.externalIdSignature,
+    config.externalIdSignedAt,
+    config.requireUserToken,
+  ])
+}
+
+function requireEntryToken(config: RuntimeImConfig) {
+  if (config.requireUserToken && !config.userToken) {
+    throw new Error(translateCurrentMessage("api.supportAuthenticationRequired"))
+  }
+}
+
+function matchesSessionIdentity(session: ImCustomerSession, config: RuntimeImConfig) {
+  if (typeof session.identityKey !== "string") return false
+  if (session.baseUrl !== config.baseUrl || session.channelId !== config.channelId) return false
+  if (config.userToken || config.requireUserToken) {
+    return (
+      !!config.userToken &&
+      (config.externalId
+        ? session.identityKey === `user:${config.externalId}`
+        : session.identityKey.startsWith("user:"))
+    )
+  }
+  const externalId = config.externalId || getGuestId()
+  return (
+    session.identityKey === `guest:${externalId}` ||
+    (!!config.externalIdSignature && session.identityKey === `user:${externalId}`)
+  )
+}
+
+function usableCustomerSession(session: ImCustomerSession | null, config: RuntimeImConfig) {
+  if (!session || !isCustomerSessionValid(session) || !matchesSessionIdentity(session, config)) return false
+  // A prior iframe's session, especially a prior guest, cannot replace this
+  // entry's JWT verification. Signed HMAC entries likewise re-exchange first.
+  if ((config.userToken || config.externalIdSignature) && entryIdentityExchangeKey !== identityContextKey(config)) {
+    return false
+  }
+  return true
+}
+
+function sessionTokenClaims(token: string): { identityKey?: string; channelCode?: string } | null {
+  try {
+    const payload = token.split(".")[1]
+    if (!payload) return null
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const bytes = Uint8Array.from(
+      atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")),
+      (c) => c.charCodeAt(0)
+    )
+    return JSON.parse(new TextDecoder().decode(bytes))
+  } catch {
+    return null
   }
 }
 
@@ -239,7 +304,7 @@ function writeCustomerSession(session: ImCustomerSession) {
 export function getCustomerSessionToken() {
   const config = getRuntimeImConfig()
   const session = readCustomerSession()
-  return isCustomerSessionValid(session, config.channelId)
+  return usableCustomerSession(session, config)
     ? session?.customerSessionToken ?? ""
     : ""
 }
@@ -254,9 +319,13 @@ export function applyCustomerSessionRefresh(payload?: {
     return
   }
   const current = readCustomerSession()
-  if (!current) {
-    return
-  }
+  const config = getRuntimeImConfig()
+  if (!current || !usableCustomerSession(current, config)) return
+  // Decode only for cache consistency, never as proof of authenticity. The
+  // server still verifies signatures. A late old-account websocket/HTTP refresh
+  // must not overwrite the current account's stored customer session.
+  const claims = sessionTokenClaims(token)
+  if (claims?.identityKey !== current.identityKey || claims?.channelCode !== current.channelId) return
   writeCustomerSession({
     ...current,
     customerSessionToken: token,
@@ -280,6 +349,7 @@ function createChannelHeaders() {
 
 function createExchangeHeaders() {
   const config = getRuntimeImConfig()
+  requireEntryToken(config)
   const headers: Record<string, string> = {
     "X-Channel-Id": config.channelId,
   }
@@ -323,6 +393,9 @@ function createRequestOptions(
   skipAuth?: boolean
   onResponse?: (response: Response) => void
 } {
+  const config = getRuntimeImConfig()
+  requireEntryToken(config)
+  const contextKey = identityContextKey(config)
   return {
     ...init,
     skipAuth: true,
@@ -330,8 +403,12 @@ function createRequestOptions(
       ...createImHeaders(explicitToken),
       ...(init?.headers as Record<string, string> | undefined),
     },
-    onResponse: applyCustomerSessionHeaders,
-    baseUrl: getRuntimeImConfig().baseUrl,
+    onResponse: (response) => {
+      if (contextKey === identityContextKey(getRuntimeImConfig())) {
+        applyCustomerSessionHeaders(response)
+      }
+    },
+    baseUrl: config.baseUrl,
   }
 }
 
@@ -353,6 +430,8 @@ function toQueryString(query?: Record<string, string | number | undefined>) {
 
 export async function exchangeCustomerSession() {
   const config = getRuntimeImConfig()
+  requireEntryToken(config)
+  const contextKey = identityContextKey(config)
   const result = await request<ImCustomerSessionExchangeResponse>(
     "/api/customer/session_exchange",
     {
@@ -362,36 +441,27 @@ export async function exchangeCustomerSession() {
       headers: createExchangeHeaders(),
     }
   )
-  const session = {
+  if (contextKey !== identityContextKey(getRuntimeImConfig())) {
+    throw new Error(translateCurrentMessage("api.supportAuthenticationRequired"))
+  }
+  const session: ImCustomerSession = {
     ...result,
     channelId: config.channelId,
+    baseUrl: config.baseUrl,
+  }
+  if (!isCustomerSessionValid(session) || !matchesSessionIdentity(session, config)) {
+    throw new Error(translateCurrentMessage("api.supportAuthenticationRequired"))
   }
   writeCustomerSession(session)
-  if (config.userToken) {
-    entryUserTokenExchangeKey = `${config.channelId}:${config.userToken}`
-  }
+  entryIdentityExchangeKey = contextKey
   return session
 }
 
 export async function ensureCustomerSession() {
   const config = getRuntimeImConfig()
+  requireEntryToken(config)
   const cached = readCustomerSession()
-  if (config.userToken) {
-    const exchangeKey = `${config.channelId}:${config.userToken}`
-    if (
-      entryUserTokenExchangeKey === exchangeKey &&
-      isCustomerSessionValid(cached, config.channelId)
-    ) {
-      return cached
-    }
-    return exchangeCustomerSession()
-  }
-
-  const externalId = config.externalId || getGuestId()
-  const identityKey = `guest:${externalId}`
-  if (isCustomerSessionValid(cached, config.channelId, identityKey)) {
-    return cached
-  }
+  if (usableCustomerSession(cached, config)) return cached!
   return exchangeCustomerSession()
 }
 
