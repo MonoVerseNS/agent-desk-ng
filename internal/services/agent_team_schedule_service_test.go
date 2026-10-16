@@ -90,7 +90,7 @@ func TestAgentTeamScheduleServiceCreateRejectsCrossDaySchedule(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected cross-day schedule to fail")
 	}
-	if !strings.Contains(err.Error(), "不能跨天") {
+	if !strings.Contains(err.Error(), "不能跨天") && !strings.Contains(err.Error(), "span multiple days") {
 		t.Fatalf("expected cross-day error, got %v", err)
 	}
 }
@@ -108,7 +108,7 @@ func TestAgentTeamScheduleServiceCreateRejectsHistoricalScheduleByDay(t *testing
 	if err == nil {
 		t.Fatalf("expected historical schedule to fail")
 	}
-	if !strings.Contains(err.Error(), "历史日期") {
+	if !strings.Contains(err.Error(), "历史日期") && !strings.Contains(err.Error(), "past date") {
 		t.Fatalf("expected historical date error, got %v", err)
 	}
 }
@@ -148,7 +148,7 @@ func TestAgentTeamScheduleServiceUpdateRejectsCrossDaySchedule(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected cross-day update to fail")
 	}
-	if !strings.Contains(err.Error(), "不能跨天") {
+	if !strings.Contains(err.Error(), "不能跨天") && !strings.Contains(err.Error(), "span multiple days") {
 		t.Fatalf("expected cross-day error, got %v", err)
 	}
 }
@@ -170,7 +170,7 @@ func TestAgentTeamScheduleServiceUpdateRejectsHistoricalScheduleByDay(t *testing
 	if err == nil {
 		t.Fatalf("expected historical update to fail")
 	}
-	if !strings.Contains(err.Error(), "历史日期") {
+	if !strings.Contains(err.Error(), "历史日期") && !strings.Contains(err.Error(), "past date") {
 		t.Fatalf("expected historical date error, got %v", err)
 	}
 }
@@ -258,7 +258,7 @@ func TestAgentTeamScheduleServiceBatchPreviewRejectsHistoricalDate(t *testing.T)
 	if err == nil {
 		t.Fatalf("expected historical batch preview to fail")
 	}
-	if !strings.Contains(err.Error(), "历史日期") {
+	if !strings.Contains(err.Error(), "历史日期") && !strings.Contains(err.Error(), "past date") {
 		t.Fatalf("expected historical date error, got %v", err)
 	}
 }
@@ -279,7 +279,7 @@ func TestAgentTeamScheduleServiceBatchPreviewRejectsInvalidTimeRange(t *testing.
 	if err == nil {
 		t.Fatalf("expected invalid time range to fail")
 	}
-	if !strings.Contains(err.Error(), "结束时间必须晚于开始时间") {
+	if !strings.Contains(err.Error(), "结束时间必须晚于开始时间") && !strings.Contains(err.Error(), "later than start time") {
 		t.Fatalf("expected invalid time range error, got %v", err)
 	}
 }

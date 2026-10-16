@@ -83,6 +83,10 @@ export function SetupReadinessBanner({
     return null
   }
 
+  const canQuickSetupAll = readiness.steps.some((s) =>
+    s.quick_fix_actions.includes("quick_setup_all"),
+  )
+
   const incompleteSteps = readiness.steps.filter((s) => s.status !== "ok")
 
   return (
@@ -132,23 +136,25 @@ export function SetupReadinessBanner({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            className="gap-1.5 rounded-md"
-            disabled={fixing}
-            onClick={() => void handleQuickSetupAll()}
-          >
-            {fixing ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <SparklesIcon className="size-4" />
-            )}
-            <span>
-              {fixing
-                ? t("setupWizard.quickSetupRunning")
-                : t("setupWizard.quickSetupAll")}
-            </span>
-          </Button>
+          {canQuickSetupAll ? (
+            <Button
+              size="sm"
+              className="gap-1.5 rounded-md"
+              disabled={fixing}
+              onClick={() => void handleQuickSetupAll()}
+            >
+              {fixing ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <SparklesIcon className="size-4" />
+              )}
+              <span>
+                {fixing
+                  ? t("setupWizard.quickSetupRunning")
+                  : t("setupWizard.quickSetupAll")}
+              </span>
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             size="sm"

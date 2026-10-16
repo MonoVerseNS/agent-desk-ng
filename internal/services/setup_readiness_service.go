@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/constants"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
 	"agent-desk/internal/pkg/dto/response"
@@ -118,6 +119,10 @@ func (s *setupReadinessService) GetReadiness(operator *dto.AuthPrincipal) (*resp
 	step6, canReceiveRequestsNow := s.evaluateEndToEndStep(channels, aiAgents, readyAIAgentMap, activeTeamMap, activeScheduleNowTeamSet, readyOperatorTeams)
 
 	steps := []response.SetupStepItem{step1, step2, step3, step4, step5, step6}
+	for i := range steps {
+		steps[i] = s.filterStepQuickFixes(steps[i], operator)
+	}
+
 	readySteps := 0
 	hasError := false
 	hasWarning := false
@@ -709,9 +714,14 @@ func (s *setupReadinessService) evaluateCurrentOperator(
 }
 
 func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequest, operator *dto.AuthPrincipal) (*response.SetupSimulateRouteResponse, error) {
-	_ = operator
 	now := time.Now()
 	db := sqls.DB()
+	fixIfAllowed := func(action string) string {
+		if s.canRunQuickFixAction(operator, action) {
+			return action
+		}
+		return ""
+	}
 
 	var channel models.Channel
 	if req.ChannelID > 0 {
@@ -724,7 +734,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 						HopKey:         "channel",
 						Status:         "error",
 						ReasonCode:     "blocked_no_channel",
-						QuickFixAction: QuickFixActionEnsureDefaultChannel,
+						QuickFixAction: fixIfAllowed(QuickFixActionEnsureDefaultChannel),
 					},
 				},
 			}, nil
@@ -740,7 +750,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 							HopKey:         "channel",
 							Status:         "error",
 							ReasonCode:     "blocked_no_channel",
-							QuickFixAction: QuickFixActionEnsureDefaultChannel,
+							QuickFixAction: fixIfAllowed(QuickFixActionEnsureDefaultChannel),
 						},
 					},
 				}, nil
@@ -765,7 +775,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			ReasonCode:     "blocked_channel_disabled",
 			EntityID:       channel.ID,
 			EntityName:     channel.Name,
-			QuickFixAction: QuickFixActionEnsureDefaultChannel,
+			QuickFixAction: fixIfAllowed(QuickFixActionEnsureDefaultChannel),
 		})
 		return resp, nil
 	}
@@ -777,7 +787,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			ReasonCode:     "blocked_zero_rollout",
 			EntityID:       channel.ID,
 			EntityName:     channel.Name,
-			QuickFixAction: QuickFixActionEnsureDefaultChannel,
+			QuickFixAction: fixIfAllowed(QuickFixActionEnsureDefaultChannel),
 		})
 		return resp, nil
 	}
@@ -789,7 +799,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			ReasonCode:     "blocked_missing_ai_agent",
 			EntityID:       channel.ID,
 			EntityName:     channel.Name,
-			QuickFixAction: QuickFixActionEnsureDefaultChannel,
+			QuickFixAction: fixIfAllowed(QuickFixActionEnsureDefaultChannel),
 		})
 		return resp, nil
 	}
@@ -810,7 +820,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			Status:         "error",
 			ReasonCode:     "blocked_missing_ai_agent",
 			EntityID:       channel.AIAgentID,
-			QuickFixAction: QuickFixActionFixAIAgentHandoff,
+			QuickFixAction: fixIfAllowed(QuickFixActionFixAIAgentHandoff),
 		})
 		return resp, nil
 	}
@@ -822,7 +832,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			ReasonCode:     "blocked_ai_only_mode",
 			EntityID:       aiAgent.ID,
 			EntityName:     aiAgent.Name,
-			QuickFixAction: QuickFixActionFixAIAgentHandoff,
+			QuickFixAction: fixIfAllowed(QuickFixActionFixAIAgentHandoff),
 		})
 		return resp, nil
 	}
@@ -841,7 +851,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 		ReasonCode:     agentReason,
 		EntityID:       aiAgent.ID,
 		EntityName:     aiAgent.Name,
-		QuickFixAction: QuickFixActionFixAIAgentHandoff,
+		QuickFixAction: fixIfAllowed(QuickFixActionFixAIAgentHandoff),
 	})
 
 	// Hop 3: Target Teams
@@ -858,7 +868,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			ReasonCode:     "blocked_agent_no_teams",
 			EntityID:       aiAgent.ID,
 			EntityName:     aiAgent.Name,
-			QuickFixAction: QuickFixActionFixAIAgentHandoff,
+			QuickFixAction: fixIfAllowed(QuickFixActionFixAIAgentHandoff),
 		})
 		return resp, nil
 	}
@@ -896,7 +906,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			Status:         "error",
 			ReasonCode:     "queued_off_hours_no_schedule",
 			EntityName:     strings.Join(teamNames, ", "),
-			QuickFixAction: QuickFixActionEnsureTeamSchedule,
+			QuickFixAction: fixIfAllowed(QuickFixActionEnsureTeamSchedule),
 		})
 		resp.CandidateOperators = s.buildCandidateListForTeams(enabledTeamIDSet, activeScheduleTeamSet)
 		return resp, nil
@@ -922,7 +932,7 @@ func (s *setupReadinessService) SimulateRoute(req request.SetupSimulateRouteRequ
 			HopKey:         "operators",
 			Status:         "error",
 			ReasonCode:     "queued_no_eligible_operator",
-			QuickFixAction: QuickFixActionEnableMyProfile,
+			QuickFixAction: fixIfAllowed(QuickFixActionEnableMyProfile),
 		})
 		return resp, nil
 	}
@@ -1027,6 +1037,81 @@ func (s *setupReadinessService) buildCandidateListForTeams(
 	return result
 }
 
+func (s *setupReadinessService) hasAnyPermission(operator *dto.AuthPrincipal, codes ...string) bool {
+	if operator == nil || operator.UserID <= 0 {
+		return false
+	}
+	if slices.Contains(operator.Roles, constants.RoleCodeSuperAdmin) || slices.Contains(operator.Roles, constants.RoleCodeAdmin) {
+		return true
+	}
+	for _, code := range codes {
+		if slices.Contains(operator.Permissions, code) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *setupReadinessService) canManageTeamsAndSchedules(operator *dto.AuthPrincipal) bool {
+	return s.hasAnyPermission(operator, constants.PermissionAgentTeamCreate.Code, constants.PermissionAgentTeamUpdate.Code) &&
+		s.hasAnyPermission(operator, constants.PermissionAgentTeamScheduleCreate.Code, constants.PermissionAgentTeamScheduleUpdate.Code, constants.PermissionAgentTeamScheduleBatchGenerate.Code)
+}
+
+func (s *setupReadinessService) canManageOperatorProfile(operator *dto.AuthPrincipal) bool {
+	return s.hasAnyPermission(
+		operator,
+		constants.PermissionAgentCreate.Code,
+		constants.PermissionAgentUpdate.Code,
+		constants.PermissionAgentConfig.Code,
+		constants.PermissionAgentUpdateStatus.Code,
+	)
+}
+
+func (s *setupReadinessService) canManageAIAgents(operator *dto.AuthPrincipal) bool {
+	return s.hasAnyPermission(operator, constants.PermissionAIAgentCreate.Code, constants.PermissionAIAgentUpdate.Code)
+}
+
+func (s *setupReadinessService) canManageChannels(operator *dto.AuthPrincipal) bool {
+	return s.hasAnyPermission(operator, constants.PermissionChannelCreate.Code, constants.PermissionChannelUpdate.Code)
+}
+
+func (s *setupReadinessService) canRunQuickFixAction(operator *dto.AuthPrincipal, action string) bool {
+	switch action {
+	case QuickFixActionEnsureTeamSchedule:
+		return s.canManageTeamsAndSchedules(operator)
+	case QuickFixActionEnableMyProfile:
+		return s.canManageOperatorProfile(operator)
+	case QuickFixActionFixAIAgentHandoff:
+		return s.canManageAIAgents(operator)
+	case QuickFixActionEnsureDefaultChannel:
+		return s.canManageChannels(operator)
+	case QuickFixActionQuickSetupAll:
+		return s.canManageTeamsAndSchedules(operator) &&
+			s.canManageOperatorProfile(operator) &&
+			s.canManageAIAgents(operator) &&
+			s.canManageChannels(operator)
+	default:
+		return false
+	}
+}
+
+func (s *setupReadinessService) filterStepQuickFixes(step response.SetupStepItem, operator *dto.AuthPrincipal) response.SetupStepItem {
+	filteredActions := make([]string, 0, len(step.QuickFixActions))
+	for _, action := range step.QuickFixActions {
+		if s.canRunQuickFixAction(operator, action) {
+			filteredActions = append(filteredActions, action)
+		}
+	}
+	step.QuickFixActions = filteredActions
+
+	for i := range step.Issues {
+		if step.Issues[i].QuickFixAction != "" && !s.canRunQuickFixAction(operator, step.Issues[i].QuickFixAction) {
+			step.Issues[i].QuickFixAction = ""
+		}
+	}
+	return step
+}
+
 func (s *setupReadinessService) ApplyQuickFix(req request.SetupQuickFixRequest, operator *dto.AuthPrincipal) (*response.SetupQuickFixResponse, error) {
 	if operator == nil || operator.UserID <= 0 {
 		return nil, errorsx.UnauthorizedI18n("error.setup.authRequired")
@@ -1037,6 +1122,9 @@ func (s *setupReadinessService) ApplyQuickFix(req request.SetupQuickFixRequest, 
 
 	switch action {
 	case QuickFixActionQuickSetupAll:
+		if !s.canRunQuickFixAction(operator, QuickFixActionQuickSetupAll) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
+		}
 		a1, err := s.ensureTeamAndSchedule(operator)
 		if err != nil {
 			return nil, err
@@ -1062,6 +1150,9 @@ func (s *setupReadinessService) ApplyQuickFix(req request.SetupQuickFixRequest, 
 		applied = append(applied, a4...)
 
 	case QuickFixActionEnsureTeamSchedule:
+		if !s.canRunQuickFixAction(operator, QuickFixActionEnsureTeamSchedule) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
+		}
 		a1, err := s.ensureTeamAndSchedule(operator)
 		if err != nil {
 			return nil, err
@@ -1069,11 +1160,16 @@ func (s *setupReadinessService) ApplyQuickFix(req request.SetupQuickFixRequest, 
 		applied = append(applied, a1...)
 
 	case QuickFixActionEnableMyProfile:
-		a1, err := s.ensureTeamAndSchedule(operator)
-		if err != nil {
-			return nil, err
+		if !s.canRunQuickFixAction(operator, QuickFixActionEnableMyProfile) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
 		}
-		applied = append(applied, a1...)
+		if s.canManageTeamsAndSchedules(operator) {
+			a1, err := s.ensureTeamAndSchedule(operator)
+			if err != nil {
+				return nil, err
+			}
+			applied = append(applied, a1...)
+		}
 
 		a2, err := s.enableOperatorProfile(operator)
 		if err != nil {
@@ -1082,11 +1178,16 @@ func (s *setupReadinessService) ApplyQuickFix(req request.SetupQuickFixRequest, 
 		applied = append(applied, a2...)
 
 	case QuickFixActionFixAIAgentHandoff:
-		a1, err := s.ensureTeamAndSchedule(operator)
-		if err != nil {
-			return nil, err
+		if !s.canRunQuickFixAction(operator, QuickFixActionFixAIAgentHandoff) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
 		}
-		applied = append(applied, a1...)
+		if s.canManageTeamsAndSchedules(operator) {
+			a1, err := s.ensureTeamAndSchedule(operator)
+			if err != nil {
+				return nil, err
+			}
+			applied = append(applied, a1...)
+		}
 
 		a2, err := s.fixAIAgentHandoff(req.EntityID, operator)
 		if err != nil {
@@ -1095,17 +1196,23 @@ func (s *setupReadinessService) ApplyQuickFix(req request.SetupQuickFixRequest, 
 		applied = append(applied, a2...)
 
 	case QuickFixActionEnsureDefaultChannel:
-		a1, err := s.ensureTeamAndSchedule(operator)
-		if err != nil {
-			return nil, err
+		if !s.canRunQuickFixAction(operator, QuickFixActionEnsureDefaultChannel) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
 		}
-		applied = append(applied, a1...)
-
-		a2, err := s.fixAIAgentHandoff(0, operator)
-		if err != nil {
-			return nil, err
+		if s.canManageTeamsAndSchedules(operator) {
+			a1, err := s.ensureTeamAndSchedule(operator)
+			if err != nil {
+				return nil, err
+			}
+			applied = append(applied, a1...)
 		}
-		applied = append(applied, a2...)
+		if s.canManageAIAgents(operator) {
+			a2, err := s.fixAIAgentHandoff(0, operator)
+			if err != nil {
+				return nil, err
+			}
+			applied = append(applied, a2...)
+		}
 
 		a3, err := s.ensureDefaultChannel(req.EntityID, operator)
 		if err != nil {
@@ -1144,6 +1251,9 @@ func (s *setupReadinessService) ensureTeamAndSchedule(operator *dto.AuthPrincipa
 	if len(activeTeams) == 0 {
 		var anyTeam models.AgentTeam
 		if err := db.Order("id ASC").First(&anyTeam).Error; err == nil && anyTeam.ID > 0 {
+			if !s.hasAnyPermission(operator, constants.PermissionAgentTeamUpdate.Code) {
+				return nil, errorsx.ForbiddenI18n("error.e0225")
+			}
 			anyTeam.Status = enums.StatusOk
 			anyTeam.UpdatedAt = now
 			anyTeam.UpdateUserID = operator.UserID
@@ -1154,6 +1264,9 @@ func (s *setupReadinessService) ensureTeamAndSchedule(operator *dto.AuthPrincipa
 			activeTeams = append(activeTeams, anyTeam)
 			applied = append(applied, "enabled_team")
 		} else {
+			if !s.hasAnyPermission(operator, constants.PermissionAgentTeamCreate.Code) {
+				return nil, errorsx.ForbiddenI18n("error.e0225")
+			}
 			newTeam := models.AgentTeam{
 				Name:         "Default Support Team",
 				LeaderUserID: operator.UserID,
@@ -1184,6 +1297,9 @@ func (s *setupReadinessService) ensureTeamAndSchedule(operator *dto.AuthPrincipa
 			return nil, err
 		}
 		if count == 0 {
+			if !s.hasAnyPermission(operator, constants.PermissionAgentTeamScheduleCreate.Code, constants.PermissionAgentTeamScheduleBatchGenerate.Code) {
+				return nil, errorsx.ForbiddenI18n("error.e0225")
+			}
 			schedule := models.AgentTeamSchedule{
 				TeamID:  team.ID,
 				StartAt: now.Add(-1 * time.Hour),
@@ -1216,12 +1332,15 @@ func (s *setupReadinessService) enableOperatorProfile(operator *dto.AuthPrincipa
 
 	var firstTeam models.AgentTeam
 	if err := db.Where("status = ?", enums.StatusOk).Order("id ASC").First(&firstTeam).Error; err != nil {
-		return nil, err
+		return nil, errorsx.ForbiddenI18n("error.e0225")
 	}
 
 	var profile models.AgentProfile
 	err := db.Where("user_id = ?", operator.UserID).First(&profile).Error
 	if err != nil {
+		if !s.hasAnyPermission(operator, constants.PermissionAgentCreate.Code) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
+		}
 		displayName := firstNonEmpty(operator.Nickname, operator.Username, fmt.Sprintf("Agent-%d", operator.UserID))
 		newProfile := models.AgentProfile{
 			UserID:                operator.UserID,
@@ -1254,13 +1373,26 @@ func (s *setupReadinessService) enableOperatorProfile(operator *dto.AuthPrincipa
 
 	targetTeamID := profile.TeamID
 	var teamCheck models.AgentTeam
-	if targetTeamID <= 0 || db.Where("id = ? AND status = ?", targetTeamID, enums.StatusOk).First(&teamCheck).Error != nil {
+	needsTeamRebind := targetTeamID <= 0 || db.Where("id = ? AND status = ?", targetTeamID, enums.StatusOk).First(&teamCheck).Error != nil
+	if needsTeamRebind {
 		targetTeamID = firstTeam.ID
 	}
 
 	maxConcurrent := profile.MaxConcurrentCount
+	needsConfigChange := !profile.AutoAssignEnabled || maxConcurrent <= 0
 	if maxConcurrent <= 0 {
 		maxConcurrent = 10
+	}
+	needsProfileEnable := profile.Status != enums.StatusOk
+
+	if (needsTeamRebind || needsProfileEnable) && !s.hasAnyPermission(operator, constants.PermissionAgentUpdate.Code) {
+		return nil, errorsx.ForbiddenI18n("error.e0225")
+	}
+	if needsConfigChange && !s.hasAnyPermission(operator, constants.PermissionAgentUpdate.Code, constants.PermissionAgentConfig.Code) {
+		return nil, errorsx.ForbiddenI18n("error.e0225")
+	}
+	if !s.hasAnyPermission(operator, constants.PermissionAgentUpdate.Code, constants.PermissionAgentConfig.Code, constants.PermissionAgentUpdateStatus.Code) {
+		return nil, errorsx.ForbiddenI18n("error.e0225")
 	}
 
 	updates := map[string]any{
@@ -1307,6 +1439,9 @@ func (s *setupReadinessService) fixAIAgentHandoff(targetAgentID int64, operator 
 	}
 
 	if len(agents) == 0 {
+		if !s.hasAnyPermission(operator, constants.PermissionAIAgentCreate.Code) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
+		}
 		newAgent := models.AIAgent{
 			Name:                 "Default Reception Agent",
 			Description:          "Routes customer inquiries to human operators",
@@ -1333,6 +1468,10 @@ func (s *setupReadinessService) fixAIAgentHandoff(targetAgentID int64, operator 
 		}
 		applied = append(applied, "created_default_ai_agent")
 		return applied, nil
+	}
+
+	if !s.hasAnyPermission(operator, constants.PermissionAIAgentUpdate.Code) {
+		return nil, errorsx.ForbiddenI18n("error.e0225")
 	}
 
 	for _, agent := range agents {
@@ -1394,7 +1533,7 @@ func (s *setupReadinessService) ensureDefaultChannel(targetChannelID int64, oper
 
 	var firstAgent models.AIAgent
 	if err := db.Where("status = ?", enums.StatusOk).Order("id ASC").First(&firstAgent).Error; err != nil {
-		return nil, err
+		return nil, errorsx.ForbiddenI18n("error.e0225")
 	}
 
 	var channels []models.Channel
@@ -1405,6 +1544,9 @@ func (s *setupReadinessService) ensureDefaultChannel(targetChannelID int64, oper
 	}
 
 	if len(channels) == 0 {
+		if !s.hasAnyPermission(operator, constants.PermissionChannelCreate.Code) {
+			return nil, errorsx.ForbiddenI18n("error.e0225")
+		}
 		newChannel := models.Channel{
 			Name:                  "Default Web Support Channel",
 			ChannelType:           string(enums.ChannelTypeWeb),
@@ -1427,6 +1569,10 @@ func (s *setupReadinessService) ensureDefaultChannel(targetChannelID int64, oper
 		}
 		applied = append(applied, "created_default_channel")
 		return applied, nil
+	}
+
+	if !s.hasAnyPermission(operator, constants.PermissionChannelUpdate.Code) {
+		return nil, errorsx.ForbiddenI18n("error.e0225")
 	}
 
 	for _, ch := range channels {

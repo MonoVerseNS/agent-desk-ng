@@ -185,6 +185,22 @@ export function SetupWizardView() {
     }
   }
 
+  const canQuickSetupAll = useMemo(() => {
+    return (
+      readiness?.steps.some((s) =>
+        s.quick_fix_actions.includes("quick_setup_all"),
+      ) ?? false
+    )
+  }, [readiness])
+
+  const canEnableMyProfile = useMemo(() => {
+    return (
+      readiness?.steps.some((s) =>
+        s.quick_fix_actions.includes("enable_my_operator_profile"),
+      ) ?? false
+    )
+  }, [readiness])
+
   const channelOptions = useMemo(() => {
     if (!readiness) {
       return []
@@ -261,23 +277,25 @@ export function SetupWizardView() {
               />
               <span>{t("setupWizard.refresh")}</span>
             </Button>
-            <Button
-              size="sm"
-              className="gap-1.5 rounded-md"
-              disabled={fixingAction !== null}
-              onClick={() => void handleQuickFix("quick_setup_all")}
-            >
-              {fixingAction === "quick_setup_all" ? (
-                <Loader2Icon className="size-4 animate-spin" />
-              ) : (
-                <SparklesIcon className="size-4" />
-              )}
-              <span>
-                {fixingAction === "quick_setup_all"
-                  ? t("setupWizard.quickSetupRunning")
-                  : t("setupWizard.quickSetupAll")}
-              </span>
-            </Button>
+            {canQuickSetupAll ? (
+              <Button
+                size="sm"
+                className="gap-1.5 rounded-md"
+                disabled={fixingAction !== null}
+                onClick={() => void handleQuickFix("quick_setup_all")}
+              >
+                {fixingAction === "quick_setup_all" ? (
+                  <Loader2Icon className="size-4 animate-spin" />
+                ) : (
+                  <SparklesIcon className="size-4" />
+                )}
+                <span>
+                  {fixingAction === "quick_setup_all"
+                    ? t("setupWizard.quickSetupRunning")
+                    : t("setupWizard.quickSetupAll")}
+                </span>
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -371,7 +389,7 @@ export function SetupWizardView() {
             )}
           </div>
 
-          {!readiness.current_operator.can_receive_now ? (
+          {!readiness.current_operator.can_receive_now && canEnableMyProfile ? (
             <div className="flex shrink-0 items-center gap-2">
               <Button
                 size="sm"

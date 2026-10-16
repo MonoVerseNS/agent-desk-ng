@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"agent-desk/internal/models"
+	"agent-desk/internal/pkg/constants"
 	"agent-desk/internal/pkg/dto"
 	"agent-desk/internal/pkg/dto/request"
 	"agent-desk/internal/pkg/enums"
@@ -73,6 +74,7 @@ func TestSetupReadiness_EmptyDBAndQuickSetupAll(t *testing.T) {
 		UserID:   admin.ID,
 		Username: admin.Username,
 		Nickname: admin.Nickname,
+		Roles:    []string{constants.RoleCodeSuperAdmin},
 	}
 
 	readiness, err := services.SetupReadinessService.GetReadiness(principal)
@@ -177,6 +179,7 @@ func TestSetupReadiness_OffHoursAndBusyOperator(t *testing.T) {
 		UserID:   opUser.ID,
 		Username: opUser.Username,
 		Nickname: opUser.Nickname,
+		Roles:    []string{constants.RoleCodeAdmin},
 	}
 
 	readiness, err := services.SetupReadinessService.GetReadiness(principal)
@@ -219,6 +222,7 @@ func TestSetupReadiness_SimulateRoute_AIOnlyAndMissingTeams(t *testing.T) {
 		UserID:   opUser.ID,
 		Username: opUser.Username,
 		Nickname: opUser.Nickname,
+		Roles:    []string{constants.RoleCodeAdmin},
 	}
 
 	// Setup team + active schedule + idle operator
@@ -303,5 +307,130 @@ func TestSetupReadiness_SimulateRoute_AIOnlyAndMissingTeams(t *testing.T) {
 	}
 	if sim3.MatchedOperator == nil || sim3.MatchedOperator.UserID != opUser.ID {
 		t.Fatalf("expected MatchedOperator UserID = %d, got %+v", opUser.ID, sim3.MatchedOperator)
+	}
+}
+
+func TestSetupReadiness_QuickFixPermissionEnforcement(t *testing.T) {
+	db := setupSetupReadinessTestDB(t)
+
+	csUser := models.User{
+		Username: "cs_agent",
+		Nickname: "Support Agent",
+		Status:   enums.StatusOk,
+	}
+	if err := db.Create(&csUser).Error; err != nil {
+		t.Fatalf("create csUser error = %v", err)
+	}
+
+	// Regular cs_user only has view permissions
+	csPrincipal := &dto.AuthPrincipal{
+		UserID:   csUser.ID,
+		Username: csUser.Username,
+		Nickname: csUser.Nickname,
+		Roles:    []string{constants.RoleCodeCsUser},
+		Permissions: []string{
+			constants.PermissionAgentView.Code,
+			constants.PermissionAgentTeamView.Code,
+			constants.PermissionAgentTeamScheduleView.Code,
+			constants.PermissionAIAgentView.Code,
+			constants.PermissionChannelView.Code,
+		},
+	}
+
+	// 1. GetReadiness for cs_user without mutation permissions must not expose quick-fix actions
+	readiness, err := services.SetupReadinessService.GetReadiness(csPrincipal)
+	if err != nil {
+		t.Fatalf("GetReadiness error = %v", err)
+	}
+	for _, step := range readiness.Steps {
+		if len(step.QuickFixActions) != 0 {
+			t.Fatalf("expected step %s QuickFixActions to be empty for cs_user without write permissions, got %v", step.Key, step.QuickFixActions)
+		}
+		for _, issue := range step.Issues {
+			if issue.QuickFixAction != "" {
+				t.Fatalf("expected issue %s QuickFixAction to be empty for cs_user without write permissions, got %s", issue.Code, issue.QuickFixAction)
+			}
+		}
+	}
+
+	// 2. Direct API calls to ApplyQuickFix must fail with Forbidden (error.e0225) and leave DB untouched
+	for _, action := range []string{
+		services.QuickFixActionQuickSetupAll,
+		services.QuickFixActionEnsureTeamSchedule,
+		services.QuickFixActionEnableMyProfile,
+		services.QuickFixActionFixAIAgentHandoff,
+		services.QuickFixActionEnsureDefaultChannel,
+	} {
+		_, err := services.SetupReadinessService.ApplyQuickFix(request.SetupQuickFixRequest{
+			Action: action,
+		}, csPrincipal)
+		if err == nil {
+			t.Fatalf("expected Forbidden error when cs_user executes %s without permissions, got nil", action)
+		}
+	}
+
+	var teamCount, agentCount, channelCount, profileCount int64
+	db.Model(&models.AgentTeam{}).Count(&teamCount)
+	db.Model(&models.AIAgent{}).Count(&agentCount)
+	db.Model(&models.Channel{}).Count(&channelCount)
+	db.Model(&models.AgentProfile{}).Count(&profileCount)
+	if teamCount != 0 || agentCount != 0 || channelCount != 0 || profileCount != 0 {
+		t.Fatalf("expected zero entities created after forbidden quick fixes, got teams=%d aiAgents=%d channels=%d profiles=%d",
+			teamCount, agentCount, channelCount, profileCount)
+	}
+
+	// 3. Seed an active team + active schedule + busy profile for csUser
+	now := time.Now()
+	team := models.AgentTeam{Name: "Main Team", Status: enums.StatusOk}
+	db.Create(&team)
+	db.Create(&models.AgentTeamSchedule{
+		TeamID:  team.ID,
+		StartAt: now.Add(-1 * time.Hour),
+		EndAt:   now.Add(24 * time.Hour),
+		Status:  enums.StatusOk,
+	})
+	db.Create(&models.AgentProfile{
+		UserID:             csUser.ID,
+		TeamID:             team.ID,
+		AgentCode:          "AG-CS1",
+		DisplayName:        "Support Agent",
+		ServiceStatus:      enums.ServiceStatusBusy,
+		MaxConcurrentCount: 5,
+		AutoAssignEnabled:  true,
+		Status:             enums.StatusOk,
+	})
+
+	// Grant only agent.updateStatus to csPrincipal: can switch own existing profile to Idle,
+	// but still cannot modify AI agents or channels!
+	statusOnlyPrincipal := &dto.AuthPrincipal{
+		UserID:   csUser.ID,
+		Username: csUser.Username,
+		Nickname: csUser.Nickname,
+		Roles:    []string{constants.RoleCodeCsUser},
+		Permissions: []string{
+			constants.PermissionAgentView.Code,
+			constants.PermissionAgentUpdateStatus.Code,
+		},
+	}
+
+	if _, err := services.SetupReadinessService.ApplyQuickFix(request.SetupQuickFixRequest{
+		Action: services.QuickFixActionFixAIAgentHandoff,
+	}, statusOnlyPrincipal); err == nil {
+		t.Fatalf("expected Forbidden when statusOnlyPrincipal calls fix_ai_agent_handoff")
+	}
+	if _, err := services.SetupReadinessService.ApplyQuickFix(request.SetupQuickFixRequest{
+		Action: services.QuickFixActionEnsureDefaultChannel,
+	}, statusOnlyPrincipal); err == nil {
+		t.Fatalf("expected Forbidden when statusOnlyPrincipal calls ensure_default_channel")
+	}
+
+	fixProfileResp, err := services.SetupReadinessService.ApplyQuickFix(request.SetupQuickFixRequest{
+		Action: services.QuickFixActionEnableMyProfile,
+	}, statusOnlyPrincipal)
+	if err != nil {
+		t.Fatalf("expected statusOnlyPrincipal to succeed on enable_my_operator_profile when team+schedule+profile exist, got %v", err)
+	}
+	if !fixProfileResp.Readiness.CurrentOperator.CanReceiveNow {
+		t.Fatalf("expected CurrentOperator.CanReceiveNow = true after status update, blockers = %v", fixProfileResp.Readiness.CurrentOperator.BlockerCodes)
 	}
 }

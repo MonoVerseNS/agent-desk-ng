@@ -104,6 +104,13 @@ export function OperatorReadinessIndicator({
     readiness.current_operator.blocker_codes.length +
     (chainOk ? 0 : Math.max(1, readiness.total_steps - readiness.ready_steps))
 
+  const canQuickSetupAll = readiness.steps.some((s) =>
+    s.quick_fix_actions.includes("quick_setup_all"),
+  )
+  const canEnableMyProfile = readiness.steps.some((s) =>
+    s.quick_fix_actions.includes("enable_my_operator_profile"),
+  )
+
   return (
     <Popover
       open={open}
@@ -218,14 +225,16 @@ export function OperatorReadinessIndicator({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            {!operatorOk ? (
+            {!operatorOk && canEnableMyProfile ? (
               <Button
                 size="sm"
                 className="w-full gap-1.5 rounded-md text-xs"
                 disabled={fixing}
                 onClick={() =>
                   void handleQuickFix(
-                    chainOk ? "enable_my_operator_profile" : "quick_setup_all",
+                    chainOk || !canQuickSetupAll
+                      ? "enable_my_operator_profile"
+                      : "quick_setup_all",
                   )
                 }
               >
@@ -235,12 +244,12 @@ export function OperatorReadinessIndicator({
                   <SparklesIcon className="size-3.5" />
                 )}
                 <span>
-                  {chainOk
+                  {chainOk || !canQuickSetupAll
                     ? t("setupWizard.enableMyReceptionBtn")
                     : t("setupWizard.quickSetupAll")}
                 </span>
               </Button>
-            ) : !chainOk ? (
+            ) : !chainOk && canQuickSetupAll ? (
               <Button
                 size="sm"
                 className="w-full gap-1.5 rounded-md text-xs"
